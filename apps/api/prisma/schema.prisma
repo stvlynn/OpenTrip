@@ -115,6 +115,7 @@ model stops {
 model trip_days {
   trip_id    String
   number     Int
+  date       String  @default("")
   date_label String
   city       String
   color      String

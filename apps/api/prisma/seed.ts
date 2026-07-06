@@ -62,6 +62,7 @@ async function main() {
           data: {
             trip_id: t.id,
             number: d.number,
+            date: d.date,
             date_label: d.dateLabel,
             city: d.city,
             color: d.color,

@@ -112,7 +112,8 @@ See [`docs/backend/README.md`](docs/backend/README.md).
   migrating.
 - **Configuration lives in `apps/api/prisma.config.ts`.** It points to the
   schema, migrations directory, and seed command; `DATABASE_URL` is loaded from
-  the root `.env` via `dotenv-cli`.
+  the root `.env` loaded from `prisma.config.ts` (and `tsx --env-file-if-exists`
+  for reset/seed scripts).
 - **Use the pg driver adapter.** Construct `PrismaClient` with `PrismaPg`
   (`@prisma/adapter-pg`) and a `pg.Pool`. Use `createPrismaClient` in
   `infrastructure/persistence/prisma.ts`.

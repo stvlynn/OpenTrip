@@ -11,18 +11,18 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
-    "db:generate": "dotenv -e ../../.env -- prisma generate",
-    "db:pull": "dotenv -e ../../.env -- prisma db pull --force",
-    "db:push": "dotenv -e ../../.env -- prisma db push",
-    "db:migrate": "dotenv -e ../../.env -- prisma migrate deploy",
-    "db:migrate-dev": "dotenv -e ../../.env -- prisma migrate dev",
-    "db:studio": "dotenv -e ../../.env -- prisma studio",
-    "db:seed": "dotenv -e ../../.env -- prisma db seed",
-    "db:reset": "dotenv -e ../../.env -- tsx prisma/reset.ts",
-    "db:snapshot": "dotenv -e ../../.env -- prisma db pull --force"
+    "db:generate": "prisma generate",
+    "db:pull": "prisma db pull --force",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate-dev": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "db:reset": "tsx --env-file-if-exists=../../.env prisma/reset.ts",
+    "db:snapshot": "prisma db pull --force"
   },
   "prisma": {
-    "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.850.0",
@@ -40,7 +40,7 @@
     "@eslint/js": "^9.17.0",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.11.10",
-    "dotenv-cli": "^11.0.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
     "prisma": "^7.8.0",
