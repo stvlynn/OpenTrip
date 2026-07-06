@@ -26,6 +26,8 @@ services:
             BASE_URL: ${BASE_URL:-http://localhost:8090}
             BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
             TRUSTED_ORIGINS: ${WEB_ORIGIN:-http://localhost:8090}
+            GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+            GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
             STORAGE_BACKEND: ${STORAGE_BACKEND:-fs}
             STORAGE_ROOT: ${STORAGE_ROOT:-/app/apps/api/uploads}
             PORT: "8780"

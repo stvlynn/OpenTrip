@@ -11,6 +11,14 @@ Reference: [../reference/backend-sources.md](../reference/backend-sources.md).
 export const auth = betterAuth({
   database: pool,               // pg.Pool
   emailAndPassword: { enabled: true },
+  socialProviders: config.googleOAuth
+    ? {
+        google: {
+          clientId: config.googleOAuth.clientId,
+          clientSecret: config.googleOAuth.clientSecret,
+        },
+      }
+    : undefined,
   trustedOrigins: config.trustedOrigins,
   user: {
     additionalFields: {
@@ -21,6 +29,12 @@ export const auth = betterAuth({
   // baseURL/secret come from env (BASE_URL / BETTER_AUTH_SECRET)
 });
 ```
+
+### Social providers
+
+Google OAuth is enabled when both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+are set. The redirect URI registered in Google Cloud Console must be
+`{BASE_URL}/api/auth/callback/google`.
 
 ### User preferences
 
@@ -33,6 +47,8 @@ The planner uses it as the preselected currency when composing a stop cost.
 - `BETTER_AUTH_SECRET` — >= 32 chars. Generate: `openssl rand -base64 32`.
 - `BASE_URL` — public base URL of the API/auth server (where `/api/auth` is mounted).
 - `TRUSTED_ORIGINS` — comma-separated web origins allowed to call auth (CSRF).
+- `GOOGLE_CLIENT_ID` — Google OAuth client ID (optional; enables Google sign-in).
+- `GOOGLE_CLIENT_SECRET` — Google OAuth client secret (optional).
 
 Never commit these. Docker uses an env file; Cloudflare uses
 `wrangler secret put` / vars.
@@ -62,6 +78,10 @@ Auth tables (`user`, `session`, `account`, `verification`) are created by
 `migrations/0001_auth.sql`. Re-run the Better Auth CLI to regenerate the schema
 after changing options/plugins, then add a new migration. The `defaultCurrency`
 additional field lives in `0005_currency.sql`.
+
+`migrations/0007_google_oauth.sql` adds the unique constraint Better Auth needs
+for OAuth account linking: `UNIQUE ("accountId", "providerId")` on the
+`account` table.
 
 ## Client
 

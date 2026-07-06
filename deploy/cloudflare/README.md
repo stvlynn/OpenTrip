@@ -26,6 +26,9 @@ DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DBNAME" pnpm db:seed
 # 3. API (Workers)
 cd deploy/cloudflare
 wrangler secret put BETTER_AUTH_SECRET --config wrangler.api.jsonc
+# Optional: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET for Google sign-in.
+wrangler secret put GOOGLE_CLIENT_ID --config wrangler.api.jsonc
+wrangler secret put GOOGLE_CLIENT_SECRET --config wrangler.api.jsonc
 wrangler secret put S3_ACCESS_KEY_ID --config wrangler.api.jsonc
 wrangler secret put S3_SECRET_ACCESS_KEY --config wrangler.api.jsonc
 wrangler deploy --config wrangler.api.jsonc

@@ -16,6 +16,8 @@ const packageJson = JSON.parse(
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, repoRoot, "");
     const baseUrl = process.env.BASE_URL ?? env.BASE_URL ?? "";
+    const webPort = Number(env.WEB_PORT ?? process.env.WEB_PORT ?? 5170);
+    const apiPort = Number(env.PORT ?? process.env.PORT ?? 8780);
 
     return {
         envDir: repoRoot,
@@ -45,9 +47,11 @@ export default defineConfig(({ mode }) => {
             },
         },
         server: {
+            port: webPort,
+            strictPort: true,
             proxy: {
                 "/api": {
-                    target: "http://localhost:8780",
+                    target: `http://localhost:${apiPort}`,
                     changeOrigin: true,
                 },
             },
