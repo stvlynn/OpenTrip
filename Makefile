@@ -45,8 +45,9 @@ help:
 	@echo "  make test            Run tests"
 	@echo "  make lint            Run ESLint"
 	@echo "  make typecheck       Run TypeScript"
-	@echo "  make check           typecheck + lint + test + build"
+	@echo "  make check           typecheck + lint + test + ui:check + build"
 	@echo "  make docs            Validate documentation links"
+	@echo "  make ui              Validate UI conventions"
 	@echo "  make clean           Remove build artifacts"
 	@echo ""
 	@echo "Deploy info:"
@@ -146,6 +147,9 @@ typecheck:
 
 check:
 	pnpm check
+
+ui:
+	pnpm ui:check
 
 docs:
 	pnpm docs:check

@@ -1,25 +1,26 @@
 {
-  "name": "wetravel",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Travel Planner SaaS — plan trips together, split everything.",
-  "packageManager": "pnpm@10.28.1",
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
-    "docs:check": "node scripts/docs-check.mjs",
-    "db:migrate": "pnpm --filter @wetravel/api migrate",
-    "db:seed": "pnpm --filter @wetravel/api seed",
-    "db:reset": "pnpm --filter @wetravel/api reset"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.3"
-  }
+    "name": "wetravel",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Travel Planner SaaS — plan trips together, split everything.",
+    "packageManager": "pnpm@10.28.1",
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "dev": "pnpm -r --parallel dev",
+        "build": "pnpm -r build",
+        "typecheck": "pnpm -r typecheck",
+        "lint": "pnpm -r lint",
+        "test": "pnpm -r test",
+        "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm ui:check && pnpm build",
+        "docs:check": "node scripts/docs-check.mjs",
+        "ui:check": "node scripts/ui-check.mjs",
+        "db:migrate": "pnpm --filter @wetravel/api migrate",
+        "db:seed": "pnpm --filter @wetravel/api seed",
+        "db:reset": "pnpm --filter @wetravel/api reset"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.3"
+    }
 }

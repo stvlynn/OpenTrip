@@ -1,76 +1,77 @@
 {
-  "appName": "wetravel",
-  "tagline": "Plan trips together, split everything.",
-  "language": "Language",
-  "languageName": {
-    "en": "English",
-    "zh": "中文"
-  },
-  "actions": {
-    "back": "Back to trips",
-    "invite": "Invite",
-    "inviteCopied": "Link copied ✓",
-    "signIn": "Sign in",
-    "signOut": "Sign out",
-    "cancel": "Cancel",
-    "close": "Close",
-    "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
-  },
-  "state": {
-    "loading": "Loading…",
-    "error": "Something went wrong.",
-    "retry": "Try again"
-  },
-  "settings": {
-    "userMenu": {
-      "profile": "Profile",
-      "preferences": "Preferences",
-      "about": "About"
+    "appName": "wetravel",
+    "tagline": "Plan trips together, split everything.",
+    "language": "Language",
+    "languageName": {
+        "en": "English",
+        "zh": "中文"
     },
-    "groups": {
-      "personal": "Personal",
-      "application": "Application"
+    "actions": {
+        "back": "Back to trips",
+        "invite": "Invite",
+        "inviteCopied": "Link copied ✓",
+        "signIn": "Sign in",
+        "signOut": "Sign out",
+        "cancel": "Cancel",
+        "close": "Close",
+        "collapseSidebar": "Collapse sidebar",
+        "expandSidebar": "Expand sidebar"
     },
-    "nav": {
-      "profile": "Profile",
-      "preferences": "Preferences",
-      "about": "About"
+    "state": {
+        "loading": "Loading…",
+        "error": "Something went wrong.",
+        "retry": "Try again"
     },
-    "profile": {
-      "title": "Profile",
-      "description": "Your display name and public identity.",
-      "displayName": "Display name",
-      "uploadAvatar": "Upload avatar",
-      "removeAvatar": "Remove avatar",
-      "save": "Save profile",
-      "saving": "Saving…",
-      "errors": {
-        "displayNameRequired": "Display name is required.",
-        "saveFailed": "Failed to save profile.",
-        "avatarTooLarge": "Avatar must be smaller than 2 MB.",
-        "avatarUnsupported": "Only PNG, JPEG and WebP images are allowed.",
-        "avatarUploadFailed": "Failed to upload avatar.",
-        "avatarRemoveFailed": "Failed to remove avatar."
-      }
-    },
-    "preferences": {
-      "title": "Preferences",
-      "description": "Language and appearance settings."
-    },
-    "appearance": {
-      "label": "Appearance",
-      "system": "System",
-      "light": "Light",
-      "dark": "Dark"
-    },
-    "language": {
-      "label": "Language"
-    },
-    "about": {
-      "title": "About",
-      "version": "Version {{version}}",
-      "description": "wetravel is a collaborative trip planner for friends and families."
+    "settings": {
+        "userMenu": {
+            "profile": "Profile",
+            "preferences": "Preferences",
+            "about": "About"
+        },
+        "groups": {
+            "personal": "Personal",
+            "application": "Application"
+        },
+        "nav": {
+            "profile": "Profile",
+            "preferences": "Preferences",
+            "about": "About"
+        },
+        "profile": {
+            "title": "Profile",
+            "description": "Your display name and public identity.",
+            "displayName": "Display name",
+            "uploadAvatar": "Upload avatar",
+            "removeAvatar": "Remove avatar",
+            "save": "Save profile",
+            "saving": "Saving…",
+            "errorTitle": "Profile update failed",
+            "errors": {
+                "displayNameRequired": "Display name is required.",
+                "saveFailed": "Failed to save profile.",
+                "avatarTooLarge": "Avatar must be smaller than 2 MB.",
+                "avatarUnsupported": "Only PNG, JPEG and WebP images are allowed.",
+                "avatarUploadFailed": "Failed to upload avatar.",
+                "avatarRemoveFailed": "Failed to remove avatar."
+            }
+        },
+        "preferences": {
+            "title": "Preferences",
+            "description": "Language and appearance settings."
+        },
+        "appearance": {
+            "label": "Appearance",
+            "system": "System",
+            "light": "Light",
+            "dark": "Dark"
+        },
+        "language": {
+            "label": "Language"
+        },
+        "about": {
+            "title": "About",
+            "version": "Version {{version}}",
+            "description": "wetravel is a collaborative trip planner for friends and families."
+        }
     }
-  }
 }

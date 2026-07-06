@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { signIn, signUp } from "@/shared/auth";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { toastManager } from "@/shared/ui/toast";
 
 type Mode = "signIn" | "signUp";
 
@@ -35,35 +36,40 @@ export function AuthForm() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
     const isSignUp = mode === "signUp";
 
+    function showAuthError() {
+        toastManager.add({
+            title: t("errors.toastTitle"),
+            description: t("errors.generic"),
+            type: "error",
+        });
+    }
+
     async function submit(e: React.FormEvent) {
         e.preventDefault();
-        setError(null);
         setPending(true);
         try {
             const result = isSignUp
                 ? await signUp.email({ name, email, password })
                 : await signIn.email({ email, password });
-            if (result.error) setError(t("errors.generic"));
+            if (result.error) showAuthError();
         } catch {
-            setError(t("errors.generic"));
+            showAuthError();
         } finally {
             setPending(false);
         }
     }
 
     async function signInWithGoogle() {
-        setError(null);
         setPending(true);
         try {
             const result = await signIn.social({ provider: "google" });
-            if (result.error) setError(t("errors.generic"));
+            if (result.error) showAuthError();
         } catch {
-            setError(t("errors.generic"));
+            showAuthError();
         } finally {
             setPending(false);
         }
@@ -118,15 +124,6 @@ export function AuthForm() {
                 />
             </label>
 
-            {error ? (
-                <p
-                    className="text-sm text-pretty text-destructive-foreground"
-                    role="alert"
-                >
-                    {error}
-                </p>
-            ) : null}
-
             <Button type="submit" size="lg" disabled={pending}>
                 {t(`${ns}.submit`)}
             </Button>
@@ -155,7 +152,6 @@ export function AuthForm() {
                 className="inline-flex min-h-10 items-center justify-center text-sm text-corn-600 transition-[color,scale] duration-[var(--dur-base)] ease-[var(--ease-out)] hover:underline active:scale-[var(--press-scale)]"
                 onClick={() => {
                     setMode(isSignUp ? "signIn" : "signUp");
-                    setError(null);
                 }}
             >
                 {t(`${ns}.switch`)}
