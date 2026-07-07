@@ -1,2 +1,2 @@
-export const THEME_STORAGE_KEY = "wetravel.theme";
+export const THEME_STORAGE_KEY = "opentrip.theme";
 

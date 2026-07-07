@@ -20,9 +20,9 @@ docker compose up -d --build
 
 Services:
 
-- `postgres` — data volume `wetravel-pgdata`, healthchecked.
+- `postgres` — data volume `opentrip-pgdata`, healthchecked.
 - `api` — waits for a healthy `postgres`, serves on port 8780, and stores
-  filesystem uploads in the `wetravel-uploads` volume.
+  filesystem uploads in the `opentrip-uploads` volume.
 - `web` — serves the built SPA on port 8090.
 
 ## 3. Migrate + seed
@@ -50,9 +50,9 @@ docker compose logs -f web
 
 ```bash
 # backup
-docker compose exec postgres pg_dump -U wetravel wetravel > backup.sql
+docker compose exec postgres pg_dump -U opentrip opentrip > backup.sql
 # restore
-cat backup.sql | docker compose exec -T postgres psql -U wetravel wetravel
+cat backup.sql | docker compose exec -T postgres psql -U opentrip opentrip
 ```
 
 ## Notes

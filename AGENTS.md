@@ -1,4 +1,4 @@
-# wetravel/微旅 — Agentic Coding Guidelines
+# OpenTrip — Agentic Coding Guidelines
 
 > Travel Planner SaaS. Read this file first, then follow the documentation map
 > below before writing any code. Template inspired by
@@ -106,9 +106,9 @@ See [`docs/backend/README.md`](docs/backend/README.md).
   `make db-migrate-dev` to create a migration, run `make db-pull && make db-generate`
   afterwards and commit both the migration directory and the updated snapshot.
 - **Never hand-write migrations.** Create migration files with
-  `pnpm --filter @wetravel/api db:migrate-dev` (or `make db-migrate-dev`).
+  `pnpm --filter @opentrip/api db:migrate-dev` (or `make db-migrate-dev`).
 - **Generate the client after every schema change.** Run `make db-generate`
-  (equivalent to `pnpm --filter @wetravel/api db:generate`) after pulling or
+  (equivalent to `pnpm --filter @opentrip/api db:generate`) after pulling or
   migrating.
 - **Configuration lives in `apps/api/prisma.config.ts`.** It points to the
   schema, migrations directory, and seed command; `DATABASE_URL` is loaded from
@@ -118,7 +118,7 @@ See [`docs/backend/README.md`](docs/backend/README.md).
   (`@prisma/adapter-pg`) and a `pg.Pool`. Use `createPrismaClient` in
   `infrastructure/persistence/prisma.ts`.
 - **Seed via `prisma/seed.ts`.** Run `make db-seed` or
-  `pnpm --filter @wetravel/api db:seed`.
+  `pnpm --filter @opentrip/api db:seed`.
 - **Reset via `make db-reset`.** Drops the `public` schema, reapplies Prisma
   migrations, and re-seeds.
 

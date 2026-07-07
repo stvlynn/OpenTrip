@@ -1,16 +1,16 @@
-name: wetravel
+name: opentrip
 
 services:
     postgres:
         image: postgres:16-alpine
         environment:
-            POSTGRES_USER: ${POSTGRES_USER:-wetravel}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wetravel}
-            POSTGRES_DB: ${POSTGRES_DB:-wetravel}
+            POSTGRES_USER: ${POSTGRES_USER:-opentrip}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opentrip}
+            POSTGRES_DB: ${POSTGRES_DB:-opentrip}
         volumes:
-            - wetravel-pgdata:/var/lib/postgresql/data
+            - opentrip-pgdata:/var/lib/postgresql/data
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wetravel}"]
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-opentrip}"]
             interval: 5s
             timeout: 5s
             retries: 10
@@ -22,7 +22,7 @@ services:
             context: ../..
             dockerfile: deploy/docker/api.Dockerfile
         environment:
-            DATABASE_URL: postgres://${POSTGRES_USER:-wetravel}:${POSTGRES_PASSWORD:-wetravel}@postgres:5432/${POSTGRES_DB:-wetravel}
+            DATABASE_URL: postgres://${POSTGRES_USER:-opentrip}:${POSTGRES_PASSWORD:-opentrip}@postgres:5432/${POSTGRES_DB:-opentrip}
             BASE_URL: ${BASE_URL:-http://localhost:8090}
             BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
             TRUSTED_ORIGINS: ${WEB_ORIGIN:-http://localhost:8090}
@@ -32,7 +32,7 @@ services:
             STORAGE_ROOT: ${STORAGE_ROOT:-/app/apps/api/uploads}
             PORT: "8780"
         volumes:
-            - wetravel-uploads:/app/apps/api/uploads
+            - opentrip-uploads:/app/apps/api/uploads
         depends_on:
             postgres:
                 condition: service_healthy
@@ -61,5 +61,5 @@ services:
             - "8090:80"
 
 volumes:
-    wetravel-pgdata:
-    wetravel-uploads:
+    opentrip-pgdata:
+    opentrip-uploads:

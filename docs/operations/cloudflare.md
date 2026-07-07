@@ -13,7 +13,7 @@ lives in [deploy/cloudflare](../../deploy/cloudflare/README.md). Reference:
 ## 1. Hyperdrive
 
 ```bash
-wrangler hyperdrive create wetravel-db \
+wrangler hyperdrive create opentrip-db \
   --connection-string "postgres://USER:PASSWORD@HOST:5432/DBNAME"
 ```
 
@@ -50,8 +50,8 @@ the access key id and secret are created under the bucket's S3 API tokens.
 ## 4. Frontend (Pages)
 
 ```bash
-BASE_URL="https://<api-worker-domain>" pnpm --filter @wetravel/web build
-wrangler pages deploy apps/web/dist --project-name wetravel-web
+BASE_URL="https://<api-worker-domain>" pnpm --filter @opentrip/web build
+wrangler pages deploy apps/web/dist --project-name opentrip-web
 ```
 
 See [deploy/cloudflare/pages.md](../../deploy/cloudflare/pages.md).

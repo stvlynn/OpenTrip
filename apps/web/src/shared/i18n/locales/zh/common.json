@@ -1,5 +1,5 @@
 {
-    "appName": "微旅",
+    "appName": "OpenTrip",
     "tagline": "一起规划旅行，费用一键分摊。",
     "language": "语言",
     "languageName": {
@@ -71,7 +71,7 @@
         "about": {
             "title": "关于",
             "version": "版本 {{version}}",
-            "description": "微旅是一款供亲友一起规划旅行的协作工具。"
+            "description": "OpenTrip是一款供亲友一起规划旅行的协作工具。"
         }
     }
 }

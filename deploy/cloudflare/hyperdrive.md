@@ -6,7 +6,7 @@ The API reads the connection string from the binding at runtime.
 ## Create
 
 ```bash
-wrangler hyperdrive create wetravel-db \
+wrangler hyperdrive create opentrip-db \
   --connection-string "postgres://USER:PASSWORD@HOST:5432/DBNAME"
 ```
 
@@ -27,8 +27,8 @@ runtime. `nodejs_compat_v2` is required for `pg`.
 For `wrangler dev`, set a local connection string:
 
 ```bash
-wrangler hyperdrive create wetravel-db-local \
-  --connection-string "postgres://postgres:postgres@localhost:5430/wetravel"
+wrangler hyperdrive create opentrip-db-local \
+  --connection-string "postgres://postgres:postgres@localhost:5430/opentrip"
 ```
 
 or provide `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` in `.dev.vars`.

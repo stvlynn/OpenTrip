@@ -34,7 +34,7 @@ void i18n
     detection: {
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
-      lookupLocalStorage: "wetravel-lang",
+      lookupLocalStorage: "opentrip-lang",
     },
   });
 

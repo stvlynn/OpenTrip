@@ -3,8 +3,8 @@ SHELL := /bin/bash
 
 COMPOSE_FILE ?= deploy/docker/compose.yaml
 POSTGRES_PORT ?= 5430
-POSTGRES_USER ?= wetravel
-POSTGRES_DB ?= wetravel
+POSTGRES_USER ?= opentrip
+POSTGRES_DB ?= opentrip
 
 .PHONY: help install env setup postgres-up postgres-down dev dev-nodb dev-web dev-api
 .PHONY: db-init db-reset db-migrate db-seed db-generate db-pull db-push db-studio db-snapshot
@@ -12,7 +12,7 @@ POSTGRES_DB ?= wetravel
 .PHONY: build test lint typecheck check docs clean deploy
 
 help:
-	@echo "wetravel Makefile targets:"
+	@echo "OpenTrip Makefile targets:"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install         Install dependencies with pnpm"
@@ -108,28 +108,28 @@ dev-nodb: env
 	pnpm dev
 
 dev-web: env
-	pnpm --filter @wetravel/web dev
+	pnpm --filter @opentrip/web dev
 
 dev-api: env postgres-up db-migrate
-	pnpm --filter @wetravel/api dev
+	pnpm --filter @opentrip/api dev
 
 db-generate:
-	pnpm --filter @wetravel/api db:generate
+	pnpm --filter @opentrip/api db:generate
 
 db-pull:
-	pnpm --filter @wetravel/api db:pull
+	pnpm --filter @opentrip/api db:pull
 
 db-snapshot: db-pull
 	@echo "Schema snapshot updated in apps/api/prisma/schema.prisma."
 
 db-push:
-	pnpm --filter @wetravel/api db:push
+	pnpm --filter @opentrip/api db:push
 
 db-migrate:
 	pnpm db:migrate
 
 db-migrate-dev:
-	pnpm --filter @wetravel/api db:migrate-dev
+	pnpm --filter @opentrip/api db:migrate-dev
 
 db-seed:
 	pnpm db:seed

@@ -40,7 +40,7 @@ open http://localhost:8090
 
 ```bash
 docker compose logs -f api
-docker compose exec postgres pg_dump -U wetravel wetravel > backup.sql
+docker compose exec postgres pg_dump -U opentrip opentrip > backup.sql
 ```
 
 ## Notes
@@ -48,5 +48,5 @@ docker compose exec postgres pg_dump -U wetravel wetravel > backup.sql
 - The browser talks only to `web` (port 8090); nginx proxies `/api` to `api`,
   so auth cookies are same-origin.
 - The API connects to Postgres via `DATABASE_URL` (no Hyperdrive locally).
-- Avatar files use the `wetravel-uploads` named volume by default. Storage
+- Avatar files use the `opentrip-uploads` named volume by default. Storage
   backend and root are selected explicitly in `.env`.

@@ -1,4 +1,4 @@
-# wetravel/微旅 documentation
+# OpenTrip documentation
 
 Travel Planner SaaS — plan trips together, split everything.
 

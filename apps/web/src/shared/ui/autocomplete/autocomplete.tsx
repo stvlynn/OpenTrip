@@ -2,7 +2,7 @@ import type React from "react";
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { cn, interactive } from "@/shared/lib";
 
-/** coss-style Autocomplete adapted to wetravel tokens (Base UI under the hood).
+/** coss-style Autocomplete adapted to OpenTrip tokens (Base UI under the hood).
  * Uses a native styled input, a plain scroll popup, and inline icons so it has
  * no coss registry / lucide dependencies. */
 export const Autocomplete: typeof AutocompletePrimitive.Root =

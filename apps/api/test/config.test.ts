@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig, type RawEnv } from "../src/infrastructure/config";
 
 const BASE_ENV: RawEnv = {
-  DATABASE_URL: "postgres://example.test/wetravel",
+  DATABASE_URL: "postgres://example.test/opentrip",
   BETTER_AUTH_SECRET: "a-secure-test-secret-with-32-characters",
   BASE_URL: "https://api.example.test",
 };
@@ -32,7 +32,7 @@ describe("loadConfig storage", () => {
       STORAGE_BACKEND: "s3",
       STORAGE_ROOT: "/avatars/",
       STORAGE_PUBLIC_URL: "https://cdn.example.test/files/",
-      S3_BUCKET: "wetravel",
+      S3_BUCKET: "opentrip",
       S3_REGION: "auto",
       S3_ENDPOINT: "https://account.r2.cloudflarestorage.com",
       S3_ACCESS_KEY_ID: "access-key",
@@ -44,7 +44,7 @@ describe("loadConfig storage", () => {
       backend: "s3",
       root: "avatars",
       publicUrl: "https://cdn.example.test/files/",
-      bucket: "wetravel",
+      bucket: "opentrip",
       region: "auto",
       forcePathStyle: true,
     });
@@ -58,7 +58,7 @@ describe("loadConfig storage", () => {
       loadConfig({
         ...BASE_ENV,
         STORAGE_BACKEND: "s3",
-        S3_BUCKET: "wetravel",
+        S3_BUCKET: "opentrip",
         S3_REGION: "auto",
         S3_ENDPOINT: "https://example.test",
         S3_ACCESS_KEY_ID: "key",

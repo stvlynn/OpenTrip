@@ -2,7 +2,7 @@ import type React from "react";
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 import { cn, interactive } from "@/shared/lib";
 
-/** coss-style ContextMenu adapted to wetravel tokens (Base UI under the hood).
+/** coss-style ContextMenu adapted to OpenTrip tokens (Base UI under the hood).
  * Right-click / long-press a wrapped surface to open a pointer-anchored menu. */
 export const ContextMenu: typeof ContextMenuPrimitive.Root =
   ContextMenuPrimitive.Root;

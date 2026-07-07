@@ -29,7 +29,7 @@ Other useful targets:
 `.env` is created from `.env.example` on first run. `BASE_URL` is the single
 public origin used by the frontend API client and Better Auth (default:
 `http://localhost:5170`). Ensure `DATABASE_URL` matches the Postgres credentials
-(defaults: `wetravel:wetravel@localhost:5430/wetravel`).
+(defaults: `opentrip:opentrip@localhost:5430/opentrip`).
 
 ## Local verification
 

@@ -27,6 +27,6 @@ configuration rather than code changes or runtime-specific bucket bindings.
 
 - Cloudflare R2 requires S3 API credentials instead of a Worker R2 binding.
 - The Worker bundle contains the modular S3 client but no native binaries.
-- Docker uploads survive container replacement through `wetravel-uploads`.
+- Docker uploads survive container replacement through `opentrip-uploads`.
 - Invalid storage configuration fails visibly during startup rather than
   falling back to ephemeral storage.

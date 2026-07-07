@@ -1,5 +1,5 @@
 {
-    "name": "wetravel",
+    "name": "opentrip",
     "version": "0.1.0",
     "private": true,
     "description": "Travel Planner SaaS — plan trips together, split everything.",
@@ -16,12 +16,12 @@
         "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm ui:check && pnpm build",
         "docs:check": "node scripts/docs-check.mjs",
         "ui:check": "node scripts/ui-check.mjs",
-        "db:migrate": "pnpm --filter @wetravel/api db:migrate",
-        "db:seed": "pnpm --filter @wetravel/api db:seed",
-        "db:reset": "pnpm --filter @wetravel/api db:reset",
-        "db:generate": "pnpm --filter @wetravel/api db:generate",
-        "db:pull": "pnpm --filter @wetravel/api db:pull",
-        "db:studio": "pnpm --filter @wetravel/api db:studio"
+        "db:migrate": "pnpm --filter @opentrip/api db:migrate",
+        "db:seed": "pnpm --filter @opentrip/api db:seed",
+        "db:reset": "pnpm --filter @opentrip/api db:reset",
+        "db:generate": "pnpm --filter @opentrip/api db:generate",
+        "db:pull": "pnpm --filter @opentrip/api db:pull",
+        "db:studio": "pnpm --filter @opentrip/api db:studio"
     },
     "devDependencies": {
         "typescript": "^5.7.3"

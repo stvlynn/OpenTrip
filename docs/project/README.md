@@ -1,6 +1,6 @@
 # Product overview
 
-wetravel is a collaborative travel planning SaaS. A small group plans a trip
+OpenTrip is a collaborative travel planning SaaS. A small group plans a trip
 together — arranging stops on a map and schedule, discussing and voting on
 what to keep, and splitting shared expenses fairly.
 

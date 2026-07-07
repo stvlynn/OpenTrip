@@ -2,7 +2,7 @@ import type React from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn, interactive } from "@/shared/lib";
 
-/** coss-style Select adapted to wetravel tokens (Base UI under the hood).
+/** coss-style Select adapted to OpenTrip tokens (Base UI under the hood).
  * Inline icons and theme tokens replace the coss registry / lucide deps. */
 export const Select: typeof SelectPrimitive.Root = SelectPrimitive.Root;
 

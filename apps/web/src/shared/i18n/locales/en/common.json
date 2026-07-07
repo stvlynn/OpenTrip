@@ -1,5 +1,5 @@
 {
-    "appName": "wetravel",
+    "appName": "OpenTrip",
     "tagline": "Plan trips together, split everything.",
     "language": "Language",
     "languageName": {
@@ -71,7 +71,7 @@
         "about": {
             "title": "About",
             "version": "Version {{version}}",
-            "description": "wetravel is a collaborative trip planner for friends and families."
+            "description": "OpenTrip is a collaborative trip planner for friends and families."
         }
     }
 }
