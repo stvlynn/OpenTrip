@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { useTranslation } from "react-i18next";
 import {
   type GeoJSONSource,
   LngLatBounds,
@@ -7,7 +9,8 @@ import {
   NavigationControl,
   Popup,
 } from "maplibre-gl";
-import type { MapStop } from "./types";
+import type { MapStop, SearchResult } from "./types";
+import { SearchPopup } from "./SearchPopup";
 import "./map.css";
 
 const STYLE_URL =
@@ -26,6 +29,10 @@ export interface TripMapProps {
   onPick?: (lng: number, lat: number) => void;
   /** Called with the coordinates of a right-click / long-press. */
   onContext?: (lng: number, lat: number) => void;
+  /** Optional search result to highlight with a temporary marker + popup. */
+  searchResult?: SearchResult | null;
+  /** Called from the search-result popup's "Add stop here" button. */
+  onAddSearchResult?: () => void;
 }
 
 /** Pushpin cursor (data URI) with the hotspot at the pin tip. */
@@ -47,7 +54,10 @@ export function TripMap({
   picking = false,
   onPick,
   onContext,
+  searchResult = null,
+  onAddSearchResult,
 }: TripMapProps) {
+  const { t, i18n } = useTranslation("planner");
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -57,10 +67,15 @@ export function TripMap({
   const selectRef = useRef(onSelectStop);
   const pickRef = useRef(onPick);
   const contextRef = useRef(onContext);
+  const onAddSearchResultRef = useRef(onAddSearchResult);
+  const searchMarkerRef = useRef<Marker | null>(null);
+  const searchPopupRef = useRef<Popup | null>(null);
+  const searchRootRef = useRef<Root | null>(null);
   const [failed, setFailed] = useState(false);
   selectRef.current = onSelectStop;
   pickRef.current = onPick;
   contextRef.current = onContext;
+  onAddSearchResultRef.current = onAddSearchResult;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -172,7 +187,7 @@ export function TripMap({
     src?.setData({ type: "FeatureCollection", features });
 
     const activeStop = visible.find((s) => s.id === active);
-    if (activeStop) {
+    if (activeStop && !searchResult) {
       map.flyTo({
         center: [activeStop.lng, activeStop.lat],
         zoom: Math.max(map.getZoom(), 13.5),
@@ -186,7 +201,7 @@ export function TripMap({
         .setLngLat([activeStop.lng, activeStop.lat])
         .setText(activeStop.name)
         .addTo(map);
-    } else if (visible.length) {
+    } else if (visible.length && !searchResult) {
       const fitKey = `${day}:${visible.length}`;
       if (fitKey !== lastFitRef.current) {
         lastFitRef.current = fitKey;
@@ -199,7 +214,7 @@ export function TripMap({
 
   useEffect(() => {
     syncRef.current();
-  }, [stops, day, activeStopId]);
+  }, [stops, day, activeStopId, searchResult]);
 
   // Point-picking mode: pushpin cursor + one click resolves a coordinate.
   useEffect(() => {
@@ -220,6 +235,66 @@ export function TripMap({
       canvas.style.cursor = "";
     };
   }, [picking]);
+
+  // Render a temporary marker + popup for the current search result.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || !searchResult) return;
+
+    searchRootRef.current?.unmount();
+    searchMarkerRef.current?.remove();
+    searchPopupRef.current?.remove();
+
+    const el = document.createElement("div");
+    el.className = "trip-map-search-marker";
+    el.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>' +
+      '<circle cx="12" cy="10" r="3" fill="white" stroke="none"/>' +
+      "</svg>";
+
+    const marker = new Marker({ element: el, anchor: "bottom" })
+      .setLngLat([searchResult.lng, searchResult.lat])
+      .addTo(map);
+    searchMarkerRef.current = marker;
+
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    searchRootRef.current = root;
+    root.render(
+      <SearchPopup
+        name={searchResult.name}
+        addLabel={t("map.popup.addStop")}
+        onAdd={() => onAddSearchResultRef.current?.()}
+      />,
+    );
+
+    const popup = new Popup({
+      offset: 12,
+      closeButton: false,
+      closeOnClick: false,
+      className: "trip-map-search-popup",
+    })
+      .setLngLat([searchResult.lng, searchResult.lat])
+      .setDOMContent(container)
+      .addTo(map);
+    searchPopupRef.current = popup;
+
+    map.flyTo({
+      center: [searchResult.lng, searchResult.lat],
+      zoom: Math.max(map.getZoom(), 14),
+      duration: 900,
+    });
+
+    return () => {
+      searchRootRef.current?.unmount();
+      searchMarkerRef.current?.remove();
+      searchPopupRef.current?.remove();
+      searchRootRef.current = null;
+      searchMarkerRef.current = null;
+      searchPopupRef.current = null;
+    };
+  }, [searchResult, i18n.language, t]);
 
   return (
     <div ref={containerRef} className="relative size-full overflow-hidden bg-[#e9ecf4]">

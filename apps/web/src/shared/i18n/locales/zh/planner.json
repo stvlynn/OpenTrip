@@ -109,6 +109,12 @@
     "menu": {
       "addStop": "在此添加地点",
       "copyCoords": "复制坐标"
+    },
+    "search": {
+      "placeholder": "搜索地点…"
+    },
+    "popup": {
+      "addStop": "在此添加地点"
     }
   },
   "budget": {

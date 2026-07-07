@@ -1,9 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { PlaceResult } from "@/shared/api";
 import type { Trip } from "@/entities/trip";
 import { dayColor } from "@/entities/trip";
 import { interactive } from "@/shared/lib";
-import { TripMap, type MapStop } from "@/shared/ui/map";
+import { TripMap, type MapStop, type SearchResult } from "@/shared/ui/map";
 import {
   ContextMenu,
   ContextMenuItem,
@@ -11,6 +12,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/shared/ui/context-menu";
+import { MapSearch } from "./MapSearch";
 
 export function TripMapView({
   trip,
@@ -36,6 +38,25 @@ export function TripMapView({
   const { t } = useTranslation("planner");
   const { t: tc } = useTranslation("common");
   const lastCoord = useRef<{ lng: number; lat: number } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+
+  const bias = useMemo(() => {
+    const first = trip.stops[0];
+    return first ? { lat: first.lat, lng: first.lng } : undefined;
+  }, [trip]);
+
+  useEffect(() => {
+    setSearchResult(null);
+    setSearchQuery("");
+  }, [activeStopId, day]);
+
+  useEffect(() => {
+    if (picking) {
+      setSearchResult(null);
+      setSearchQuery("");
+    }
+  }, [picking]);
 
   const copyCoords = () => {
     const c = lastCoord.current;
@@ -60,9 +81,41 @@ export function TripMapView({
     [trip, numbers],
   );
 
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (!value.trim()) setSearchResult(null);
+  };
+
+  const handleSelectPlace = (place: PlaceResult) => {
+    setSearchQuery(place.label);
+    setSearchResult({ lat: place.lat, lng: place.lng, name: place.label });
+  };
+
+  const handleAddSearchResult = () => {
+    if (!searchResult) return;
+    const { lng, lat } = searchResult;
+    setSearchResult(null);
+    setSearchQuery("");
+    onAddStopHere?.(lng, lat);
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger className="relative block size-full">
+        {!picking ? (
+          <div className="absolute left-4 top-4 z-10 w-full max-w-xs pr-8">
+            <div className="rounded-xl bg-card/95 p-2 shadow-[var(--shadow-border),var(--shadow-md)] backdrop-blur-sm">
+              <MapSearch
+                value={searchQuery}
+                onValueChange={handleSearchChange}
+                onSelect={handleSelectPlace}
+                placeholder={t("map.search.placeholder")}
+                biasLat={bias?.lat}
+                biasLng={bias?.lng}
+              />
+            </div>
+          </div>
+        ) : null}
         <TripMap
           stops={stops}
           day={day}
@@ -74,6 +127,8 @@ export function TripMapView({
           onContext={(lng, lat) => {
             lastCoord.current = { lng, lat };
           }}
+          searchResult={searchResult}
+          onAddSearchResult={handleAddSearchResult}
         />
       {picking ? (
         <div className="absolute inset-x-0 top-4 flex justify-center px-4">

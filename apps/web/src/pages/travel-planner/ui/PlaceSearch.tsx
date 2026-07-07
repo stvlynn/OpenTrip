@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
-import { searchPlaces, type PlaceResult } from "@/shared/api";
+import { type PlaceResult } from "@/shared/api";
 import {
   Autocomplete,
   AutocompleteEmpty,
@@ -11,15 +10,7 @@ import {
   AutocompletePopup,
   AutocompleteStatus,
 } from "@/shared/ui/autocomplete";
-
-function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(id);
-  }, [value, ms]);
-  return debounced;
-}
+import { usePlaceSearch } from "../model/usePlaceSearch";
 
 export interface PlaceSearchProps {
   value: string;
@@ -49,20 +40,15 @@ export function PlaceSearch({
   biasLng,
   autoFocus,
 }: PlaceSearchProps) {
-  const { t, i18n } = useTranslation("planner");
-  const lang = i18n.resolvedLanguage ?? "en";
-  const debounced = useDebounced(value, 250);
-  const enabled = debounced.trim().length >= 2;
+  const { t } = useTranslation("planner");
   const [open, setOpen] = useState(false);
   const highlightedRef = useRef<PlaceResult | undefined>(undefined);
 
-  const { data: results = [], isFetching } = useQuery({
-    queryKey: ["places", debounced, biasLat, biasLng, lang],
-    queryFn: ({ signal }) =>
-      searchPlaces(debounced, { lat: biasLat, lng: biasLng, lang, signal }),
-    enabled,
-    staleTime: 60_000,
-  });
+  const { results, isFetching, enabled } = usePlaceSearch(
+    value,
+    biasLat,
+    biasLng,
+  );
 
   return (
     <div className="flex items-center gap-2">

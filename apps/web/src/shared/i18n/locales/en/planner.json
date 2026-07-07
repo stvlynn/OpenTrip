@@ -110,6 +110,12 @@
     "menu": {
       "addStop": "Add a stop here",
       "copyCoords": "Copy coordinates"
+    },
+    "search": {
+      "placeholder": "Search places…"
+    },
+    "popup": {
+      "addStop": "Add stop here"
     }
   },
   "budget": {

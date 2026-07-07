@@ -8,3 +8,9 @@ export interface MapStop {
   num: number;
   transit: boolean;
 }
+
+export interface SearchResult {
+  lat: number;
+  lng: number;
+  name: string;
+}

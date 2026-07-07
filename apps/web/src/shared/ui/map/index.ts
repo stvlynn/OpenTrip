@@ -1,2 +1,2 @@
 export { TripMap, type TripMapProps } from "./TripMap";
-export type { MapStop } from "./types";
+export type { MapStop, SearchResult } from "./types";
