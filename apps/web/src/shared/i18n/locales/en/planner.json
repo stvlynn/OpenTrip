@@ -147,5 +147,13 @@
   },
   "members": {
     "title": "Travelers"
+  },
+  "weather": {
+    "tooltip": {
+      "temp": "Temp",
+      "feelsLike": "Feels like",
+      "humidity": "Humidity",
+      "wind": "Wind"
+    }
   }
 }

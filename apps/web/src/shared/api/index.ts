@@ -43,3 +43,4 @@ export {
   type UserPreference,
   type UpdatePreferencesInput,
 } from "./preferences";
+export { fetchWeather, type WeatherData } from "./weather";

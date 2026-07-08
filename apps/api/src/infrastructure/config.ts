@@ -22,6 +22,7 @@ export interface AppConfig {
     storage: StorageConfig;
     googleOAuth: GoogleOAuthConfig | null;
     captcha: CaptchaConfig | null;
+    openWeatherMapApiKey: string | undefined;
 }
 
 interface StorageConfigBase {
@@ -64,6 +65,8 @@ export interface RawEnv {
     S3_ACCESS_KEY_ID?: string;
     S3_SECRET_ACCESS_KEY?: string;
     S3_FORCE_PATH_STYLE?: string;
+    OPENWEATHERMAP_API_KEY?: string;
+    VITE_OPENWEATHERMAP_API_KEY?: string;
 }
 
 const CAPTCHA_PROVIDERS: CaptchaProvider[] = [
@@ -129,6 +132,9 @@ export function loadConfig(env: RawEnv, connectionString?: string): AppConfig {
                 ? { clientId: googleClientId, clientSecret: googleClientSecret }
                 : null,
         captcha: parseCaptchaConfig(env),
+        openWeatherMapApiKey:
+          env.OPENWEATHERMAP_API_KEY?.trim() ||
+          env.VITE_OPENWEATHERMAP_API_KEY?.trim(),
     };
 }
 

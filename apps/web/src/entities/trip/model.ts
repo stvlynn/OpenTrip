@@ -40,6 +40,8 @@ export interface TripSummary {
   creatorName: string;
   /** Members ordered with the creator first, for a stacked avatar cluster. */
   members: TripSummaryMember[];
+  /** Representative location derived from the first located stop. */
+  location: { lat: number; lng: number } | null;
 }
 
 /** The requesting user's effective permissions on a trip. */

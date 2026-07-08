@@ -70,7 +70,7 @@ export function MapSearch({
       }}
     >
       <AutocompleteInput
-        className="rounded-lg"
+        className="shadow-[var(--shadow-md)]"
         placeholder={placeholder}
         showClear
         startAddon={

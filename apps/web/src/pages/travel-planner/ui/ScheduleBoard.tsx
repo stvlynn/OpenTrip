@@ -59,6 +59,7 @@ import {
 } from "@/shared/ui/select";
 import { PlaceSearch } from "./PlaceSearch";
 import { StopCard, type StopCardDragHandleProps } from "./StopCard";
+import { DayWeatherIcon } from "@/features/weather";
 
 const CATEGORY_OPTIONS: StopCategory[] = [
   "Sight",
@@ -246,6 +247,7 @@ export function ScheduleBoard({
               style={drag.columnStyle(dayIndex, d.number)}
             >
               <DayHeader
+                trip={trip}
                 day={d}
                 headerMeta={headerMeta}
                 suggestedCity={suggestedCity}
@@ -886,6 +888,7 @@ function insertionLineX(
 }
 
 function DayHeader({
+  trip,
   day,
   headerMeta,
   suggestedCity,
@@ -897,6 +900,7 @@ function DayHeader({
   onDelete,
   onUseSuggestedCity,
 }: {
+  trip: Trip;
   day: TripDay;
   headerMeta: string;
   suggestedCity: string;
@@ -928,6 +932,7 @@ function DayHeader({
             <span className="font-heading text-base font-semibold text-balance">
               {t("days.day", { n: day.number })}
             </span>
+            <DayWeatherIcon trip={trip} dayNumber={day.number} />
           </div>
           {headerMeta ? (
             <span className="pl-4 font-mono text-[11px] text-muted-foreground tabular-nums">

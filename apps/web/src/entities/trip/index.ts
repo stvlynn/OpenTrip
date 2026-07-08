@@ -14,5 +14,6 @@ export {
   dayDateLabel,
   moveTripStop,
   reorderTripDays,
+  dayRepresentativeStop,
   type MoveTripStopInput,
 } from "./lib";

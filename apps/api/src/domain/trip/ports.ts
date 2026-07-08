@@ -27,6 +27,9 @@ export interface TripSummary {
   creatorName: string;
   /** Members ordered with the creator first, for a stacked avatar cluster. */
   members: TripSummaryMember[];
+  /** Representative location for weather and map preview, derived from the first
+   * located stop. `null` when the trip has no stops with coordinates. */
+  location: { lat: number; lng: number } | null;
 }
 
 /** Repository port for the Trip aggregate. Implemented in infrastructure. */

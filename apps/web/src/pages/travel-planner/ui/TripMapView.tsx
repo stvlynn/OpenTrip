@@ -104,16 +104,14 @@ export function TripMapView({
       <ContextMenuTrigger className="relative block size-full">
         {!picking ? (
           <div className="absolute left-4 top-4 z-10 w-full max-w-xs pr-8">
-            <div className="rounded-xl bg-card/95 p-2 shadow-[var(--shadow-border),var(--shadow-md)] backdrop-blur-sm">
-              <MapSearch
-                value={searchQuery}
-                onValueChange={handleSearchChange}
-                onSelect={handleSelectPlace}
-                placeholder={t("map.search.placeholder")}
-                biasLat={bias?.lat}
-                biasLng={bias?.lng}
-              />
-            </div>
+            <MapSearch
+              value={searchQuery}
+              onValueChange={handleSearchChange}
+              onSelect={handleSelectPlace}
+              placeholder={t("map.search.placeholder")}
+              biasLat={bias?.lat}
+              biasLng={bias?.lng}
+            />
           </div>
         ) : null}
         <TripMap

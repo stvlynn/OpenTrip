@@ -145,5 +145,13 @@
   },
   "members": {
     "title": "同行者"
+  },
+  "weather": {
+    "tooltip": {
+      "temp": "温度",
+      "feelsLike": "体感温度",
+      "humidity": "湿度",
+      "wind": "风速"
+    }
   }
 }

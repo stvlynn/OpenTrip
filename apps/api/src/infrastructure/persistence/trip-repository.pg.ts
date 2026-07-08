@@ -30,13 +30,23 @@ export class PgTripRepository implements TripRepository {
       created_at: string | Date;
       member_count: string;
       stop_count: string;
+      location_lat: string | null;
+      location_lng: string | null;
     }>(
       // Return trips the user belongs to, plus legacy/demo trips that have no
       // real (user-backed) members yet so the seeded demo stays visible.
       `SELECT t.id, t.title, t.start_date, t.end_date, t.status, t.currency, t.cover_color,
               t.owner_id, t.created_at,
               (SELECT count(*) FROM trip_members m WHERE m.trip_id = t.id) AS member_count,
-              (SELECT count(*) FROM stops s WHERE s.trip_id = t.id) AS stop_count
+              (SELECT count(*) FROM stops s WHERE s.trip_id = t.id) AS stop_count,
+              (SELECT s.lat FROM stops s
+               WHERE s.trip_id = t.id AND s.transit = false
+                 AND s.lat IS NOT NULL AND s.lng IS NOT NULL
+               ORDER BY s.sort_order ASC LIMIT 1) AS location_lat,
+              (SELECT s.lng FROM stops s
+               WHERE s.trip_id = t.id AND s.transit = false
+                 AND s.lat IS NOT NULL AND s.lng IS NOT NULL
+               ORDER BY s.sort_order ASC LIMIT 1) AS location_lng
        FROM trips t
        WHERE EXISTS (
                SELECT 1 FROM trip_members m
@@ -89,6 +99,8 @@ export class PgTripRepository implements TripRepository {
         ownerIdx > 0
           ? [all[ownerIdx]!, ...all.slice(0, ownerIdx), ...all.slice(ownerIdx + 1)]
           : all;
+      const locationLat = r.location_lat ? Number(r.location_lat) : null;
+      const locationLng = r.location_lng ? Number(r.location_lng) : null;
       return {
         id: r.id,
         title: r.title,
@@ -102,6 +114,10 @@ export class PgTripRepository implements TripRepository {
         createdAt: new Date(r.created_at).toISOString(),
         creatorName: members[0]?.name ?? "",
         members,
+        location:
+          locationLat != null && locationLng != null
+            ? { lat: locationLat, lng: locationLng }
+            : null,
       };
     });
   }

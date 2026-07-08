@@ -6,7 +6,9 @@ import type {
 import { useTranslation } from "react-i18next";
 import type { Trip } from "@/entities/trip";
 import { CategoryIcon, type Stop } from "@/entities/stop";
+import { useWeather } from "@/features/weather";
 import { cn, formatMoney } from "@/shared/lib";
+import { WeatherIcon } from "@/shared/ui/weather-icon";
 
 export interface StopCardDragHandleProps {
   onPointerDown: (e: ReactPointerEvent<HTMLElement>) => void;
@@ -42,6 +44,11 @@ export function StopCard({
   onSelect,
 }: StopCardProps) {
   const { t } = useTranslation("planner");
+  const { data: weather } = useWeather(
+    stop.lat,
+    stop.lng,
+    !stop.transit,
+  );
 
   const meta = [
     t(`category.${stop.category}`),
@@ -76,9 +83,12 @@ export function StopCard({
         <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
           {stop.time}
         </span>
-        <span className="font-mono text-[10.5px] text-muted-foreground tabular-nums">
-          {stop.duration}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[10.5px] text-muted-foreground tabular-nums">
+            {stop.duration}
+          </span>
+          <WeatherIcon data={weather} size={18} />
+        </div>
       </div>
       <div className="flex items-center gap-1.5">
         <CategoryIcon category={stop.category} />

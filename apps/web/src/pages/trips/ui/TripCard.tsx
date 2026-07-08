@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { TripSummary } from "@/entities/trip";
+import { TripWeatherIcon } from "@/features/weather";
 import { Badge } from "@/shared/ui/badge";
 import { Card } from "@/shared/ui/card";
 import { Avatar } from "@/shared/ui/avatar";
@@ -128,9 +129,12 @@ export function TripCard({
           <h2 className="font-heading text-base font-semibold tracking-tight text-balance">
             {trip.title}
           </h2>
-          <Badge variant={STATUS_VARIANT[trip.status]}>
-            {t(`status.${trip.status}`)}
-          </Badge>
+          <div className="flex flex-none items-center gap-1.5">
+            <TripWeatherIcon trip={trip} />
+            <Badge variant={STATUS_VARIANT[trip.status]}>
+              {t(`status.${trip.status}`)}
+            </Badge>
+          </div>
         </div>
         {meta && (
           <p className="font-mono text-[11px] text-muted-foreground tabular-nums">

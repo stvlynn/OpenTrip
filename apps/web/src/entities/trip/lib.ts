@@ -1,6 +1,15 @@
 import type { Stop } from "@/entities/stop";
 import type { Trip, TripDay } from "./model";
 
+export function dayRepresentativeStop(
+  trip: Trip,
+  dayNumber: number,
+): Stop | undefined {
+  return trip.stops.find(
+    (s) => s.day === dayNumber && !s.transit && s.lat != null && s.lng != null,
+  );
+}
+
 /** Sequential per-day stop numbers, matching the prototype `numsForStops`. */
 export function stopNumbers(stops: readonly Stop[]): Map<string, number> {
   const counts = new Map<number, number>();

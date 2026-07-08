@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { Trip } from "@/entities/trip";
 import { dayDateLabel, findDay } from "@/entities/trip";
 import type { UpdateStopInput } from "@/shared/api";
+import { DayWeatherIcon } from "@/features/weather";
 import { DayPills } from "./DayPills";
 import { StopCard } from "./StopCard";
 import { StopDetail } from "./StopDetail";
@@ -84,6 +85,7 @@ export function Sidebar(props: SidebarProps) {
                     <span className="font-mono text-[11px] text-muted-foreground">
                       {findDay(trip, d.number)?.city}
                     </span>
+                    <DayWeatherIcon trip={trip} dayNumber={d.number} size={18} />
                   </div>
                   <div className="flex flex-col gap-2.5 px-4">
                     {dayStops.map((s) => (
