@@ -6,5 +6,6 @@ export interface PlannerSidebarPreferenceDto {
 export interface UserPreferenceDto {
   userId: string;
   plannerSidebar: PlannerSidebarPreferenceDto;
+  agentPanelCollapsed: boolean;
   updatedAt: string;
 }

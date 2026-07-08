@@ -30,6 +30,13 @@ services:
             GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
             STORAGE_BACKEND: ${STORAGE_BACKEND:-fs}
             STORAGE_ROOT: ${STORAGE_ROOT:-/app/apps/api/uploads}
+            AI_PROVIDER: ${AI_PROVIDER:-openai}
+            AI_MODEL: ${AI_MODEL}
+            AI_BASE_URL: ${AI_BASE_URL}
+            AI_API_KEY: ${AI_API_KEY}
+            AI_PROACTIVE_THRESHOLD: ${AI_PROACTIVE_THRESHOLD:-0.7}
+            AI_MAX_TOOL_STEPS: ${AI_MAX_TOOL_STEPS:-5}
+            AI_REPLY_THRESHOLD: ${AI_REPLY_THRESHOLD:-6}
             PORT: "8780"
         volumes:
             - opentrip-uploads:/app/apps/api/uploads

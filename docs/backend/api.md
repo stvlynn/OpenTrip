@@ -10,7 +10,8 @@ Hono routes under `apps/api/src/interfaces/http`. Reference:
 - Error envelope: `{ "error": { "code": string, "message": string } }`.
 - Status codes: `200` ok, `400` validation, `401` unauthenticated,
   `403` forbidden (member lacks permission, e.g. a viewer attempting an edit),
-  `404` not found, `413` upload too large, `500` unexpected.
+  `404` not found, `409` conflict (agent suggestion already resolved or stale),
+  `413` upload too large, `500` unexpected.
 - Business routes require an authenticated session; unauthenticated -> `401`.
   Trip routes additionally require membership: non-members get `404` (existence
   is not leaked) and read-only viewers attempting a mutation get `403`.
@@ -40,7 +41,15 @@ Hono routes under `apps/api/src/interfaces/http`. Reference:
 | GET | `/api/trip-invites/:token` | Public preview of an invite: `{ tripId, tripTitle, inviterName, memberCount, role, accessScope, status, alreadyMember, expiresAt }`. `status` is `usable \| expired \| revoked \| email_restricted` |
 | POST | `/api/trip-invites/:token/accept` | Accept an invite (auth required); adds the caller as a member and returns `{ tripId, joined }`. Idempotent for existing members |
 | PUT | `/api/users/preferences` | Update current-user UI preferences `{ plannerSidebarWidth: number, plannerSidebarCollapsed: boolean }`; both values are validated |
-| GET | `/api/users/preferences` | Read current-user UI preferences `{ userId, plannerSidebar: { width, collapsed }, updatedAt }` |
+| PUT | `/api/users/preferences/agent-panel` | Update the agent panel collapsed state `{ collapsed: boolean }` |
+| GET | `/api/users/preferences` | Read current-user UI preferences `{ userId, plannerSidebar: { width, collapsed }, agentPanelCollapsed, updatedAt }` |
+| GET | `/api/agent/status` | Whether the trip agent is enabled in this deployment `{ enabled }` |
+| GET | `/api/trips/:tripId/agent/messages` | Shared agent session history `{ messages, suggestions }` (members only; `404` when AI is not configured) |
+| POST | `/api/trips/:tripId/agent/messages` | Post a plain member message `{ text }` into the shared session; returns `{ thresholdReached }` — when true an ambient agent reply is generated in the background and arrives via polling |
+| POST | `/api/trips/:tripId/agent/chat` | Stream an agent reply (AI SDK UI message stream, not the `{ data }` envelope). Body `{ message }` carries the latest UI message; the server persists it and rebuilds context from the shared session |
+| GET | `/api/trips/:tripId/agent/events?after=<seq>` | Polling endpoint: `{ latestSeq, messages, suggestions }` with messages after the cursor plus pending/recently-changed suggestions (dismissed ones are hidden per user) |
+| POST | `/api/trips/:tripId/agent/suggestions/:id/apply` | Apply a pending suggestion's patch through the normal domain operations; requires edit permission. `409` when the suggestion is stale (trip version changed), expired, or already resolved. Returns the updated trip |
+| POST | `/api/trips/:tripId/agent/suggestions/:id/dismiss` | Hide a suggestion's toast for the calling user only |
 | POST | `/api/users/avatar` | Upload the current user's PNG/JPEG/WebP avatar as multipart field `avatar` (maximum file size 2 MiB); updates Better Auth and cleans up the previous managed avatar |
 | DELETE | `/api/users/avatar` | Remove the current user's managed avatar and clear the Better Auth image field |
 | GET | `/api/uploads/*` | Public immutable delivery for managed uploaded avatars |

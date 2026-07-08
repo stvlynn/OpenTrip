@@ -1,7 +1,9 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
+import { containsAgentMention, type Defer } from "../../application";
+import type { OperationEvent } from "../../domain/agent";
 import { MAX_AVATAR_BYTES } from "../../application/avatar";
 import { BetterAuthCurrentUserProfile } from "../../infrastructure/auth/current-user-profile";
 import type { Container } from "../../infrastructure/composition/container";
@@ -134,6 +136,28 @@ const preferenceSchema = z.object({
   plannerSidebarCollapsed: z.boolean(),
 });
 
+const agentPanelPreferenceSchema = z.object({
+  collapsed: z.boolean(),
+});
+
+const agentPostMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4_000),
+});
+
+const agentChatSchema = z.object({
+  /** Latest UI message from the panel; null for server-triggered generation. */
+  message: z
+    .object({
+      parts: z.array(
+        z.object({ type: z.string(), text: z.string().optional() }).passthrough(),
+      ),
+    })
+    .nullable()
+    .optional(),
+});
+
+const agentEventsQuerySchema = z.coerce.number().int().min(0).default(0);
+
 export function createApp(container: Container) {
   const {
     auth,
@@ -144,7 +168,38 @@ export function createApp(container: Container) {
     fileStorage,
     config,
     weatherService,
+    agentService,
   } = container;
+
+  /** Schedule work past the response: waitUntil on Workers, floating on Node. */
+  const deferOf = (c: Context<Env>): Defer => (task) => {
+    const guarded = task.catch((err) =>
+      console.error("Deferred agent task failed:", err),
+    );
+    try {
+      c.executionCtx.waitUntil(guarded);
+    } catch {
+      // Node runtime has no execution context; the floating promise is enough.
+    }
+  };
+
+  /** Record a whitelisted write operation in the agent session without
+   * blocking or failing the originating request. */
+  const notifyAgent = (
+    c: Context<Env>,
+    event: Omit<OperationEvent, "actorUserId" | "actorName">,
+  ) => {
+    if (!agentService) return;
+    const user = c.get("user");
+    if (!user) return;
+    const defer = deferOf(c);
+    defer(
+      agentService.recordOperation(
+        { ...event, actorUserId: user.id, actorName: user.name || user.email },
+        defer,
+      ),
+    );
+  };
 
   const inviteActor = (u: Session["user"]) => ({
     id: u.id,
@@ -258,65 +313,105 @@ export function createApp(container: Container) {
 
   guard.put("/trips/:id/days/order", async (c) => {
     const { order } = reorderDaysSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.reorderDays(c.req.param("id"), order, c.get("user")!.id),
+    const dto = await tripService.reorderDays(
+      c.req.param("id"),
+      order,
+      c.get("user")!.id,
     );
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "reorder_days",
+      summary: `reordered the itinerary days to [${order.join(", ")}]`,
+      details: { order },
+    });
+    return ok(c, dto);
   });
 
   guard.delete("/trips/:id/days/:day", async (c) => {
     const dayNumber = dayNumberSchema.parse(c.req.param("day"));
-    return ok(
-      c,
-      await tripService.deleteDay(c.req.param("id"), dayNumber, c.get("user")!.id),
+    const dto = await tripService.deleteDay(
+      c.req.param("id"),
+      dayNumber,
+      c.get("user")!.id,
     );
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "delete_day",
+      summary: `deleted day ${dayNumber}`,
+      details: { dayNumber },
+    });
+    return ok(c, dto);
   });
 
   guard.patch("/trips/:id/days/:day", async (c) => {
     const dayNumber = dayNumberSchema.parse(c.req.param("day"));
     const input = updateDaySchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.updateDay(
-        c.req.param("id"),
-        dayNumber,
-        input,
-        c.get("user")!.id,
-      ),
+    const dto = await tripService.updateDay(
+      c.req.param("id"),
+      dayNumber,
+      input,
+      c.get("user")!.id,
     );
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "update_day",
+      summary: `updated day ${dayNumber}`,
+      details: { dayNumber, changes: input },
+    });
+    return ok(c, dto);
   });
 
   guard.post("/trips/:id/stops", async (c) => {
     const input = insertStopSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.insertStop(c.req.param("id"), input, c.get("user")!.id),
+    const dto = await tripService.insertStop(
+      c.req.param("id"),
+      input,
+      c.get("user")!.id,
     );
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "insert_stop",
+      summary: `added stop "${input.name}" to day ${input.day}`,
+      details: { input },
+    });
+    return ok(c, dto);
   });
 
   guard.patch("/trips/:id/stops/:stopId", async (c) => {
     const input = updateStopSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.updateStop(
-        c.req.param("id"),
-        c.req.param("stopId"),
-        input,
-        c.get("user")!.id,
-      ),
+    const stopId = c.req.param("stopId");
+    const dto = await tripService.updateStop(
+      c.req.param("id"),
+      stopId,
+      input,
+      c.get("user")!.id,
     );
+    const stopName = dto.stops.find((s) => s.id === stopId)?.name ?? stopId;
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "update_stop",
+      summary: `updated stop "${stopName}"`,
+      details: { stopId, changes: input },
+    });
+    return ok(c, dto);
   });
 
   guard.put("/trips/:id/stops/:stopId/position", async (c) => {
     const input = moveStopSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.moveStop(
-        c.req.param("id"),
-        { stopId: c.req.param("stopId"), ...input },
-        c.get("user")!.id,
-      ),
+    const stopId = c.req.param("stopId");
+    const dto = await tripService.moveStop(
+      c.req.param("id"),
+      { stopId, ...input },
+      c.get("user")!.id,
     );
+    const stopName = dto.stops.find((s) => s.id === stopId)?.name ?? stopId;
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "move_stop",
+      summary: `moved stop "${stopName}" to day ${input.day}`,
+      details: { stopId, ...input },
+    });
+    return ok(c, dto);
   });
 
   guard.post("/trips/:id/stops/:stopId/vote", async (c) =>
@@ -332,36 +427,63 @@ export function createApp(container: Container) {
 
   guard.post("/trips/:id/stops/:stopId/comments", async (c) => {
     const { text } = commentSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.addComment(
-        c.req.param("id"),
-        c.req.param("stopId"),
-        text,
-        c.get("user")!.id,
-      ),
+    const user = c.get("user")!;
+    const stopId = c.req.param("stopId");
+    const dto = await tripService.addComment(
+      c.req.param("id"),
+      stopId,
+      text,
+      user.id,
     );
+    // An @agent mention in a stop comment enters the shared session as a
+    // question with the stop as context.
+    if (agentService && containsAgentMention(text)) {
+      const stopName = dto.stops.find((s) => s.id === stopId)?.name ?? stopId;
+      const defer = deferOf(c);
+      defer(
+        agentService.recordMention(
+          dto.id,
+          user.id,
+          `(commenting on stop "${stopName}") ${text}`,
+          defer,
+        ),
+      );
+    }
+    return ok(c, dto);
   });
 
   guard.post("/trips/:id/expenses", async (c) => {
     const input = expenseSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.addExpense(c.req.param("id"), input, c.get("user")!.id),
+    const dto = await tripService.addExpense(
+      c.req.param("id"),
+      input,
+      c.get("user")!.id,
     );
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "add_expense",
+      summary: `added expense "${input.description}" (${input.amount})`,
+      details: { input },
+    });
+    return ok(c, dto);
   });
 
   guard.patch("/trips/:id/expenses/:expenseId", async (c) => {
     const input = expenseSchema.parse(await c.req.json());
-    return ok(
-      c,
-      await tripService.updateExpense(
-        c.req.param("id"),
-        c.req.param("expenseId"),
-        input,
-        c.get("user")!.id,
-      ),
+    const expenseId = c.req.param("expenseId");
+    const dto = await tripService.updateExpense(
+      c.req.param("id"),
+      expenseId,
+      input,
+      c.get("user")!.id,
     );
+    notifyAgent(c, {
+      tripId: dto.id,
+      operation: "update_expense",
+      summary: `updated expense "${input.description}"`,
+      details: { expenseId, changes: input },
+    });
+    return ok(c, dto);
   });
 
   guard.post("/trips/:id/invites", async (c) => {
@@ -442,6 +564,92 @@ export function createApp(container: Container) {
       ),
     );
   });
+
+  guard.put("/users/preferences/agent-panel", async (c) => {
+    const user = c.get("user")!;
+    const input = agentPanelPreferenceSchema.parse(await c.req.json());
+    return ok(c, await preferenceService.updateAgentPanel(user.id, input.collapsed));
+  });
+
+  // Whether the trip agent is available in this deployment.
+  guard.get("/agent/status", (c) => ok(c, { enabled: agentService !== null }));
+
+  // Trip agent session routes. All 404 when AI is not configured.
+  const agent = new Hono<Env>();
+  agent.use("*", async (c, next) => {
+    if (!agentService) return fail(c, "agent_disabled", "Agent is not enabled", 404);
+    await next();
+  });
+
+  agent.get("/messages", async (c) =>
+    ok(
+      c,
+      await agentService!.getHistory(c.req.param("tripId")!, c.get("user")!.id),
+    ),
+  );
+
+  agent.post("/messages", async (c) => {
+    const { text } = agentPostMessageSchema.parse(await c.req.json());
+    return ok(
+      c,
+      await agentService!.postMessage(
+        c.req.param("tripId")!,
+        c.get("user")!.id,
+        text,
+        deferOf(c),
+      ),
+    );
+  });
+
+  agent.post("/chat", async (c) => {
+    const input = agentChatSchema.parse(await c.req.json());
+    const text = input.message
+      ? input.message.parts
+          .filter((p) => p.type === "text" && typeof p.text === "string")
+          .map((p) => p.text)
+          .join("\n")
+      : null;
+    // Streaming response: returned as-is, outside the { data } envelope.
+    return agentService!.streamChat(
+      c.req.param("tripId")!,
+      c.get("user")!.id,
+      text,
+    );
+  });
+
+  agent.get("/events", async (c) => {
+    const afterSeq = agentEventsQuerySchema.parse(c.req.query("after"));
+    return ok(
+      c,
+      await agentService!.listEvents(
+        c.req.param("tripId")!,
+        c.get("user")!.id,
+        afterSeq,
+      ),
+    );
+  });
+
+  agent.post("/suggestions/:suggestionId/apply", async (c) =>
+    ok(
+      c,
+      await agentService!.applySuggestion(
+        c.req.param("tripId")!,
+        c.req.param("suggestionId"),
+        c.get("user")!.id,
+      ),
+    ),
+  );
+
+  agent.post("/suggestions/:suggestionId/dismiss", async (c) => {
+    await agentService!.dismissSuggestion(
+      c.req.param("tripId")!,
+      c.req.param("suggestionId"),
+      c.get("user")!.id,
+    );
+    return ok(c, { dismissed: true });
+  });
+
+  guard.route("/trips/:tripId/agent", agent);
 
   app.route("/api", guard);
 

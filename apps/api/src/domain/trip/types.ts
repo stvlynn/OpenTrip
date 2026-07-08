@@ -90,6 +90,9 @@ export interface TripSnapshot {
   title: string;
   status: TripStatus;
   currency: string;
+  /** Monotonic write counter bumped on every persisted mutation. Used to
+   * detect stale agent suggestions before applying their patches. */
+  version: number;
   /** Trip start date as an ISO `YYYY-MM-DD` string, or "" when unknown.
    * Day dates are derived from this by offsetting by (day.number - 1). */
   startDate: string;

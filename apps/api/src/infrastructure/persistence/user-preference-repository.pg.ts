@@ -10,17 +10,34 @@ const DEFAULT_PREFERENCE: PlannerSidebarPreference = {
   collapsed: false,
 };
 
+const DEFAULT_AGENT_PANEL_COLLAPSED = true;
+
+interface PreferenceRow {
+  planner_sidebar_width: number;
+  planner_sidebar_collapsed: boolean;
+  agent_panel_collapsed: boolean;
+  updated_at: Date;
+}
+
+function toSnapshot(userId: string, row: PreferenceRow): UserPreferenceSnapshot {
+  return {
+    userId,
+    plannerSidebar: {
+      width: Number(row.planner_sidebar_width),
+      collapsed: row.planner_sidebar_collapsed,
+    },
+    agentPanelCollapsed: row.agent_panel_collapsed,
+    updatedAt: row.updated_at,
+  };
+}
+
 /** PostgreSQL adapter for per-user UI preferences. */
 export class PgUserPreferenceRepository implements UserPreferenceRepository {
   constructor(private pool: Pool) {}
 
   async findByUserId(userId: string): Promise<UserPreferenceSnapshot> {
-    const { rows } = await this.pool.query<{
-      planner_sidebar_width: number;
-      planner_sidebar_collapsed: boolean;
-      updated_at: Date;
-    }>(
-      `SELECT planner_sidebar_width, planner_sidebar_collapsed, updated_at
+    const { rows } = await this.pool.query<PreferenceRow>(
+      `SELECT planner_sidebar_width, planner_sidebar_collapsed, agent_panel_collapsed, updated_at
        FROM user_preferences
        WHERE user_id = $1`,
       [userId],
@@ -31,18 +48,12 @@ export class PgUserPreferenceRepository implements UserPreferenceRepository {
       return {
         userId,
         plannerSidebar: { ...DEFAULT_PREFERENCE },
+        agentPanelCollapsed: DEFAULT_AGENT_PANEL_COLLAPSED,
         updatedAt: new Date(),
       };
     }
 
-    return {
-      userId,
-      plannerSidebar: {
-        width: Number(row.planner_sidebar_width),
-        collapsed: row.planner_sidebar_collapsed,
-      },
-      updatedAt: row.updated_at,
-    };
+    return toSnapshot(userId, row);
   }
 
   async updatePlannerSidebar(
@@ -50,11 +61,7 @@ export class PgUserPreferenceRepository implements UserPreferenceRepository {
     width: number,
     collapsed: boolean,
   ): Promise<UserPreferenceSnapshot> {
-    const { rows } = await this.pool.query<{
-      planner_sidebar_width: number;
-      planner_sidebar_collapsed: boolean;
-      updated_at: Date;
-    }>(
+    const { rows } = await this.pool.query<PreferenceRow>(
       `INSERT INTO user_preferences (user_id, planner_sidebar_width, planner_sidebar_collapsed, updated_at)
        VALUES ($1, $2, $3, now())
        ON CONFLICT (user_id)
@@ -62,18 +69,28 @@ export class PgUserPreferenceRepository implements UserPreferenceRepository {
          planner_sidebar_width = EXCLUDED.planner_sidebar_width,
          planner_sidebar_collapsed = EXCLUDED.planner_sidebar_collapsed,
          updated_at = EXCLUDED.updated_at
-       RETURNING planner_sidebar_width, planner_sidebar_collapsed, updated_at`,
+       RETURNING planner_sidebar_width, planner_sidebar_collapsed, agent_panel_collapsed, updated_at`,
       [userId, width, collapsed],
     );
 
-    const row = rows[0]!;
-    return {
-      userId,
-      plannerSidebar: {
-        width: Number(row.planner_sidebar_width),
-        collapsed: row.planner_sidebar_collapsed,
-      },
-      updatedAt: row.updated_at,
-    };
+    return toSnapshot(userId, rows[0]!);
+  }
+
+  async updateAgentPanel(
+    userId: string,
+    collapsed: boolean,
+  ): Promise<UserPreferenceSnapshot> {
+    const { rows } = await this.pool.query<PreferenceRow>(
+      `INSERT INTO user_preferences (user_id, agent_panel_collapsed, updated_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         agent_panel_collapsed = EXCLUDED.agent_panel_collapsed,
+         updated_at = EXCLUDED.updated_at
+       RETURNING planner_sidebar_width, planner_sidebar_collapsed, agent_panel_collapsed, updated_at`,
+      [userId, collapsed],
+    );
+
+    return toSnapshot(userId, rows[0]!);
   }
 }

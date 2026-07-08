@@ -39,4 +39,7 @@ export const queryKeys = {
   trip: (id: string) => ["trips", id] as const,
   session: ["session"] as const,
   preferences: ["preferences"] as const,
+  agentStatus: ["agent", "status"] as const,
+  agentMessages: (tripId: string) => ["agent", tripId, "messages"] as const,
+  agentEvents: (tripId: string) => ["agent", tripId, "events"] as const,
 };

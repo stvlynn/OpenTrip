@@ -8,6 +8,7 @@ export interface PlannerSidebarPreference {
 export interface UserPreference {
   userId: string;
   plannerSidebar: PlannerSidebarPreference;
+  agentPanelCollapsed: boolean;
   updatedAt: string;
 }
 
@@ -26,5 +27,14 @@ export function updatePreferences(
   return apiFetch<UserPreference>("/api/users/preferences", {
     method: "PUT",
     body: JSON.stringify(input),
+  });
+}
+
+export function updateAgentPanelPreference(
+  collapsed: boolean,
+): Promise<UserPreference> {
+  return apiFetch<UserPreference>("/api/users/preferences/agent-panel", {
+    method: "PUT",
+    body: JSON.stringify({ collapsed }),
   });
 }

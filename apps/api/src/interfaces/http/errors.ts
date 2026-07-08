@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { ZodError } from "zod";
 import { WeatherError } from "../../application/weather/weather-error";
 import { DomainError, NotFoundError } from "../../domain/shared/errors";
-import { ForbiddenError } from "../../application";
+import { ConflictError, ForbiddenError } from "../../application";
 import { AvatarError } from "../../application/avatar";
 import { fail } from "./response";
 
@@ -13,6 +13,9 @@ export function handleError(err: Error, c: Context) {
   }
   if (err instanceof ForbiddenError) {
     return fail(c, err.code, err.message, 403);
+  }
+  if (err instanceof ConflictError) {
+    return fail(c, err.code, err.message, 409);
   }
   if (err instanceof DomainError) {
     return fail(c, err.code, err.message, 400);

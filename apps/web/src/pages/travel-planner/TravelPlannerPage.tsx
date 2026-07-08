@@ -14,6 +14,12 @@ import {
   reversePlace,
   fetchPreferences,
   updatePreferences,
+  updateAgentPanelPreference,
+  fetchAgentStatus,
+  applyAgentSuggestion,
+  dismissAgentSuggestion,
+  ApiError,
+  type AgentSuggestion,
 } from "@/shared/api";
 import { queryKeys } from "@/shared/config";
 import { stopNumbers } from "@/entities/trip";
@@ -24,8 +30,13 @@ import { AppSidebar } from "@/widgets/app-sidebar";
 import { Spinner } from "@/shared/ui/spinner";
 import { Tabs } from "@/shared/ui/tabs";
 import { Splitter, clamp } from "@/shared/ui/splitter";
+import { toastManager } from "@/shared/ui/toast";
 import { useTripActions } from "./model/useTripActions";
+import { useAgentEvents } from "./model/useAgentEvents";
 import { Sidebar } from "./ui/Sidebar";
+import { AgentToggle } from "./ui/agent/AgentToggle";
+import { AgentDrawer } from "./ui/agent/AgentDrawer";
+import { AgentInterventionToasts } from "./ui/agent/AgentInterventionToast";
 import { TripMapView } from "./ui/TripMapView";
 import { ScheduleBoard, type ComposeDraft } from "./ui/ScheduleBoard";
 import { BudgetBoard } from "./ui/BudgetBoard";
@@ -41,6 +52,7 @@ const SIDEBAR_STEP = 1;
 export function TravelPlannerPage({ tripId }: { tripId: string }) {
   const { t } = useTranslation("planner");
   const { t: tc } = useTranslation("common");
+  const { t: ta } = useTranslation("agent");
   const { navigate } = useRouter();
   const { data: session } = useSession();
   const currentUserId = session?.user?.id ?? "lynn";
@@ -126,6 +138,103 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
       return next;
     });
   }, [persistSidebar]);
+
+  // ----- Trip agent (only active when the deployment has AI configured) -----
+  const { data: agentStatus } = useQuery({
+    queryKey: queryKeys.agentStatus,
+    queryFn: fetchAgentStatus,
+    staleTime: Infinity,
+  });
+  const agentEnabled = agentStatus?.enabled ?? false;
+
+  const [agentCollapsed, setAgentCollapsed] = useState(true);
+  useEffect(() => {
+    if (preferences) setAgentCollapsed(preferences.agentPanelCollapsed);
+  }, [preferences]);
+
+  const agentPanelMutation = useMutation({
+    mutationFn: updateAgentPanelPreference,
+    onSuccess: (data) => queryClient.setQueryData(queryKeys.preferences, data),
+  });
+  const setAgentPanel = useCallback(
+    (collapsed: boolean) => {
+      setAgentCollapsed(collapsed);
+      agentPanelMutation.mutate(collapsed);
+    },
+    [agentPanelMutation],
+  );
+
+  const suggestions = useAgentEvents(tripId, agentEnabled);
+  const pendingSuggestions = useMemo(
+    () => suggestions.filter((s) => s.status === "pending"),
+    [suggestions],
+  );
+
+  // Retire toasts and refresh the trip when someone else applies a suggestion.
+  const seenPendingRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const s of suggestions) {
+      if (s.status === "pending") {
+        seenPendingRef.current.add(s.id);
+      } else if (seenPendingRef.current.delete(s.id) && s.status === "applied") {
+        if (s.appliedBy && s.appliedBy !== currentUserId) {
+          const name =
+            trip?.members.find((m) => m.userId === s.appliedBy)?.name ?? "";
+          toastManager.add({
+            title: name
+              ? ta("toast.appliedByOther", { name })
+              : ta("toast.applied"),
+            type: "info",
+          });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.trip(tripId) });
+        }
+      }
+    }
+  }, [suggestions, currentUserId, trip, ta, queryClient, tripId]);
+
+  const applySuggestionMutation = useMutation({
+    mutationFn: (suggestionId: string) => applyAgentSuggestion(tripId, suggestionId),
+    onSuccess: (updatedTrip) => {
+      queryClient.setQueryData(queryKeys.trip(tripId), updatedTrip);
+      toastManager.add({ title: ta("toast.applied"), type: "success" });
+    },
+    onError: (err) => {
+      const stale =
+        err instanceof ApiError &&
+        (err.status === 409 || err.code === "suggestion_stale");
+      toastManager.add({
+        title: stale ? ta("toast.stale") : ta("toast.applyError"),
+        type: "error",
+      });
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.agentEvents(tripId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.agentMessages(tripId) });
+    },
+  });
+
+  const dismissSuggestionMutation = useMutation({
+    mutationFn: (suggestionId: string) => dismissAgentSuggestion(tripId, suggestionId),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.agentEvents(tripId) });
+    },
+  });
+
+  const handleApplySuggestion = useCallback(
+    (s: AgentSuggestion) => applySuggestionMutation.mutate(s.id),
+    [applySuggestionMutation],
+  );
+  const handleDiscussSuggestion = useCallback(
+    () => setAgentPanel(false),
+    [setAgentPanel],
+  );
+  const handleDismissSuggestion = useCallback(
+    (s: AgentSuggestion) => dismissSuggestionMutation.mutate(s.id),
+    [dismissSuggestionMutation],
+  );
+  const applyingSuggestionId = applySuggestionMutation.isPending
+    ? applySuggestionMutation.variables
+    : null;
 
   const rename = useMutation({
     mutationFn: (title: string) => renameTrip(tripId, title),
@@ -414,9 +523,37 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
             members={trip.members}
             canInvite={trip.permissions.canInvite}
           />
-        </main>
+
+          {agentEnabled && !agentCollapsed ? (
+            <AgentDrawer
+              tripId={trip.id}
+              canEdit={trip.permissions.canEdit}
+              applyingId={applyingSuggestionId ?? null}
+              onApplySuggestion={handleApplySuggestion}
+              onClose={() => setAgentPanel(true)}
+            />
+          ) : null}
+      </main>
       </div>
       </Splitter>
+
+      {agentEnabled && agentCollapsed ? (
+        <AgentToggle
+          onOpen={() => setAgentPanel(false)}
+          reserveMapControls={tab === "map"}
+        />
+      ) : null}
+
+      {agentEnabled ? (
+        <AgentInterventionToasts
+          suggestions={pendingSuggestions}
+          canEdit={trip.permissions.canEdit}
+          applyingId={applyingSuggestionId ?? null}
+          onApply={handleApplySuggestion}
+          onDiscuss={handleDiscussSuggestion}
+          onDismiss={handleDismissSuggestion}
+        />
+      ) : null}
     </div>
   );
 }

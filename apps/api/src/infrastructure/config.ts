@@ -14,6 +14,19 @@ export interface CaptchaConfig {
     secretKey: string;
 }
 
+export interface AiConfig {
+    provider: string;
+    model: string;
+    baseUrl: string | null;
+    apiKey: string;
+    /** Minimum model confidence in [0, 1] before a proactive toast is created. */
+    proactiveThreshold: number;
+    /** Upper bound on tool-call steps per chat generation. */
+    maxToolSteps: number;
+    /** Member messages since the last assistant reply that trigger an ambient reply. */
+    replyThreshold: number;
+}
+
 export interface AppConfig {
     databaseUrl: string;
     betterAuthSecret: string;
@@ -23,6 +36,8 @@ export interface AppConfig {
     googleOAuth: GoogleOAuthConfig | null;
     captcha: CaptchaConfig | null;
     openWeatherMapApiKey: string | undefined;
+    /** Trip agent model configuration. Null disables the agent entirely. */
+    ai: AiConfig | null;
 }
 
 interface StorageConfigBase {
@@ -67,6 +82,13 @@ export interface RawEnv {
     S3_FORCE_PATH_STYLE?: string;
     OPENWEATHERMAP_API_KEY?: string;
     VITE_OPENWEATHERMAP_API_KEY?: string;
+    AI_PROVIDER?: string;
+    AI_MODEL?: string;
+    AI_BASE_URL?: string;
+    AI_API_KEY?: string;
+    AI_PROACTIVE_THRESHOLD?: string;
+    AI_MAX_TOOL_STEPS?: string;
+    AI_REPLY_THRESHOLD?: string;
 }
 
 const CAPTCHA_PROVIDERS: CaptchaProvider[] = [
@@ -135,7 +157,42 @@ export function loadConfig(env: RawEnv, connectionString?: string): AppConfig {
         openWeatherMapApiKey:
           env.OPENWEATHERMAP_API_KEY?.trim() ||
           env.VITE_OPENWEATHERMAP_API_KEY?.trim(),
+        ai: parseAiConfig(env),
     };
+}
+
+/** Agent config. Requires AI_MODEL and AI_API_KEY together; absence of either
+ * disables the trip agent rather than failing startup. */
+function parseAiConfig(env: RawEnv): AiConfig | null {
+    const model = env.AI_MODEL?.trim();
+    const apiKey = env.AI_API_KEY?.trim();
+    if (!model || !apiKey) return null;
+
+    return {
+        provider: env.AI_PROVIDER?.trim() || "openai",
+        model,
+        baseUrl: env.AI_BASE_URL?.trim() || null,
+        apiKey,
+        proactiveThreshold: parseNumber(
+            env.AI_PROACTIVE_THRESHOLD,
+            "AI_PROACTIVE_THRESHOLD",
+            0.7,
+        ),
+        maxToolSteps: parseNumber(env.AI_MAX_TOOL_STEPS, "AI_MAX_TOOL_STEPS", 5),
+        replyThreshold: parseNumber(env.AI_REPLY_THRESHOLD, "AI_REPLY_THRESHOLD", 6),
+    };
+}
+
+function parseNumber(
+    value: string | undefined,
+    name: string,
+    fallback: number,
+): number {
+    const trimmed = value?.trim();
+    if (!trimmed) return fallback;
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) throw new Error(`${name} must be a number`);
+    return parsed;
 }
 
 function loadStorageConfig(env: RawEnv, publicUrl: string): StorageConfig {

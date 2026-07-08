@@ -200,6 +200,7 @@ export class Trip {
       title,
       status: "planning",
       currency: draft.currency?.trim() || "JPY",
+      version: 0,
       startDate,
       ownerId: owner.id,
       members: [

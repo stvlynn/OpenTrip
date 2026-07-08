@@ -24,6 +24,15 @@ widgets and features. Two pages:
   persists the resulting width/collapse state through the backend preferences
   API.
 
+  The trip agent (see [../backend/agent.md](../backend/agent.md)) is also
+  page-private: `ui/agent/` holds the top-right sparkle toggle (mirroring the
+  left sidebar's expand control), the inset right drawer with the shared chat,
+  and the bottom-right intervention cards; `model/useAgentChat.ts` wraps AI SDK
+  UI's `useChat` (streaming buffer only — the shared history lives in React
+  Query), and `model/useAgentEvents.ts` polls the session every 12 s for all
+  members. The panel's collapsed state persists via the preferences API. All of
+  it renders only when `GET /api/agent/status` reports the agent enabled.
+
 Pages may hold page-specific state and data fetching (Pages First).
 
 ## widgets

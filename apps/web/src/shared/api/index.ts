@@ -42,7 +42,24 @@ export {
 export {
   fetchPreferences,
   updatePreferences,
+  updateAgentPanelPreference,
   type UserPreference,
   type UpdatePreferencesInput,
 } from "./preferences";
+export {
+  fetchAgentStatus,
+  fetchAgentMessages,
+  postAgentMessage,
+  fetchAgentEvents,
+  applyAgentSuggestion,
+  dismissAgentSuggestion,
+  type AgentMessage,
+  type AgentMessagePart,
+  type AgentMessageSource,
+  type AgentSuggestion,
+  type AgentSuggestionStatus,
+  type AgentSeverity,
+  type AgentHistory,
+  type AgentEvents,
+} from "./agent";
 export { fetchWeather, type WeatherData } from "./weather";

@@ -130,8 +130,9 @@ export class PgTripRepository implements TripRepository {
       currency: string;
       start_date: string;
       owner_id: string;
+      version: number;
     }>(
-      `SELECT id, title, status, currency, start_date, owner_id FROM trips WHERE id = $1`,
+      `SELECT id, title, status, currency, start_date, owner_id, version FROM trips WHERE id = $1`,
       [id],
     );
     const base = tripRes.rows[0];
@@ -266,6 +267,7 @@ export class PgTripRepository implements TripRepository {
       title: base.title,
       status: base.status as TripStatus,
       currency: base.currency,
+      version: Number(base.version),
       startDate: base.start_date ?? "",
       ownerId: base.owner_id,
       members: (members.rows as Array<Record<string, unknown>>).map((m) => ({
@@ -356,7 +358,10 @@ export class PgTripRepository implements TripRepository {
   }
 
   async rename(id: string, title: string): Promise<void> {
-    await this.pool.query(`UPDATE trips SET title = $2 WHERE id = $1`, [id, title]);
+    await this.pool.query(
+      `UPDATE trips SET title = $2, version = version + 1 WHERE id = $1`,
+      [id, title],
+    );
   }
 
   async addDay(tripId: string, day: DaySnapshot): Promise<void> {
@@ -366,6 +371,7 @@ export class PgTripRepository implements TripRepository {
        ON CONFLICT (trip_id, number) DO NOTHING`,
       [tripId, day.number, day.date, day.dateLabel, day.city, day.color],
     );
+    await bumpVersion(this.pool, tripId);
   }
 
   async updateDay(tripId: string, day: DaySnapshot): Promise<void> {
@@ -374,6 +380,7 @@ export class PgTripRepository implements TripRepository {
        WHERE trip_id = $1 AND number = $2`,
       [tripId, day.number, day.date, day.dateLabel, day.city, day.color],
     );
+    await bumpVersion(this.pool, tripId);
   }
 
   async reorderDays(trip: Trip): Promise<void> {
@@ -393,6 +400,7 @@ export class PgTripRepository implements TripRepository {
       }
       await client.query(`DELETE FROM stops WHERE trip_id = $1`, [s.id]);
       await insertStops(client, s.id, s.stops);
+      await bumpVersion(client, s.id);
       await client.query("COMMIT");
     } catch (err) {
       await client.query("ROLLBACK");
@@ -442,6 +450,7 @@ export class PgTripRepository implements TripRepository {
         }
       }
 
+      await bumpVersion(client, s.id);
       await client.query("COMMIT");
     } catch (err) {
       await client.query("ROLLBACK");
@@ -450,6 +459,17 @@ export class PgTripRepository implements TripRepository {
       client.release();
     }
   }
+}
+
+/** Increment the trip's write counter so agent patches computed against an
+ * older state can be detected as stale. */
+async function bumpVersion(
+  executor: Pick<PoolClient, "query">,
+  tripId: string,
+): Promise<void> {
+  await executor.query(`UPDATE trips SET version = version + 1 WHERE id = $1`, [
+    tripId,
+  ]);
 }
 
 /** Insert stops with their votes and comments. Caller manages the surrounding

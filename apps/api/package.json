@@ -25,10 +25,13 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.9",
+    "@ai-sdk/openai-compatible": "^3.0.6",
     "@aws-sdk/client-s3": "^3.850.0",
     "@hono/node-server": "^1.13.7",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "ai": "^7.0.18",
     "better-auth": "^1.2.7",
     "hono": "^4.6.15",
     "pg": "^8.13.1",

@@ -1,0 +1,25 @@
+{
+  "toggle": {
+    "open": "打开行程助手",
+    "close": "收起行程助手"
+  },
+  "panel": {
+    "title": "行程助手",
+    "empty": "助手会安静地关注这次行程。@agent 可以向它提问。",
+    "inputPlaceholder": "聊聊这次行程…(@agent 让助手回复)",
+    "send": "发送",
+    "agentName": "助手",
+    "systemName": "系统",
+    "operationBy": "{{name}}"
+  },
+  "toast": {
+    "title": "助手建议",
+    "apply": "应用建议",
+    "discuss": "讨论",
+    "dismiss": "忽略",
+    "applied": "建议已应用",
+    "appliedByOther": "{{name}} 应用了一条助手建议",
+    "stale": "建议已过期——行程已发生变化",
+    "applyError": "无法应用该建议"
+  }
+}

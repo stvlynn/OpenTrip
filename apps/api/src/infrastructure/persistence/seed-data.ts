@@ -123,6 +123,7 @@ function buildJapan(): SeedTrip {
     title: "Japan · Autumn",
     status: "active",
     currency: "JPY",
+    version: 0,
     startDate: "2025-10-12",
     ownerId: "demo",
     members: members(),

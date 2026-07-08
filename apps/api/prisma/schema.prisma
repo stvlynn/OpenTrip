@@ -26,6 +26,52 @@ model account {
   @@index([userId], map: "account_user_id_idx")
 }
 
+model agent_messages {
+  id            String   @id
+  seq           BigInt   @unique(map: "agent_messages_seq_unique") @default(autoincrement())
+  trip_id       String
+  role          String
+  parts         Json
+  actor_user_id String?
+  source        String   @default("chat")
+  trip_version  Int      @default(0)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  trips         trips    @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([trip_id, seq], map: "agent_messages_trip_seq_idx")
+}
+
+model agent_suggestion_dismissals {
+  suggestion_id     String
+  user_id           String
+  dismissed_at      DateTime          @default(now()) @db.Timestamptz(6)
+  agent_suggestions agent_suggestions @relation(fields: [suggestion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([suggestion_id, user_id])
+}
+
+model agent_suggestions {
+  id                          String                        @id
+  trip_id                     String
+  message_id                  String?
+  status                      String                        @default("pending")
+  severity                    String
+  confidence                  Float
+  reason                      String
+  suggestion_text             String
+  patch                       Json
+  trip_version                Int
+  expires_at                  DateTime?                     @db.Timestamptz(6)
+  applied_by                  String?
+  applied_at                  DateTime?                     @db.Timestamptz(6)
+  created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  agent_suggestion_dismissals agent_suggestion_dismissals[]
+  trips                       trips                         @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([trip_id, status], map: "agent_suggestions_trip_status_idx")
+}
+
 model expense_participants {
   expense_id String
   member_id  String
@@ -181,20 +227,23 @@ model trip_members {
 }
 
 model trips {
-  id           String         @id
-  title        String
-  start_date   String
-  end_date     String
-  status       String
-  currency     String         @default("JPY")
-  cover_color  String         @default("#3f6fc9")
-  owner_id     String?
-  created_at   DateTime       @default(now()) @db.Timestamptz(6)
-  expenses     expenses[]
-  stops        stops[]
-  trip_days    trip_days[]
-  trip_invites trip_invites[]
-  trip_members trip_members[]
+  id                String              @id
+  title             String
+  start_date        String
+  end_date          String
+  status            String
+  currency          String              @default("JPY")
+  cover_color       String              @default("#3f6fc9")
+  owner_id          String?
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  version           Int                 @default(0)
+  agent_messages    agent_messages[]
+  agent_suggestions agent_suggestions[]
+  expenses          expenses[]
+  stops             stops[]
+  trip_days         trip_days[]
+  trip_invites      trip_invites[]
+  trip_members      trip_members[]
 }
 
 model user {
@@ -216,6 +265,7 @@ model user_preferences {
   planner_sidebar_width     Decimal  @default(30) @db.Decimal
   planner_sidebar_collapsed Boolean  @default(false)
   updated_at                DateTime @default(now()) @db.Timestamptz(6)
+  agent_panel_collapsed     Boolean  @default(true)
   user                      user     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 

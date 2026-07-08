@@ -1,0 +1,25 @@
+{
+  "toggle": {
+    "open": "Open trip agent",
+    "close": "Close trip agent"
+  },
+  "panel": {
+    "title": "Trip agent",
+    "empty": "The agent watches this trip quietly. Mention @agent to ask something.",
+    "inputPlaceholder": "Ask about this trip… (@agent for a reply)",
+    "send": "Send",
+    "agentName": "Agent",
+    "systemName": "System",
+    "operationBy": "{{name}}"
+  },
+  "toast": {
+    "title": "Agent suggestion",
+    "apply": "Apply",
+    "discuss": "Discuss",
+    "dismiss": "Ignore",
+    "applied": "Suggestion applied",
+    "appliedByOther": "{{name}} applied an agent suggestion",
+    "stale": "Suggestion outdated — the trip has changed",
+    "applyError": "Could not apply the suggestion"
+  }
+}

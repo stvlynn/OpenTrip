@@ -26,6 +26,7 @@ Travel Planner SaaS — plan trips together, split everything.
 - [backend/api.md](backend/api.md)
 - [backend/database.md](backend/database.md)
 - [backend/auth.md](backend/auth.md)
+- [backend/agent.md](backend/agent.md)
 
 ### Operations and quality
 

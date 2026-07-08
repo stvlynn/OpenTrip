@@ -4,6 +4,7 @@ import type { UserPreferenceDto } from "./dto";
 function toDto(snapshot: {
   userId: string;
   plannerSidebar: { width: number; collapsed: boolean };
+  agentPanelCollapsed: boolean;
   updatedAt: Date;
 }): UserPreferenceDto {
   return {
@@ -12,6 +13,7 @@ function toDto(snapshot: {
       width: snapshot.plannerSidebar.width,
       collapsed: snapshot.plannerSidebar.collapsed,
     },
+    agentPanelCollapsed: snapshot.agentPanelCollapsed,
     updatedAt: snapshot.updatedAt.toISOString(),
   };
 }
@@ -30,5 +32,12 @@ export class PreferenceService {
     collapsed: boolean,
   ): Promise<UserPreferenceDto> {
     return toDto(await this.repo.updatePlannerSidebar(userId, width, collapsed));
+  }
+
+  async updateAgentPanel(
+    userId: string,
+    collapsed: boolean,
+  ): Promise<UserPreferenceDto> {
+    return toDto(await this.repo.updateAgentPanel(userId, collapsed));
   }
 }

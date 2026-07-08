@@ -65,6 +65,12 @@ origin), `TRUSTED_ORIGINS` (Pages origin), and the non-secret S3-compatible R2
 configuration as vars. The Worker does not use a native filesystem or R2
 binding; all object storage configuration is supplied through env values.
 
+To enable the trip agent (see [../backend/agent.md](../backend/agent.md)), set
+`AI_API_KEY` as a secret and `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, and the
+threshold vars (`AI_PROACTIVE_THRESHOLD`, `AI_MAX_TOOL_STEPS`,
+`AI_REPLY_THRESHOLD`) as vars. Without `AI_MODEL` + `AI_API_KEY` the agent
+routes respond 404 and the frontend hides the entry point.
+
 ## Rollback
 
 ```bash

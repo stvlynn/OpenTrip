@@ -10,4 +10,9 @@ export interface UserPreferenceRepository {
     width: number,
     collapsed: boolean,
   ): Promise<UserPreferenceSnapshot>;
+  /** Persist the agent panel collapsed state for a user. */
+  updateAgentPanel(
+    userId: string,
+    collapsed: boolean,
+  ): Promise<UserPreferenceSnapshot>;
 }

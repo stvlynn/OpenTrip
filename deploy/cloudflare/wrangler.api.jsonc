@@ -28,6 +28,14 @@
     "S3_BUCKET": "opentrip-uploads",
     "S3_REGION": "auto",
     "S3_ENDPOINT": "https://<account-id>.r2.cloudflarestorage.com",
-    "S3_FORCE_PATH_STYLE": "false"
+    "S3_FORCE_PATH_STYLE": "false",
+    // Trip agent. Leave AI_MODEL empty (and skip the AI_API_KEY secret) to
+    // disable the agent entirely.
+    "AI_PROVIDER": "openai",
+    "AI_MODEL": "",
+    "AI_BASE_URL": "",
+    "AI_PROACTIVE_THRESHOLD": "0.7",
+    "AI_MAX_TOOL_STEPS": "5",
+    "AI_REPLY_THRESHOLD": "6"
   }
 }

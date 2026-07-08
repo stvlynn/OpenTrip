@@ -14,3 +14,15 @@ export { type UserPreferenceDto } from "./preferences/dto";
 export { WeatherService } from "./weather/weather-service";
 export { type WeatherData } from "./weather/weather-data";
 export { WeatherError } from "./weather/weather-error";
+export {
+  AgentService,
+  ConflictError,
+  containsAgentMention,
+  type Defer,
+} from "./agent/agent-service";
+export {
+  type AgentMessageDto,
+  type AgentSuggestionDto,
+  type AgentHistoryDto,
+  type AgentEventsDto,
+} from "./agent/dto";

@@ -16,5 +16,7 @@ export interface PlannerSidebarPreference {
 export interface UserPreferenceSnapshot {
   userId: string;
   plannerSidebar: PlannerSidebarPreference;
+  /** Whether the trip agent panel is collapsed. Collapsed by default. */
+  agentPanelCollapsed: boolean;
   updatedAt: Date;
 }
