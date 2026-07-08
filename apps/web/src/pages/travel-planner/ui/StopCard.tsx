@@ -5,6 +5,7 @@ import type {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { Trip } from "@/entities/trip";
+import { stopDateTime } from "@/entities/trip";
 import { CategoryIcon, type Stop } from "@/entities/stop";
 import { useWeather } from "@/features/weather";
 import { cn, formatMoney } from "@/shared/lib";
@@ -44,9 +45,12 @@ export function StopCard({
   onSelect,
 }: StopCardProps) {
   const { t } = useTranslation("planner");
+  const dateTime = stopDateTime(trip, stop);
   const { data: weather } = useWeather(
     stop.lat,
     stop.lng,
+    dateTime?.date,
+    dateTime?.time,
     !stop.transit,
   );
 

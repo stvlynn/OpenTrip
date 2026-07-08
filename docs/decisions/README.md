@@ -18,3 +18,5 @@ Each ADR uses: **Context**, **Decision**, **Consequences**, **Status**
 - [0003-i18n.md](0003-i18n.md) — react-i18next and centralized copy.
 - [0004-env-configured-object-storage.md](0004-env-configured-object-storage.md) —
   explicit filesystem or S3-compatible avatar storage across runtimes.
+- [0005-trip-agent.md](0005-trip-agent.md) — non-intrusive shared trip agent
+  using Vercel AI SDK, AI SDK UI, proactive toasts, and pending patches.

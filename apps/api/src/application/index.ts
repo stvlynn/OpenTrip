@@ -11,3 +11,6 @@ export {
 } from "./invite-service";
 export { PreferenceService } from "./preferences/preferences-service";
 export { type UserPreferenceDto } from "./preferences/dto";
+export { WeatherService } from "./weather/weather-service";
+export { type WeatherData } from "./weather/weather-data";
+export { WeatherError } from "./weather/weather-error";

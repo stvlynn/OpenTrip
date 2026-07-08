@@ -1,10 +1,12 @@
-import { TripService, TripInviteService, PreferenceService } from "../../application";
+import { TripService, TripInviteService, PreferenceService, WeatherService } from "../../application";
 import { AvatarService, type FileStorage } from "../../application/avatar";
 import { createPool, type Pool } from "../persistence/pool";
 import { PgTripRepository } from "../persistence/trip-repository.pg";
 import { PgTripInviteRepository } from "../persistence/invite-repository.pg";
 import { PgUserPreferenceRepository } from "../persistence/user-preference-repository.pg";
 import { createAuth, type Auth } from "../auth/auth";
+import { CachedWeatherClient } from "../weather/cached-weather-client";
+import { OpenWeatherMapClient } from "../weather/openweather-client";
 import type { AppConfig } from "../config";
 
 export interface Container {
@@ -14,6 +16,7 @@ export interface Container {
   tripService: TripService;
   tripInviteService: TripInviteService;
   preferenceService: PreferenceService;
+  weatherService: WeatherService;
   fileStorage: FileStorage;
   avatarService: AvatarService;
 }
@@ -30,6 +33,9 @@ export function createContainer(config: AppConfig, fileStorage: FileStorage): Co
   );
   const preferenceService = new PreferenceService(new PgUserPreferenceRepository(pool));
   const avatarService = new AvatarService(fileStorage);
+  const openWeatherClient = new OpenWeatherMapClient(config.openWeatherMapApiKey);
+  const cachedWeatherClient = new CachedWeatherClient(openWeatherClient);
+  const weatherService = new WeatherService(cachedWeatherClient);
   return {
     config,
     pool,
@@ -37,6 +43,7 @@ export function createContainer(config: AppConfig, fileStorage: FileStorage): Co
     tripService,
     tripInviteService,
     preferenceService,
+    weatherService,
     fileStorage,
     avatarService,
   };

@@ -15,5 +15,8 @@ export {
   moveTripStop,
   reorderTripDays,
   dayRepresentativeStop,
+  dayIsoDate,
+  parseHm,
+  stopDateTime,
   type MoveTripStopInput,
 } from "./lib";

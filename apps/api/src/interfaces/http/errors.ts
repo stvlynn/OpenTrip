@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { ZodError } from "zod";
+import { WeatherError } from "../../application/weather/weather-error";
 import { DomainError, NotFoundError } from "../../domain/shared/errors";
 import { ForbiddenError } from "../../application";
 import { AvatarError } from "../../application/avatar";
@@ -23,6 +24,10 @@ export function handleError(err: Error, c: Context) {
         : err.code === "avatar_unsupported_mime"
           ? 400
           : 500;
+    return fail(c, err.code, err.message, status);
+  }
+  if (err instanceof WeatherError) {
+    const status = err.code === "weather_not_configured" ? 503 : 502;
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof NotFoundError) {

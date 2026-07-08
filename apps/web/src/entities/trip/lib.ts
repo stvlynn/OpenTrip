@@ -36,6 +36,38 @@ export function findDay(trip: Trip, day: number): TripDay | undefined {
   return trip.days.find((d) => d.number === day);
 }
 
+export function dayIsoDate(trip: Trip, dayNumber: number): string | null {
+  const day = findDay(trip, dayNumber);
+  if (day && ISO_DATE.test(day.date)) return day.date;
+  if (ISO_DATE.test(trip.startDate)) return addDaysIso(trip.startDate, dayNumber - 1);
+  return null;
+}
+
+export function parseHm(time: string): { hour: number; minute: number } | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return { hour, minute };
+}
+
+export function stopDateTime(
+  trip: Trip,
+  stop: Stop,
+): { date: string; time?: string } | null {
+  const date = dayIsoDate(trip, stop.day);
+  if (!date) return null;
+  const parsed = parseHm(stop.time);
+  if (parsed) {
+    return {
+      date,
+      time: `${String(parsed.hour).padStart(2, "0")}:${String(parsed.minute).padStart(2, "0")}`,
+    };
+  }
+  return { date };
+}
+
 export interface MoveTripStopInput {
   stopId: string;
   day: number;

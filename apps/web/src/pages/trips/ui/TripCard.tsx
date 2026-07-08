@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import type { TripSummary } from "@/entities/trip";
-import { TripWeatherIcon } from "@/features/weather";
 import { Badge } from "@/shared/ui/badge";
 import { Card } from "@/shared/ui/card";
 import { Avatar } from "@/shared/ui/avatar";
@@ -130,7 +129,6 @@ export function TripCard({
             {trip.title}
           </h2>
           <div className="flex flex-none items-center gap-1.5">
-            <TripWeatherIcon trip={trip} />
             <Badge variant={STATUS_VARIANT[trip.status]}>
               {t(`status.${trip.status}`)}
             </Badge>

@@ -143,6 +143,7 @@ export function createApp(container: Container) {
     avatarService,
     fileStorage,
     config,
+    weatherService,
   } = container;
 
   const inviteActor = (u: Session["user"]) => ({
@@ -217,37 +218,15 @@ export function createApp(container: Container) {
   );
 
   guard.get("/weather", async (c) => {
-    const key = config.openWeatherMapApiKey;
-    if (!key) {
-      return fail(
-        c,
-        "weather_not_configured",
-        "OpenWeatherMap API key is not configured",
-        503,
-      );
-    }
-
     const lat = Number(c.req.query("lat"));
     const lon = Number(c.req.query("lon"));
+    const date = c.req.query("date")?.trim();
+    const time = c.req.query("time")?.trim();
     const lang = c.req.query("lang")?.trim() || "en";
-
     if (Number.isNaN(lat) || Number.isNaN(lon)) {
       return fail(c, "invalid_coordinates", "lat and lon are required", 400);
     }
-
-    const url = new URL("https://api.openweathermap.org/data/2.5/weather");
-    url.searchParams.set("lat", String(lat));
-    url.searchParams.set("lon", String(lon));
-    url.searchParams.set("appid", key);
-    url.searchParams.set("units", "metric");
-    url.searchParams.set("lang", mapOpenWeatherLang(lang));
-
-    const res = await fetch(url);
-    if (!res.ok) {
-      return fail(c, "weather_failed", "Failed to fetch weather", 502);
-    }
-
-    return ok(c, await res.json());
+    return ok(c, await weatherService.getWeather(lat, lon, date, time, lang));
   });
 
   guard.post("/trips", async (c) => {
@@ -486,10 +465,4 @@ function isAvatarStoragePath(path: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(png|jpg|webp)$/i.test(
     parts[2]!,
   );
-}
-
-function mapOpenWeatherLang(lang: string): string {
-  const lower = lang.toLowerCase();
-  if (lower.startsWith("zh")) return "zh_cn";
-  return lower.split("-")[0] ?? "en";
 }
