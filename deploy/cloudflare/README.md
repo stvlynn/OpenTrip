@@ -14,10 +14,11 @@ Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cl
 
 | Path | Purpose |
 | --- | --- |
-| [wrangler.api.jsonc](wrangler.api.jsonc) | Workers config (routes, Hyperdrive, vars) |
+| [wrangler.api.jsonc](wrangler.api.jsonc) | Workers config (routes, fallback vars) |
 | [secrets.example.json](secrets.example.json) | Secret key names only (no values) |
+| [vars.example.json](vars.example.json) | Non-secret Actions variable key names |
 | [scripts/deploy-web.mjs](scripts/deploy-web.mjs) | Build SPA + `wrangler pages deploy` |
-| [scripts/deploy-api.mjs](scripts/deploy-api.mjs) | Deploy API Worker (requires Hyperdrive) |
+| [scripts/deploy-api.mjs](scripts/deploy-api.mjs) | Deploy API Worker; overlay Actions vars |
 | [scripts/sync-secrets.mjs](scripts/sync-secrets.mjs) | Bulk-upload Worker secrets |
 | [scripts/set-hyperdrive.mjs](scripts/set-hyperdrive.mjs) | Patch Hyperdrive id into wrangler config |
 | [hyperdrive.md](hyperdrive.md) | Create/configure Hyperdrive |
@@ -27,27 +28,53 @@ Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cl
 
 Pushing to `main` runs [`.github/workflows/deploy-cloudflare.yml`](../../.github/workflows/deploy-cloudflare.yml):
 
-1. **Pages** always deploys (`opentrip-web` → `opentrip.im`).
-2. **API Worker** deploys only when `wrangler.api.jsonc` has a real Hyperdrive id (not the placeholder).
-3. When API deploys, GitHub secrets whose names match Worker secret keys are bulk-synced.
+1. **Pages** deploys with `API_BASE_URL`, `CAPTCHA_PROVIDER`, `TURNSTILE_SITE_KEY`.
+2. **API Worker** deploys with Hyperdrive id + Actions **variables** overlaid
+   onto wrangler vars.
+3. GitHub **secrets** are bulk-synced to the Worker.
+
+Production config lives in **GitHub Actions secrets/variables**, not in git.
 
 ### Required GitHub secrets
 
 | Secret | Purpose |
 | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | Wrangler auth (Workers Scripts Write, Pages Write, DNS Write, Account Read, Hyperdrive, R2) |
-| `CLOUDFLARE_ACCOUNT_ID` | `<CLOUDFLARE_ACCOUNT_ID>` |
+| `CLOUDFLARE_ACCOUNT_ID` | Account id |
+| `HYPERDRIVE_ID` | Hyperdrive config id (deploy inject) |
+| `DATABASE_URL` | Origin DB URL for CI migrate only |
+| `BETTER_AUTH_SECRET` | Auth signing secret |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | R2 credentials |
 
-### Optional GitHub secrets (synced to the Worker)
+### Auth / captcha / email secrets
 
-`BETTER_AUTH_SECRET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `AI_API_KEY`,
-`OPENWEATHERMAP_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
-`GOOGLE_MAPS_API_KEY`, `CAPTCHA_SECRET_KEY`, `RESEND_API_KEY`.
+| Secret | Purpose |
+| --- | --- |
+| `TURNSTILE_SITE_KEY` | Public Turnstile site key (SPA build) |
+| `CAPTCHA_SECRET_KEY` | Turnstile secret (Worker) |
+| `RESEND_API_KEY` | OTP mail when `EMAIL_PROVIDER=resend` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
+
+### Optional secrets
+
+`AI_API_KEY`, `OPENWEATHERMAP_API_KEY`, `GOOGLE_MAPS_API_KEY`.
 
 ```bash
-# Example: update one secret and re-sync on next deploy
-gh secret set AI_API_KEY -R stvlynn/OpenTrip
+gh secret set RESEND_API_KEY -R stvlynn/OpenTrip
+gh variable set EMAIL_PROVIDER --body "resend" -R stvlynn/OpenTrip
 ```
+
+### Required GitHub variables
+
+See [vars.example.json](vars.example.json). At minimum for auth:
+
+| Variable | Example |
+| --- | --- |
+| `API_BASE_URL` | `https://api.opentrip.im` |
+| `TRUSTED_ORIGINS` | Pages origins + `opentrip://` |
+| `CAPTCHA_PROVIDER` | `cloudflare-turnstile` |
+| `EMAIL_PROVIDER` | `resend` |
+| `EMAIL_FROM` | `OpenTrip <noreply@opentrip.im>` |
 
 ## One-time bootstrap
 
@@ -63,28 +90,19 @@ gh secret set HYPERDRIVE_ID -R stvlynn/OpenTrip
 CI passes `HYPERDRIVE_ID` into `deploy-api.mjs`, which injects the binding at
 deploy time into a temporary wrangler file.
 
-Committed vars in `wrangler.api.jsonc`:
-
-- `DATABASE_PROVIDER=postgres`
-
-Optional: keep origin `DATABASE_URL` as a GitHub secret for `db:migrate` /
-`DB_INIT_ON_START` only (Worker runtime uses Hyperdrive, not this secret).
+Optional: keep origin `DATABASE_URL` as a GitHub secret for `db:migrate` only
+(Worker runtime uses Hyperdrive, not this secret).
 
 ### 1b. Fallback: direct `DATABASE_URL` secret
 
 If you omit `HYPERDRIVE_ID`, set Worker secret `DATABASE_URL` instead
-(`wrangler secret put` or GitHub secret sync).
+(`wrangler secret put` or include it in sync — CI intentionally skips syncing
+`DATABASE_URL` when Hyperdrive is used).
 
-### One-shot DB init on deploy
+### Seed on demand
 
-If the database does not exist yet:
-
-1. GitHub → **Settings → Secrets and variables → Actions → Variables**
-2. Add `DB_INIT_ON_START` = `true` (optional: `DB_INIT_SEED` = `true`)
-3. Push or re-run **Deploy Cloudflare**
-4. After success, set `DB_INIT_ON_START` = `false` so later deploys skip init
-
-Alternatively: **Run workflow** → enable **init_db** once (no variable needed).
+**Run workflow** → enable **seed_db**, or set variable `DB_INIT_SEED=true`
+temporarily.
 
 Local equivalent (Postgres origin URL, not Hyperdrive):
 
@@ -112,6 +130,13 @@ node deploy/cloudflare/scripts/sync-secrets.mjs
 export CLOUDFLARE_API_TOKEN=…
 export CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID>
 
+# Match production Actions vars when testing locally:
+export API_BASE_URL=https://api.opentrip.im
+export CAPTCHA_PROVIDER=cloudflare-turnstile
+export TURNSTILE_SITE_KEY=…
+export EMAIL_PROVIDER=resend
+export EMAIL_FROM='OpenTrip <noreply@opentrip.im>'
+
 node deploy/cloudflare/scripts/deploy-web.mjs
 node deploy/cloudflare/scripts/deploy-api.mjs
 node deploy/cloudflare/scripts/sync-secrets.mjs
@@ -119,17 +144,19 @@ node deploy/cloudflare/scripts/sync-secrets.mjs
 
 ## Vars vs secrets
 
-- **Vars** (non-secret) live in `wrangler.api.jsonc` → `vars`.
-  Production defaults: `BASE_URL=https://api.opentrip.im`,
-  `TRUSTED_ORIGINS` includes `https://opentrip.im`, R2 endpoint/bucket,
-  agent model settings.
-- **Secrets** are never committed. Set with `sync-secrets.mjs` or
-  `wrangler secret put <KEY> --config deploy/cloudflare/wrangler.api.jsonc`.
+- **Variables** (non-secret) — GitHub Actions variables; overlaid by
+  `deploy-api.mjs` / baked by `deploy-web.mjs`. Key list:
+  [vars.example.json](vars.example.json).
+- **Secrets** — never committed. GitHub secrets → `sync-secrets.mjs` /
+  `wrangler secret put`. Key list: [secrets.example.json](secrets.example.json).
+
+`wrangler.api.jsonc` `vars` remain as **local defaults** only.
 
 ## R2
 
 Bucket `opentrip-uploads` holds avatars/media via the S3-compatible API
-(`STORAGE_BACKEND=s3`). Access key id + secret access key are Worker secrets.
+(`STORAGE_BACKEND=s3`). Access key id + secret access key are Worker secrets;
+bucket/endpoint are Actions variables.
 
 ## Rollback
 

@@ -18,9 +18,12 @@ function Routes() {
 function Gate() {
   const { path } = useRouter();
   const inviteToken = matchInviteToken(path);
-  const { data: session, isPending } = useSession();
+  // Better Auth sets isPending during logged-out refetches (e.g. after
+  // sign-up). Only block the tree on the initial resolve so AuthForm keeps
+  // its OTP step instead of remounting back to credentials.
+  const { data: session, isPending, isRefetching } = useSession();
 
-  if (isPending) {
+  if (isPending && !isRefetching) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
         <Spinner className="size-6" />

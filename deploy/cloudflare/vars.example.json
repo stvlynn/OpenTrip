@@ -1,0 +1,23 @@
+{
+  "_comment": "Non-secret Worker/Pages vars managed in GitHub Actions → Settings → Variables. deploy-api.mjs overlays these onto wrangler.api.jsonc; deploy-web.mjs bakes captcha into the SPA. Do not put secrets here.",
+  "API_BASE_URL": "https://api.opentrip.im",
+  "TRUSTED_ORIGINS": "https://opentrip.im,https://www.opentrip.im,https://opentrip-web.pages.dev,opentrip://",
+  "DATABASE_PROVIDER": "postgres",
+  "DATABASE_SSL": "off",
+  "STORAGE_BACKEND": "s3",
+  "STORAGE_ROOT": "uploads",
+  "S3_BUCKET": "opentrip-uploads",
+  "S3_REGION": "auto",
+  "S3_ENDPOINT": "https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
+  "S3_FORCE_PATH_STYLE": "false",
+  "AI_PROVIDER": "openai",
+  "AI_MODEL": "<model id>",
+  "AI_BASE_URL": "<provider base URL>",
+  "AI_PROACTIVE_THRESHOLD": "0.7",
+  "AI_MAX_TOOL_STEPS": "5",
+  "GEO_PROVIDER": "osm",
+  "GEO_OSM_USER_AGENT": "OpenTrip/0.1 (https://opentrip.im; geo-agent)",
+  "EMAIL_PROVIDER": "resend",
+  "EMAIL_FROM": "OpenTrip <noreply@opentrip.im>",
+  "CAPTCHA_PROVIDER": "cloudflare-turnstile"
+}

@@ -33,7 +33,14 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 export function InvitePage({ token }: { token: string }) {
   const { t } = useTranslation("invite");
-  const { data: session, isPending: sessionPending } = useSession();
+  const {
+    data: session,
+    isPending: sessionPending,
+    isRefetching: sessionRefetching,
+  } = useSession();
+  // Same as Gate: ignore logged-out session refetches so AuthForm OTP state
+  // survives sign-up on the invite route.
+  const sessionBooting = sessionPending && !sessionRefetching;
 
   const preview = useQuery<InvitePreview, ApiError>({
     queryKey: ["invite", token],
@@ -41,7 +48,7 @@ export function InvitePage({ token }: { token: string }) {
     retry: false,
   });
 
-  if (sessionPending || preview.isPending) {
+  if (sessionBooting || preview.isPending) {
     return (
       <Shell>
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">

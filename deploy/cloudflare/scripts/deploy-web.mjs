@@ -11,7 +11,10 @@ import { existsSync } from "node:fs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "../../..");
 
-const API_ORIGIN = process.env.API_ORIGIN || "https://api.opentrip.im";
+const API_ORIGIN =
+  process.env.API_ORIGIN?.trim() ||
+  process.env.API_BASE_URL?.trim() ||
+  "https://api.opentrip.im";
 const PROJECT = process.env.PAGES_PROJECT || "opentrip-web";
 const BRANCH = process.env.PAGES_BRANCH || "main";
 
@@ -33,12 +36,25 @@ function run(cmd, args, env = {}) {
 // Prefer pnpm when available; CI installs it via corepack/setup.
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
+const captchaProvider = process.env.CAPTCHA_PROVIDER?.trim() || "";
+const turnstileSiteKey = process.env.TURNSTILE_SITE_KEY?.trim() || "";
+if (captchaProvider && !turnstileSiteKey) {
+  console.error(
+    "TURNSTILE_SITE_KEY is required when CAPTCHA_PROVIDER is set (public site key for the SPA build).",
+  );
+  process.exit(1);
+}
+if (captchaProvider) {
+  console.log(`SPA captcha: provider=${captchaProvider}`);
+} else {
+  console.log("SPA captcha: disabled (CAPTCHA_PROVIDER unset)");
+}
+
 run(pnpm, ["install", "--frozen-lockfile"]);
 run(pnpm, ["--filter", "@opentrip/web", "build"], {
   BASE_URL: API_ORIGIN,
-  // Captcha disabled in production until real Turnstile keys are provisioned.
-  CAPTCHA_PROVIDER: process.env.CAPTCHA_PROVIDER || "",
-  TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY || "",
+  CAPTCHA_PROVIDER: captchaProvider,
+  TURNSTILE_SITE_KEY: turnstileSiteKey,
 });
 
 const dist = resolve(root, "apps/web/dist");

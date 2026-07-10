@@ -7,6 +7,10 @@
  *     (never commit the id)
  *   - Worker secret DATABASE_URL for direct connect
  *
+ * Non-secret Worker vars are taken from process.env when set (GitHub Actions
+ * variables), overlaying defaults in wrangler.api.jsonc. Secrets are synced
+ * separately via sync-secrets.mjs.
+ *
  * Usage:
  *   CLOUDFLARE_API_TOKEN=… HYPERDRIVE_ID=… node deploy/cloudflare/scripts/deploy-api.mjs
  */
@@ -25,6 +29,36 @@ const generatedConfigPath = resolve(
   "wrangler.api.generated.json",
 );
 
+/** Non-secret Worker `vars` that CI may override from GitHub Actions variables. */
+const WORKER_VAR_KEYS = [
+  "BASE_URL",
+  "TRUSTED_ORIGINS",
+  "DATABASE_PROVIDER",
+  "DATABASE_SSL",
+  "STORAGE_BACKEND",
+  "STORAGE_ROOT",
+  "STORAGE_PUBLIC_URL",
+  "S3_BUCKET",
+  "S3_REGION",
+  "S3_ENDPOINT",
+  "S3_FORCE_PATH_STYLE",
+  "AI_PROVIDER",
+  "AI_MODEL",
+  "AI_BASE_URL",
+  "AI_PROACTIVE_THRESHOLD",
+  "AI_MAX_TOOL_STEPS",
+  "GEO_PROVIDER",
+  "GEO_OSM_USER_AGENT",
+  "GEO_OSM_NOMINATIM_URL",
+  "GEO_OSM_OVERPASS_URL",
+  "GEO_OSM_OSRM_URL",
+  "GEO_TIMEOUT_MS",
+  "GEO_CACHE_TTL_MS",
+  "EMAIL_PROVIDER",
+  "EMAIL_FROM",
+  "CAPTCHA_PROVIDER",
+];
+
 if (!process.env.CLOUDFLARE_API_TOKEN) {
   console.error("CLOUDFLARE_API_TOKEN is required.");
   process.exit(1);
@@ -40,6 +74,13 @@ function stripJsoncComments(source) {
 function loadConfigObject(path) {
   const raw = readFileSync(path, "utf8");
   return JSON.parse(stripJsoncComments(raw));
+}
+
+/** Prefer explicit BASE_URL; otherwise map API_BASE_URL (Actions naming). */
+function resolveBaseUrlEnv() {
+  const base = process.env.BASE_URL?.trim();
+  if (base) return base;
+  return process.env.API_BASE_URL?.trim() || "";
 }
 
 const config = loadConfigObject(baseConfigPath);
@@ -64,6 +105,24 @@ if (hyperdriveId) {
   console.log(
     "No HYPERDRIVE_ID env — deploying without Hyperdrive (use DATABASE_URL secret).",
   );
+}
+
+config.vars = { ...(config.vars ?? {}) };
+const overridden = [];
+const baseUrl = resolveBaseUrlEnv();
+if (baseUrl) {
+  config.vars.BASE_URL = baseUrl;
+  overridden.push("BASE_URL");
+}
+for (const key of WORKER_VAR_KEYS) {
+  if (key === "BASE_URL") continue;
+  const value = process.env[key]?.trim();
+  if (!value) continue;
+  config.vars[key] = value;
+  overridden.push(key);
+}
+if (overridden.length > 0) {
+  console.log(`Overlaying Worker vars from env: ${overridden.join(", ")}`);
 }
 
 writeFileSync(generatedConfigPath, `${JSON.stringify(config, null, 2)}\n`, {

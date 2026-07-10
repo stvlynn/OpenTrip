@@ -11,20 +11,24 @@ lives in [deploy/cloudflare](../../deploy/cloudflare/README.md). Reference:
 | Web | https://opentrip.im |
 | API | https://api.opentrip.im |
 
-The SPA bakes `BASE_URL=https://api.opentrip.im` at build time. The Worker
-uses the same origin for Better Auth and sets `TRUSTED_ORIGINS` to the Pages
-origins (`https://opentrip.im`, `https://www.opentrip.im`).
+The SPA bakes `API_BASE_URL` (as Vite `BASE_URL`) at build time. The Worker
+uses the same origin for Better Auth. `TRUSTED_ORIGINS` lists the Pages
+origins plus `opentrip://` for native.
 
 ## Continuous deployment (git push)
 
 Pushing to `main` triggers
 [`.github/workflows/deploy-cloudflare.yml`](../../.github/workflows/deploy-cloudflare.yml):
 
-1. Build and deploy the SPA to Pages project `opentrip-web` (custom domain
-   `opentrip.im`).
-2. If `deploy/cloudflare/wrangler.api.jsonc` has a real Hyperdrive id, deploy
-   the API Worker (`opentrip-api`, custom domain `api.opentrip.im`) and sync
-   GitHub secrets into Worker secrets.
+1. Build and deploy the SPA to Pages (`opentrip-web` → `opentrip.im`), baking
+   `CAPTCHA_PROVIDER` + `TURNSTILE_SITE_KEY` when set.
+2. Deploy the API Worker (`opentrip-api` → `api.opentrip.im`), overlaying
+   GitHub Actions **variables** onto `wrangler.api.jsonc` vars.
+3. Sync GitHub **secrets** into Worker secrets (`sync-secrets.mjs`).
+
+**Source of truth for production config is GitHub Actions** (Settings →
+Secrets and variables → Actions). Committed `wrangler.api.jsonc` vars are
+local/manual defaults only.
 
 ### GitHub secrets
 
@@ -32,13 +36,33 @@ Pushing to `main` triggers
 | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | yes | Workers + Pages + DNS + Hyperdrive + R2 |
 | `CLOUDFLARE_ACCOUNT_ID` | yes | Account id |
+| `HYPERDRIVE_ID` | for API | Injected at deploy; never commit |
+| `DATABASE_URL` | for migrate | Origin Postgres URL (CI only, not Worker runtime) |
 | `BETTER_AUTH_SECRET` | for API | ≥ 32 chars |
 | `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | for API | R2 S3 API credentials |
-| `AI_API_KEY` | optional | Enables trip agent with `AI_MODEL` var |
-| `OPENWEATHERMAP_API_KEY` | optional | Weather proxy |
+| `TURNSTILE_SITE_KEY` | captcha | Public site key baked into the SPA |
+| `CAPTCHA_SECRET_KEY` | captcha | Worker-only; pair with var `CAPTCHA_PROVIDER` |
+| `RESEND_API_KEY` | email OTP | Required when var `EMAIL_PROVIDER=resend` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional | Google sign-in |
+| `AI_API_KEY` | optional | Trip agent |
+| `OPENWEATHERMAP_API_KEY` | optional | Weather proxy |
 | `GOOGLE_MAPS_API_KEY` | optional | When `GEO_PROVIDER=google` |
-| `CAPTCHA_SECRET_KEY` | optional | When captcha var is enabled |
+
+### GitHub variables
+
+See [deploy/cloudflare/vars.example.json](../../deploy/cloudflare/vars.example.json)
+for the full list. Production must set at least:
+
+| Variable | Example |
+| --- | --- |
+| `API_BASE_URL` | `https://api.opentrip.im` |
+| `TRUSTED_ORIGINS` | `https://opentrip.im,…,opentrip://` |
+| `EMAIL_PROVIDER` | `resend` |
+| `EMAIL_FROM` | `OpenTrip <noreply@opentrip.im>` |
+| `CAPTCHA_PROVIDER` | `cloudflare-turnstile` |
+| `DATABASE_PROVIDER` | `postgres` |
+| `STORAGE_BACKEND` / `S3_*` | R2 settings |
+| `AI_*` / `GEO_*` | Agent and geo |
 
 Manual re-run: **Actions → Deploy Cloudflare → Run workflow**.
 
@@ -57,16 +81,17 @@ Manual re-run: **Actions → Deploy Cloudflare → Run workflow**.
 
 ```bash
 gh secret set HYPERDRIVE_ID -R stvlynn/OpenTrip
-# paste the id when prompted
+# paste the id from the Cloudflare dashboard
 ```
 
 3. On deploy, `deploy-api.mjs` injects the binding from that env into a
    temporary wrangler config (not checked into git).
 
-Committed Worker vars: `DATABASE_PROVIDER=postgres`.
+Committed fallback in `wrangler.api.jsonc`: `DATABASE_PROVIDER=postgres`
+(overridden by Actions var when set).
 
 For migrations, also keep origin `DATABASE_URL` (PlanetScale connection string)
-as a GitHub secret and run `DB_INIT_ON_START` / `init_db` once.
+as a GitHub secret; CI runs `prisma migrate deploy` before Worker deploy.
 
 ### B. Direct `DATABASE_URL` (fallback)
 
@@ -123,55 +148,56 @@ export CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID>
 # One-time or when secrets change (also runs in CI after API deploy):
 node deploy/cloudflare/scripts/sync-secrets.mjs
 
+# Optional: overlay the same vars CI uses
+export API_BASE_URL=https://api.opentrip.im
+export EMAIL_PROVIDER=resend
+export CAPTCHA_PROVIDER=cloudflare-turnstile
+# …
+
 node deploy/cloudflare/scripts/deploy-api.mjs
 ```
 
-`wrangler.api.jsonc` sets `compatibility_flags: ["nodejs_compat_v2"]`, the
-`HYPERDRIVE` binding, `observability.enabled`, custom domain `api.opentrip.im`,
-and non-secret vars (including R2 endpoint/bucket and agent model settings).
+`wrangler.api.jsonc` sets `compatibility_flags: ["nodejs_compat_v2"]`,
+observability, custom domain `api.opentrip.im`, and **fallback** non-secret
+vars. Production values come from GitHub Actions variables via
+`deploy-api.mjs`.
 
 ## 4. Frontend (Pages)
 
 ```bash
 export CLOUDFLARE_API_TOKEN=…
 export CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID>
+export API_BASE_URL=https://api.opentrip.im
+export CAPTCHA_PROVIDER=cloudflare-turnstile
+export TURNSTILE_SITE_KEY=…   # public site key
 
 node deploy/cloudflare/scripts/deploy-web.mjs
 ```
 
-Equivalent low-level commands:
-
-```bash
-BASE_URL="https://api.opentrip.im" pnpm --filter @opentrip/web build
-npx wrangler pages deploy apps/web/dist --project-name opentrip-web
-```
-
 See [deploy/cloudflare/pages.md](../../deploy/cloudflare/pages.md).
 
-## Secrets
+## Secrets and variables
 
-Only key names are committed, in
-[deploy/cloudflare/secrets.example.json](../../deploy/cloudflare/secrets.example.json).
-Prefer `node deploy/cloudflare/scripts/sync-secrets.mjs` (reads
-`.secrets.local.json`, root `.env` non-local values, or `--from-env`).
-Alternatively `wrangler secret put <KEY> --config deploy/cloudflare/wrangler.api.jsonc`.
+- **Secrets** — key names in
+  [deploy/cloudflare/secrets.example.json](../../deploy/cloudflare/secrets.example.json).
+  Prefer GitHub secrets + CI sync; locally `sync-secrets.mjs` or
+  `wrangler secret put`.
+- **Variables** — key names in
+  [deploy/cloudflare/vars.example.json](../../deploy/cloudflare/vars.example.json).
+  Prefer GitHub Actions variables; `deploy-api.mjs` overlays them at deploy.
 
-Set `BASE_URL` (Worker origin), `TRUSTED_ORIGINS` (Pages origins), and the
-non-secret S3-compatible R2 configuration as vars. The Worker does not use a
-native filesystem or R2 binding; all object storage configuration is supplied
-through env values.
+Captcha: public `TURNSTILE_SITE_KEY` (secret in GitHub only so it is not
+committed; still safe to bake into the SPA) + Worker `CAPTCHA_SECRET_KEY`.
+Email OTP: `EMAIL_PROVIDER=resend` + `EMAIL_FROM` + `RESEND_API_KEY`.
 
 To enable the trip agent (see [../backend/agent.md](../backend/agent.md)), set
 `AI_API_KEY` as a secret and `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, and the
-threshold vars (`AI_PROACTIVE_THRESHOLD`, `AI_MAX_TOOL_STEPS`) as vars. Without
-`AI_MODEL` + `AI_API_KEY` the agent routes respond 404 and the frontend hides
-the entry point.
+threshold vars as Actions variables. Without `AI_MODEL` + `AI_API_KEY` the
+agent routes respond 404 and the frontend hides the entry point.
 
 Geo agent tools default to OSM (`GEO_PROVIDER=osm`). To use Google Places +
-Routes instead, set `GEO_PROVIDER=google` as a var and
-`GOOGLE_MAPS_API_KEY` as a secret. Optional OSM endpoint overrides
-(`GEO_OSM_NOMINATIM_URL`, `GEO_OSM_OVERPASS_URL`, `GEO_OSM_OSRM_URL`,
-`GEO_OSM_USER_AGENT`) are vars. See [../backend/geo.md](../backend/geo.md).
+Routes instead, set `GEO_PROVIDER=google` and `GOOGLE_MAPS_API_KEY`. See
+[../backend/geo.md](../backend/geo.md).
 
 Airbnb lodging tools (`airbnbSearch`, `airbnbListingDetails`) need no API key.
 Optional vars: `LODGING_IGNORE_ROBOTS_TXT`, `LODGING_DISABLE_GEOCODING`,
@@ -196,6 +222,14 @@ Mitigations in code: **per-request** shared `pg.Pool` (do not cache across
 Worker isolate freezes), connection timeouts, no session preload on
 `/api/auth/*`, and emergency CORS on uncaught Worker errors. Hyperdrive still
 pools origin TCP at the edge.
+
+### Sign-up shows no captcha / no OTP step
+
+1. Confirm Actions vars `CAPTCHA_PROVIDER` and secrets `TURNSTILE_SITE_KEY` /
+   `CAPTCHA_SECRET_KEY` are set, and the latest Pages + Worker deploy ran.
+2. Confirm `EMAIL_PROVIDER=resend`, `EMAIL_FROM`, and `RESEND_API_KEY`.
+3. OTP UI lives in `AuthForm` after a successful `sign-up/email`. Gate must not
+   remount on session refetch while logged out (initial `isPending` only).
 
 ## Hyperdrive read-after-write
 

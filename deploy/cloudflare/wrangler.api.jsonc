@@ -46,7 +46,8 @@
     "AI_MAX_TOOL_STEPS": "5",
     "GEO_PROVIDER": "osm",
     "GEO_OSM_USER_AGENT": "OpenTrip/0.1 (https://opentrip.im; geo-agent)",
-    // Set EMAIL_PROVIDER=resend and wrangler secret RESEND_API_KEY for real OTP mail.
+    // Local/manual defaults. Production overlays these from GitHub Actions
+    // variables via deploy-api.mjs (EMAIL_PROVIDER, CAPTCHA_PROVIDER, AI_*, …).
     "EMAIL_PROVIDER": "console",
     "EMAIL_FROM": "OpenTrip <noreply@opentrip.im>"
   }

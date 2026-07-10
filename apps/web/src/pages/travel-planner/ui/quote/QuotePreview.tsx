@@ -17,7 +17,7 @@ export function QuotePreview({
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-lg border-l-[3px] border-border-strong bg-secondary/60 px-2.5 py-1.5",
+        "flex items-start gap-2 rounded-lg bg-secondary/60 px-2.5 py-1.5",
         className,
       )}
     >
