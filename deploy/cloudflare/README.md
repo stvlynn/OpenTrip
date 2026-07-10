@@ -68,7 +68,7 @@ echo -n "$DATABASE_URL" | npx wrangler secret put DATABASE_URL \
 Vars already in `wrangler.api.jsonc`:
 
 - `DATABASE_PROVIDER=mysql`
-- `DATABASE_SSL=required` — TLS on, no CA pin (typical for cloud MySQL)
+- `DATABASE_SSL=off` — plain TCP (use `required` only if the origin supports TLS)
 
 Or set GitHub repo secret `DATABASE_URL`; CI syncs it on each API deploy.
 

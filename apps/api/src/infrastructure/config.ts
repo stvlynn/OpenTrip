@@ -359,15 +359,16 @@ function resolveDatabaseProvider(
 }
 
 /**
- * Resolve MySQL TLS mode. Default `required` for mysql (managed clouds often
- * force TLS); postgres defaults to `off` (use URL sslmode instead).
+ * Resolve MySQL TLS mode. Default `off` (plain TCP). Set DATABASE_SSL=required
+ * when the origin supports TLS (some managed clouds force SSL; others reject it).
  */
 function resolveDatabaseSsl(
     raw: string | undefined,
     provider: DatabaseProvider,
 ): DatabaseSslMode {
     const v = raw?.trim().toLowerCase();
-    if (!v) return provider === "mysql" ? "required" : "off";
+    // Default off for both engines so Workers can reach hosts that do not speak SSL.
+    if (!v) return "off";
     if (v === "off" || v === "false" || v === "0" || v === "disable") return "off";
     if (v === "required" || v === "require" || v === "true" || v === "1") {
         return "required";

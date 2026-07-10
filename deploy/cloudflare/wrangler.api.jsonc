@@ -35,8 +35,9 @@
     "BASE_URL": "https://api.opentrip.im",
     "TRUSTED_ORIGINS": "https://opentrip.im,https://www.opentrip.im,https://opentrip-web.pages.dev",
     "DATABASE_PROVIDER": "mysql",
-    // TLS for direct DATABASE_URL connections (not used by Hyperdrive).
-    "DATABASE_SSL": "required",
+    // TLS for direct DATABASE_URL. Use "required" only if the MySQL origin
+    // supports SSL; many managed public endpoints only accept plain TCP.
+    "DATABASE_SSL": "off",
     "STORAGE_BACKEND": "s3",
     "STORAGE_ROOT": "uploads",
     "S3_BUCKET": "opentrip-uploads",

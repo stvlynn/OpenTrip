@@ -68,7 +68,7 @@ Worker vars (non-secret, in `wrangler.api.jsonc` or Dashboard):
 | Var | Example | Notes |
 | --- | --- | --- |
 | `DATABASE_PROVIDER` | `mysql` | or `postgres` |
-| `DATABASE_SSL` | `required` | MySQL TLS without CA pin (managed DBs). `off` / `verify` also valid |
+| `DATABASE_SSL` | `off` | Default plain TCP. Set `required` only if the origin supports TLS |
 
 GitHub Actions syncs repo secret `DATABASE_URL` → Worker on each API deploy when set.
 
