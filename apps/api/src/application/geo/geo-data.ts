@@ -18,9 +18,9 @@ export interface GeoCoordinateDto {
   lng: number;
 }
 
-export interface GeoAddressDto extends GeoAddress {}
+export type GeoAddressDto = GeoAddress;
 
-export interface GeoBoundingBoxDto extends GeoBoundingBox {}
+export type GeoBoundingBoxDto = GeoBoundingBox;
 
 export interface GeoPlaceDto {
   id: string;

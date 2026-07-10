@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  TripMediaError,
-  TripMediaService,
-} from "../src/application/media";
+import type { TripMediaError } from "../src/application/media";
+import { TripMediaService } from "../src/application/media";
 import type { FileStorage, StoredFile } from "../src/application/storage";
 import type { TripService } from "../src/application/use-cases";
 

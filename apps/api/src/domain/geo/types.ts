@@ -72,7 +72,7 @@ export interface GeoPlaceDetailQuery {
   lang?: string;
 }
 
-export interface GeoRouteWaypoint extends GeoCoordinate {}
+export type GeoRouteWaypoint = GeoCoordinate;
 
 export interface GeoRouteComputeQuery {
   waypoints: GeoRouteWaypoint[];
