@@ -13,6 +13,12 @@
     "operationBy": "{{name}}",
     "thinking": "Thinking…"
   },
+  "attach": {
+    "add": "Attach a file",
+    "remove": "Remove attachment",
+    "imageAlt": "Attached image",
+    "fileFallback": "Attachment"
+  },
   "mention": {
     "listLabel": "Mention a member or the agent",
     "toastTitle": "{{name}} mentioned you",
@@ -45,7 +51,8 @@
       "placeDetail": "Place details",
       "routeCompute": "Compute route",
       "routeMatrix": "Route matrix",
-      "reviewLookup": "Look up reviews"
+      "reviewLookup": "Look up reviews",
+      "readTripMedia": "Read trip file"
     }
   },
   "preview": {

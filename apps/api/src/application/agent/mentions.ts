@@ -1,5 +1,6 @@
 import type { AgentMessagePart } from "../../domain/agent";
 import type { Trip } from "../../domain/trip";
+import type { AgentFilePart } from "./file-parts";
 
 export const AGENT_MENTION_TOKEN = "agent";
 
@@ -42,13 +43,20 @@ export function containsAgentMention(text: string): boolean {
   return new RegExp(`@${AGENT_MENTION_TOKEN}\\b`, "i").test(text);
 }
 
-/** Build persisted parts for a user-authored chat line (text + optional mentions). */
+/** Build persisted parts for a user-authored chat line (text + files + mentions). */
 export function buildUserMessageParts(
   text: string,
   trip: Trip,
   actorUserId: string,
+  fileParts: AgentFilePart[] = [],
 ): AgentMessagePart[] {
-  const parts: AgentMessagePart[] = [{ type: "text", text }];
+  const parts: AgentMessagePart[] = [];
+  if (text.trim()) {
+    parts.push({ type: "text", text });
+  }
+  for (const file of fileParts) {
+    parts.push(file);
+  }
   const userIds = parseMemberMentions(text, trip, actorUserId);
   if (userIds.length > 0) {
     parts.push({ type: "mentions", userIds });

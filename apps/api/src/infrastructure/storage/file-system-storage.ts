@@ -56,6 +56,14 @@ function contentTypeForPath(path: string): string {
       return "image/jpeg";
     case ".webp":
       return "image/webp";
+    case ".pdf":
+      return "application/pdf";
+    case ".txt":
+      return "text/plain";
+    case ".md":
+      return "text/markdown";
+    case ".csv":
+      return "text/csv";
     default:
       return "application/octet-stream";
   }

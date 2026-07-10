@@ -13,7 +13,23 @@ Shared session model, tools, and intervention policy: [agent.md](../agent.md).
 ### `POST /api/trips/:tripId/agent/messages`
 
 - **Auth:** session + member; agent enabled  
-- **Body:** `{ text: string }` trim, 1–4000  
+- **Body:**
+
+```ts
+{
+  text?: string; // trim, max 4000; optional when files are present
+  files?: Array<{
+    type: "file";
+    mediaType: string;
+    url: string; // trip-owned /api/uploads/trips/… URL (not data:)
+    filename?: string;
+  }>; // max 8
+}
+```
+
+At least one of `text` (non-empty) or `files` is required. File URLs must belong
+to this trip’s managed upload namespace; unsupported MIME types are dropped.
+
 - **Response:** `{ addressed: boolean }` — **immediate** flag only:
   - `true` when the text contains an explicit `@agent` mention (ambient reply
     is deferred and will arrive via polling).
@@ -37,15 +53,20 @@ Shared session model, tools, and intervention policy: [agent.md](../agent.md).
   messages?: Array<{
     id?: string;
     role: string;
-    parts: Array<{ type: string; text?: string; /* AI SDK passthrough */ }>;
+    parts: Array<
+      | { type: "text"; text: string }
+      | { type: "file"; mediaType: string; url: string; filename?: string }
+      | { type: string; /* AI SDK tool/reasoning passthrough */ }
+    >;
   }>;
   message?: { id?: string; role: string; parts: … } | null; // legacy single turn
 }
 ```
 
-Server persists new user text (and finished assistant messages) using client
-UIMessage ids for live/history dedupe. Tool-approval continuation uses the full
-`messages` list with approval parts.
+Server persists new user text **and file parts** (and finished assistant
+messages) using client UIMessage ids for live/history dedupe. Attachment-only
+turns are allowed. Tool-approval continuation uses the full `messages` list
+with approval parts.
 
 ### `GET /api/trips/:tripId/agent/events`
 

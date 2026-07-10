@@ -99,22 +99,26 @@ legacy fallback only.
 - **Auth:** session + **edit** (`loadEditable`; viewers `403`)  
 - **Body:** `{ text: string }` (min 1)  
 - **Response:** [`TripDto`](./dtos.md#tripdto-full-trip)  
-- **Side effect:** if `text` contains an `@agent` mention and the agent is
-  enabled, a mention is recorded for an ambient reply (see [agent.md](../agent.md)).
+- **Side effect:** when the agent is enabled, comments that `@mention` trip
+  members and/or `@agent` are mirrored into the shared agent session (with the
+  stop as context). Member mentions use the same toast path as agent chat;
+  ambient agent reply runs only when `@agent` is present (see
+  [agent.md](../agent.md)).
 
 ### `POST /api/trips/:id/media`
 
 - **Auth:** session + edit  
 - **Status:** `201`  
 - **Body:** `multipart/form-data`, field name **`file`**  
-- **Constraints:** PNG / JPEG / WebP; max **2 MiB** decoded payload  
+- **Constraints:** PNG / JPEG / WebP / PDF / plain text (markdown, csv); max **2 MiB** decoded payload  
+  (agent chat attachments use the same endpoint) 
 - **Response:** `{ url: string }` — absolute or path URL under `/api/uploads/trips/…`  
 - **Errors:** `400` `media_missing` / `media_unsupported_mime`; `413`
   `media_too_large`
 
 ---
 
-Related: [trip-ops.md](../trip-ops.md) · [agent.md](../agent.md) (comment @agent mentions)
+Related: [trip-ops.md](../trip-ops.md) · [agent.md](../agent.md) (comment @mentions)
 
 ---
 

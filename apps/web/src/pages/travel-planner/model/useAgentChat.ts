@@ -7,7 +7,12 @@ import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import { fetchAgentMessages, postAgentMessage } from "@/shared/api";
+import {
+  fetchAgentMessages,
+  postAgentMessage,
+  type AgentFilePart,
+} from "@/shared/api";
+import { uploadTripMedia } from "@/shared/api/media";
 import { config, queryKeys } from "@/shared/config";
 
 const MENTION_PATTERN = /@agent\b/i;
@@ -21,6 +26,36 @@ function hasPendingToolApproval(messages: UIMessage[]): boolean {
         !p.approval?.isAutomatic,
     ),
   );
+}
+
+async function uploadFilesAsParts(
+  tripId: string,
+  files: File[],
+): Promise<AgentFilePart[]> {
+  const parts: AgentFilePart[] = [];
+  for (const file of files) {
+    const url = await uploadTripMedia(tripId, file);
+    parts.push({
+      type: "file",
+      mediaType: mediaTypeOf(file),
+      url,
+      filename: file.name,
+    });
+  }
+  return parts;
+}
+
+function mediaTypeOf(file: File): string {
+  if (file.type) return file.type;
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  if (name.endsWith(".webp")) return "image/webp";
+  if (name.endsWith(".pdf")) return "application/pdf";
+  if (name.endsWith(".md") || name.endsWith(".markdown")) return "text/markdown";
+  if (name.endsWith(".csv")) return "text/csv";
+  if (name.endsWith(".txt")) return "text/plain";
+  return "application/octet-stream";
 }
 
 /** Shared-session chat for the agent panel.
@@ -82,17 +117,31 @@ export function useAgentChat(tripId: string, enabled: boolean) {
   /** Route input: @agent mentions stream a reply; plain messages land in the
    * shared session and the server decides whether the agent was addressed
    * (ambient replies arrive via polling). */
-  const send = async (text: string) => {
+  const send = async (text: string, files: File[] = []) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed && files.length === 0) return;
+
+    const fileParts =
+      files.length > 0 ? await uploadFilesAsParts(tripId, files) : [];
+
     if (MENTION_PATTERN.test(trimmed)) {
-      await chat.sendMessage({ text: trimmed });
-    } else {
-      await postAgentMessage(tripId, trimmed);
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.agentMessages(tripId),
+      await chat.sendMessage({
+        role: "user",
+        parts: [
+          ...fileParts,
+          ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+        ],
       });
+      return;
     }
+
+    await postAgentMessage(tripId, {
+      text: trimmed || undefined,
+      files: fileParts.length > 0 ? fileParts : undefined,
+    });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.agentMessages(tripId),
+    });
   };
 
   return {

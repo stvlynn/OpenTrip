@@ -13,6 +13,12 @@
     "operationBy": "{{name}}",
     "thinking": "思考中…"
   },
+  "attach": {
+    "add": "添加附件",
+    "remove": "移除附件",
+    "imageAlt": "附件图片",
+    "fileFallback": "附件"
+  },
   "mention": {
     "listLabel": "提及成员或助手",
     "toastTitle": "{{name}} 提到了你",
@@ -44,7 +50,8 @@
       "placeDetail": "地点详情",
       "routeCompute": "计算路线",
       "routeMatrix": "行程矩阵",
-      "reviewLookup": "查看评价"
+      "reviewLookup": "查看评价",
+      "readTripMedia": "读取行程文件"
     }
   },
   "preview": {

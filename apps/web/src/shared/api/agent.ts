@@ -12,6 +12,14 @@ export interface AgentMessagePart {
   [key: string]: unknown;
 }
 
+/** AI SDK FileUIPart persisted after upload (URL, not data:). */
+export interface AgentFilePart {
+  type: "file";
+  mediaType: string;
+  url: string;
+  filename?: string;
+}
+
 export interface AgentMessage {
   id: string;
   seq: number;
@@ -70,11 +78,11 @@ export function fetchAgentMessages(tripId: string): Promise<AgentHistory> {
 
 export function postAgentMessage(
   tripId: string,
-  text: string,
+  input: { text?: string; files?: AgentFilePart[] },
 ): Promise<{ addressed: boolean }> {
   return apiFetch<{ addressed: boolean }>(
     `/api/trips/${tripId}/agent/messages`,
-    { method: "POST", body: JSON.stringify({ text }) },
+    { method: "POST", body: JSON.stringify(input) },
   );
 }
 

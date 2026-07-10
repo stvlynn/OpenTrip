@@ -23,7 +23,7 @@ quiet unless asked or a change carries a material planning risk.
 | --- | --- | --- |
 | Explicit chat with `@agent` | `POST …/agent/chat` | Streams a reply (AI SDK UI message stream). User and assistant rows are persisted with the **same UIMessage ids** the client `useChat` buffer uses, so the panel can dedupe live vs history while streaming |
 | Plain member message | `POST …/agent/messages` | Persists the message, then asks the model whether the agent was addressed. Explicit `@agent` or an AI-judged ask triggers an ambient reply in the background (lands via polling); member-to-member chatter stays silent |
-| `@agent` in a stop comment | `POST …/stops/:stopId/comments` | Detected server-side; recorded as a mention with the stop as context, answered ambiently |
+| `@agent` or `@Member` in a stop comment | `POST …/stops/:stopId/comments` | Mirrored into the shared session with the stop as context (`source = mention`). `@Member` mentions populate `mentionedUserIds` so the same client toast path as chat fires. Ambient agent reply runs **only** when `@agent` is present |
 | Whitelisted write operation | stop insert/update/move, day update/delete/reorder, expense add/update | Recorded as an operation event, then evaluated asynchronously |
 
 ## Intervention policy
@@ -62,11 +62,27 @@ proactive `pendingPatch` stay in sync.
 | `routeCompute` | none (auto) | Route between waypoints via `GeoService` |
 | `routeMatrix` | none (auto) | Travel-time matrix via `GeoService` |
 | `reviewLookup` | none (auto) | Place reviews when the geo provider supports them |
+| `readTripMedia` | none (auto) | Read a trip-owned upload (image/PDF/text) via AI SDK `toModelOutput`; URL must be this trip’s `/api/uploads/trips/…` path |
 | *(from registry)* | `user-approval` | All trip-scoped editor mutations (`renameTrip`, `insertStop`, …) |
 
 Geo tools are read-only and do not mutate trips. Adding a discovered place still
 uses `insertStop` (and approval). Provider selection and caching are documented
 in [geo.md](./geo.md).
+
+### Multimodal (AI SDK file parts)
+
+- Members can attach **PNG / JPEG / WebP / PDF / plain text** (markdown, csv)
+  in the agent composer (max 2 MiB, same as trip note media).
+- Files are uploaded to `POST /api/trips/:id/media` first; chat messages persist
+  AI SDK `{ type: "file", mediaType, url, filename? }` parts (never `data:` URLs).
+- Before calling the model, trip-owned upload URLs are resolved to **inline
+  bytes** via `FileStorage` (and `experimental_download` for any remaining URL
+  parts). AI SDK’s default HTTP downloader blocks `localhost`/private hosts
+  (SSRF guard); we never ask it to fetch our own upload URLs over the network.
+- Stop `note` Markdown (truncated) is included in the trip snapshot so the agent
+  can discover existing upload URLs and call `readTripMedia` when needed.
+- External URLs are rejected by `readTripMedia` and by the custom download
+  helper (SSRF protection).
 
 Write tools use AI SDK `toolApproval` + `experimental_toolApprovalSecret`. The
 client continues with `addToolApprovalResponse({ id, approved, reason? })` and
@@ -147,4 +163,6 @@ approvals round-trip), a 12-second poll of `GET …/agent/events` shared by all
 members, and bottom-right intervention cards with approve / discuss / deny
 actions (AI SDK approval DTO). Chat tool parts render Approve/Deny via
 `addToolApprovalResponse`. The collapsed state persists via
-`PUT /api/users/preferences/agent-panel`.
+`PUT /api/users/preferences/agent-panel` (response is the written preference
+snapshot — not a post-write re-read; see
+[../operations/cloudflare.md](../operations/cloudflare.md#hyperdrive-read-after-write)).

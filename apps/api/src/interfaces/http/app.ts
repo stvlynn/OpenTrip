@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
-import { containsAgentMention, type Defer } from "../../application";
+import { type Defer } from "../../application";
 import type { OperationEvent } from "../../domain/agent";
 import { MAX_AVATAR_BYTES } from "../../application/avatar";
 import { MAX_TRIP_MEDIA_BYTES } from "../../application/media";
@@ -83,9 +83,22 @@ const agentPanelPreferenceSchema = z.object({
   collapsed: z.boolean(),
 });
 
-const agentPostMessageSchema = z.object({
-  text: z.string().trim().min(1).max(4_000),
+const agentFilePartSchema = z.object({
+  type: z.literal("file"),
+  mediaType: z.string().min(1).max(100),
+  url: z.string().min(1).max(2_000),
+  filename: z.string().max(255).optional(),
 });
+
+const agentPostMessageSchema = z
+  .object({
+    text: z.string().trim().max(4_000).optional(),
+    files: z.array(agentFilePartSchema).max(8).optional(),
+  })
+  .refine(
+    (v) => Boolean(v.text?.trim()) || (v.files?.length ?? 0) > 0,
+    { message: "Message text or attachment is required" },
+  );
 
 const agentUiMessageSchema = z.object({
   id: z.string().optional(),
@@ -430,13 +443,13 @@ export function createApp(container: Container) {
     "/trips/:id/media",
     bodyLimit({
       maxSize: MAX_TRIP_MEDIA_REQUEST_BYTES,
-      onError: (c) => fail(c, "media_too_large", "Image request is too large", 413),
+      onError: (c) => fail(c, "media_too_large", "File request is too large", 413),
     }),
     async (c) => {
       const body = await c.req.parseBody();
       const file = body.file;
       if (!(file instanceof File)) {
-        return fail(c, "media_missing", "Image file is required", 400);
+        return fail(c, "media_missing", "File is required", 400);
       }
       const url = await tripMediaService.upload(
         c.req.param("id"),
@@ -444,6 +457,7 @@ export function createApp(container: Container) {
         {
           content: new Uint8Array(await file.arrayBuffer()),
           claimedMimeType: file.type,
+          filename: file.name,
         },
       );
       return ok(c, { url }, 201);
@@ -508,13 +522,13 @@ export function createApp(container: Container) {
       text,
       user.id,
     );
-    // An @agent mention in a stop comment enters the shared session as a
-    // question with the stop as context.
-    if (agentService && containsAgentMention(text)) {
+    // Mirror @member / @agent mentions into the shared agent session so the
+    // existing mention-toast poll path fires. Ambient reply only for @agent.
+    if (agentService) {
       const stopName = dto.stops.find((s) => s.id === stopId)?.name ?? stopId;
       const defer = deferOf(c);
       defer(
-        agentService.recordMention(
+        agentService.recordStopComment(
           dto.id,
           user.id,
           `(commenting on stop "${stopName}") ${text}`,
@@ -662,13 +676,13 @@ export function createApp(container: Container) {
   );
 
   agent.post("/messages", async (c) => {
-    const { text } = agentPostMessageSchema.parse(await c.req.json());
+    const body = agentPostMessageSchema.parse(await c.req.json());
     return ok(
       c,
       await agentService!.postMessage(
         c.req.param("tripId")!,
         c.get("user")!.id,
-        text,
+        { text: body.text, files: body.files },
         deferOf(c),
       ),
     );
@@ -694,6 +708,7 @@ export function createApp(container: Container) {
     );
 
     // Prefer the latest user text (and its client id) from the UI message list.
+    // Attachment-only turns still need the client id for history dedupe.
     let text: string | null = null;
     let clientMessageId: string | undefined;
     if (!hasApprovalResponse && clientMessages?.length) {
@@ -705,8 +720,9 @@ export function createApp(container: Container) {
           .map((p) => p.text as string)
           .join("\n")
           .trim();
-        if (joined) {
-          text = joined;
+        const hasFile = m.parts.some((p) => p.type === "file");
+        if (joined || hasFile) {
+          text = joined || null;
           clientMessageId = m.id;
           break;
         }

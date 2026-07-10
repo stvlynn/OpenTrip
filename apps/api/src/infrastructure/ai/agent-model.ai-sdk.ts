@@ -6,6 +6,7 @@ import {
   stepCountIs,
   streamText,
   tool,
+  type Experimental_DownloadFunction,
   type LanguageModel,
   type ModelMessage,
   type ToolSet,
@@ -29,12 +30,21 @@ import type {
 import type { TripSnapshot } from "../../domain/trip";
 import type { WeatherService } from "../../application/weather/weather-service";
 import type { GeoService } from "../../application/geo/geo-service";
+import type { FileStorage } from "../../application/storage";
+import {
+  isTripMediaStoragePath,
+  storageNamespaceOf,
+  storagePathFromPublicUrl,
+} from "../../application/storage";
+import { isAgentFilePart } from "../../application/agent/file-parts";
 import {
   listWriteOps,
   pendingPatchSchema,
   writeToolNames,
 } from "../../application/trip/ops";
 import type { AiConfig } from "../config";
+
+const NOTE_CONTEXT_MAX = 2_000;
 
 function chatSystemPrompt(): string {
   const tools = writeToolNames().join(", ");
@@ -49,7 +59,8 @@ Rules:
 - You have the same trip-edit capabilities as a human editor. Prefer calling write tools over telling the member to do it manually.
 - Write tools (${tools}) pause for member approval before they run — never claim a change already applied.
 - For existing entities, only use stop/day/expense/member ids from the trip snapshot. insertStop and addExpense create new ids after approval.
-- checkWeather, placeSearch, placeNearby, placeDetail, routeCompute, routeMatrix, and reviewLookup are read-only and do not need approval.
+- checkWeather, placeSearch, placeNearby, placeDetail, routeCompute, routeMatrix, reviewLookup, and readTripMedia are read-only and do not need approval.
+- Members may attach images, PDFs, or text files in chat. Stop notes in the snapshot may embed trip upload URLs — call readTripMedia with those URLs when you need to see the file contents.
 - Use geo read tools to discover places and travel times, then propose insertStop (or other write tools) when the member wants a found place added to the trip.`;
 }
 
@@ -119,6 +130,11 @@ function tripContext(trip: TripSnapshot): string {
       lat: s.lat,
       lng: s.lng,
       cost: s.cost,
+      note: s.note
+        ? s.note.length > NOTE_CONTEXT_MAX
+          ? `${s.note.slice(0, NOTE_CONTEXT_MAX)}…`
+          : s.note
+        : "",
     })),
     expenses: trip.expenses.map((e) => ({
       id: e.id,
@@ -138,29 +154,150 @@ function textOf(parts: AgentMessagePart[]): string {
     .join("\n");
 }
 
+type InlineFilePart = {
+  type: "file";
+  data: { type: "data"; data: Uint8Array };
+  mediaType: string;
+  filename?: string;
+};
+
+/**
+ * Resolve persisted file parts to inline bytes via FileStorage.
+ *
+ * AI SDK's default URL downloader blocks localhost/private hosts (SSRF guard).
+ * Best practice for private uploads: never ask the SDK to HTTP-fetch them —
+ * load from our storage port and pass `{ type: "data" }` instead.
+ */
+async function fileContentParts(
+  parts: AgentMessagePart[],
+  fileStorage: FileStorage,
+  tripId: string,
+): Promise<InlineFilePart[]> {
+  const tripNamespace = storageNamespaceOf(tripId);
+  const content: InlineFilePart[] = [];
+  for (const part of parts) {
+    if (!isAgentFilePart(part)) continue;
+    const path = storagePathFromPublicUrl(part.url);
+    if (
+      !path ||
+      !isTripMediaStoragePath(path) ||
+      path.split("/")[1] !== tripNamespace
+    ) {
+      continue;
+    }
+    const file = await fileStorage.read(path);
+    if (!file) continue;
+    content.push({
+      type: "file",
+      data: { type: "data", data: file.content },
+      mediaType: file.contentType || part.mediaType,
+      ...(part.filename ? { filename: part.filename } : {}),
+    });
+  }
+  return content;
+}
+
+/**
+ * AI SDK `experimental_download` for trip-owned upload URLs.
+ * Reads from FileStorage so localhost/dev public URLs never hit the SSRF guard.
+ * Non-trip URLs are passed through only when the model supports them natively.
+ */
+export function createTripMediaDownload(
+  fileStorage: FileStorage,
+  tripId: string,
+): Experimental_DownloadFunction {
+  const tripNamespace = storageNamespaceOf(tripId);
+  return async (requestedDownloads) =>
+    Promise.all(
+      requestedDownloads.map(async ({ url, isUrlSupportedByModel }) => {
+        const path = storagePathFromPublicUrl(url.href);
+        if (
+          path &&
+          isTripMediaStoragePath(path) &&
+          path.split("/")[1] === tripNamespace
+        ) {
+          const file = await fileStorage.read(path);
+          if (!file) {
+            throw new Error(`Trip media not found for ${url.href}`);
+          }
+          return { data: file.content, mediaType: file.contentType };
+        }
+        // Model can fetch public HTTPS itself — do not download here.
+        if (isUrlSupportedByModel) return null;
+        throw new Error(
+          `Refusing to download non-trip media URL (${url.hostname})`,
+        );
+      }),
+    );
+}
+
 /** Convert the shared session history into model messages. Assistant entries
  * keep their role; human and operation entries become labeled user messages
- * so the model can attribute statements to members. */
-function toModelMessages(
+ * so the model can attribute statements to members. File parts stay multimodal. */
+async function toModelMessages(
   history: AgentMessage[],
   actorName: (userId: string | null) => string,
-): ModelMessage[] {
+  fileStorage: FileStorage,
+  tripId: string,
+): Promise<ModelMessage[]> {
   const messages: ModelMessage[] = [];
   for (const message of history) {
     const text = textOf(message.parts);
-    if (!text.trim()) continue;
+    const files = await fileContentParts(message.parts, fileStorage, tripId);
+
     if (message.role === "assistant") {
+      if (!text.trim()) continue;
       messages.push({ role: "assistant", content: text });
-    } else if (message.source === "operation") {
-      messages.push({ role: "user", content: `[operation] ${text}` });
-    } else {
-      messages.push({
-        role: "user",
-        content: `[${actorName(message.actorUserId)}] ${text}`,
-      });
+      continue;
     }
+
+    if (!text.trim() && files.length === 0) continue;
+
+    const label =
+      message.source === "operation"
+        ? "[operation]"
+        : `[${actorName(message.actorUserId)}]`;
+    const labeledText = text.trim()
+      ? `${label} ${text}`
+      : `${label} (attachment)`;
+
+    if (files.length === 0) {
+      messages.push({ role: "user", content: labeledText });
+      continue;
+    }
+
+    messages.push({
+      role: "user",
+      content: [{ type: "text", text: labeledText }, ...files],
+    });
   }
   return messages;
+}
+
+function contextSnippetFromMessages(messages: ModelMessage[]): string {
+  return messages
+    .map((m) => {
+      if (typeof m.content === "string") return `${m.role}: ${m.content}`;
+      if (!Array.isArray(m.content)) return `${m.role}:`;
+      const text = m.content
+        .filter(
+          (p): p is { type: "text"; text: string } =>
+            typeof p === "object" &&
+            p !== null &&
+            "type" in p &&
+            p.type === "text" &&
+            "text" in p &&
+            typeof p.text === "string",
+        )
+        .map((p) => p.text)
+        .join(" ");
+      const fileCount = m.content.filter(
+        (p) => typeof p === "object" && p !== null && "type" in p && p.type === "file",
+      ).length;
+      const suffix = fileCount > 0 ? ` [${fileCount} attachment(s)]` : "";
+      return `${m.role}: ${text}${suffix}`;
+    })
+    .join("\n");
 }
 
 function clientHasToolApprovalResponse(messages: AgentClientUIMessage[]): boolean {
@@ -221,6 +358,7 @@ export class AiSdkAgentModel implements AgentModel {
     private config: AiConfig,
     private weatherService: WeatherService,
     private geoService: GeoService,
+    private fileStorage: FileStorage,
   ) {
     if (config.baseUrl) {
       const provider = createOpenAICompatible({
@@ -236,19 +374,21 @@ export class AiSdkAgentModel implements AgentModel {
   }
 
   /** Read-only tools always available (no approval). Not part of trip ops.
-   * Weather and geo go through application services, never provider clients. */
-  private readTools(): ToolSet {
+   * Weather, geo, and trip media go through application/storage ports. */
+  private readTools(tripId: string): ToolSet {
     return {
       ...buildWeatherReadTools(this.weatherService),
       ...buildGeoReadTools(this.geoService),
+      ...buildTripMediaReadTools(this.fileStorage, tripId),
     };
   }
 
   private chatTools(
+    tripId: string,
     applyPatch?: (patch: PendingPatch) => Promise<AgentToolApplyResult>,
   ): ToolSet {
-    if (!applyPatch) return this.readTools();
-    return { ...this.readTools(), ...buildWriteTools(applyPatch) };
+    if (!applyPatch) return this.readTools(tripId);
+    return { ...this.readTools(tripId), ...buildWriteTools(applyPatch) };
   }
 
   private chatSystem(trip: TripSnapshot): string {
@@ -279,11 +419,13 @@ export class AiSdkAgentModel implements AgentModel {
     return toModelMessages(
       request.history,
       this.actorNameResolver(request.trip),
+      this.fileStorage,
+      request.trip.id,
     );
   }
 
   async streamChat(request: AgentChatRequest): Promise<Response> {
-    const tools = this.chatTools(request.applyPatch);
+    const tools = this.chatTools(request.trip.id, request.applyPatch);
     const messages = await this.resolveModelMessages(request, tools);
 
     // When the last message is an assistant with tool parts, the UI stream
@@ -302,6 +444,11 @@ export class AiSdkAgentModel implements AgentModel {
       tools,
       toolApproval: buildWriteToolApproval(request.canEdit),
       experimental_toolApprovalSecret: this.config.apiKey,
+      // Private trip uploads: resolve via FileStorage, never HTTP-fetch localhost.
+      experimental_download: createTripMediaDownload(
+        this.fileStorage,
+        request.trip.id,
+      ),
       stopWhen: stepCountIs(this.config.maxToolSteps),
     });
 
@@ -324,23 +471,31 @@ export class AiSdkAgentModel implements AgentModel {
     const result = await generateText({
       model: this.model,
       system: this.chatSystem(request.trip),
-      messages: toModelMessages(
+      messages: await toModelMessages(
         request.history,
         this.actorNameResolver(request.trip),
+        this.fileStorage,
+        request.trip.id,
       ),
-      tools: this.readTools(),
+      tools: this.readTools(request.trip.id),
+      experimental_download: createTripMediaDownload(
+        this.fileStorage,
+        request.trip.id,
+      ),
       stopWhen: stepCountIs(this.config.maxToolSteps),
     });
     return [{ type: "text", text: result.text }];
   }
 
   async isAddressed(request: AgentAddressedRequest): Promise<boolean> {
-    const recentContext = toModelMessages(
-      request.history.slice(-20),
-      this.actorNameResolver(request.trip),
-    )
-      .map((m) => `${m.role}: ${typeof m.content === "string" ? m.content : ""}`)
-      .join("\n");
+    const recentContext = contextSnippetFromMessages(
+      await toModelMessages(
+        request.history.slice(-20),
+        this.actorNameResolver(request.trip),
+        this.fileStorage,
+        request.trip.id,
+      ),
+    );
 
     const { object } = await generateObject({
       model: this.model,
@@ -359,12 +514,14 @@ export class AiSdkAgentModel implements AgentModel {
   async evaluateOperation(
     request: AgentEvaluationRequest,
   ): Promise<InterventionDecision> {
-    const recentContext = toModelMessages(
-      request.history.slice(-20),
-      this.actorNameResolver(request.trip),
-    )
-      .map((m) => `${m.role}: ${typeof m.content === "string" ? m.content : ""}`)
-      .join("\n");
+    const recentContext = contextSnippetFromMessages(
+      await toModelMessages(
+        request.history.slice(-20),
+        this.actorNameResolver(request.trip),
+        this.fileStorage,
+        request.trip.id,
+      ),
+    );
 
     const { object } = await generateObject({
       model: this.model,
@@ -488,4 +645,72 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
       execute: async (input) => geoService.reviewLookup(input),
     }),
   };
+}
+
+type TripMediaToolResult =
+  | { error: string }
+  | { mediaType: string; data: string; filename?: string };
+
+/** Read trip-owned uploads into multimodal tool output (AI SDK toModelOutput). */
+export function buildTripMediaReadTools(
+  fileStorage: FileStorage,
+  tripId: string,
+): ToolSet {
+  const tripNamespace = storageNamespaceOf(tripId);
+  return {
+    readTripMedia: tool({
+      description:
+        "Read a trip-owned uploaded image, PDF, or text file so you can see its contents. Pass a URL from a chat attachment or a stop note that points at this trip's /api/uploads/trips/... path. External URLs are rejected.",
+      inputSchema: z.object({
+        url: z.string().min(1).describe("Public upload URL for this trip"),
+      }),
+      execute: async ({ url }): Promise<TripMediaToolResult> => {
+        const path = storagePathFromPublicUrl(url);
+        if (
+          !path ||
+          !isTripMediaStoragePath(path) ||
+          path.split("/")[1] !== tripNamespace
+        ) {
+          return {
+            error:
+              "URL is not a managed media file for this trip. Use a /api/uploads/trips/... URL from this trip.",
+          };
+        }
+        const file = await fileStorage.read(path);
+        if (!file) {
+          return { error: "File not found" };
+        }
+        return {
+          mediaType: file.contentType,
+          data: bytesToBase64(file.content),
+          filename: path.split("/").pop(),
+        };
+      },
+      toModelOutput: ({ output }: { output: TripMediaToolResult }) => {
+        if ("error" in output) {
+          return { type: "text" as const, value: output.error };
+        }
+        return {
+          type: "content" as const,
+          value: [
+            {
+              type: "file" as const,
+              mediaType: output.mediaType,
+              data: { type: "data" as const, data: output.data },
+              ...(output.filename ? { filename: output.filename } : {}),
+            },
+          ],
+        };
+      },
+    }),
+  };
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
 }

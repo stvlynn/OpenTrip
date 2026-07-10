@@ -160,8 +160,11 @@ docker compose -f deploy/docker/compose.yaml --profile mysql up -d mysql
   category set and defaults to `Plan`.
 - `expense_participants` — `expense_id`, `member_id` (unique together).
 - `user_preferences` — `user_id` (PK, references `user`), `planner_sidebar_width`,
-  `planner_sidebar_collapsed`, `updated_at`. Stores UI chrome such as the
-  travel-planner resizable sidebar width and collapsed state.
+  `planner_sidebar_collapsed`, `agent_panel_collapsed`, `updated_at`. Stores UI
+  chrome such as the travel-planner resizable sidebar and agent panel collapsed
+  state. Preference **updates** return the written snapshot and must not
+  re-`SELECT` after UPSERT (Hyperdrive may serve a stale cached row — see
+  [../operations/cloudflare.md](../operations/cloudflare.md#hyperdrive-read-after-write)).
 
 Amounts are stored as integers in their selected currency. The current budget
 algorithm does not convert FX; mixed-currency expenses are persisted/displayed

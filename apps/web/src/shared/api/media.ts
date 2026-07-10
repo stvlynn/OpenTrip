@@ -6,7 +6,11 @@ interface MediaUploadBody {
   error?: { code?: string; message?: string };
 }
 
-/** Upload a PNG/JPEG/WebP image for embedding in a stop note. */
+/** MIME types accepted for trip note images and agent chat attachments. */
+export const TRIP_MEDIA_ACCEPT =
+  "image/png,image/jpeg,image/webp,application/pdf,text/plain,text/markdown,text/csv,.md,.csv,.txt,.pdf";
+
+/** Upload a file into the trip media namespace; returns a public URL. */
 export async function uploadTripMedia(
   tripId: string,
   file: File,

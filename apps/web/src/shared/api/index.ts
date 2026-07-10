@@ -55,6 +55,7 @@ export {
   applyAgentSuggestion,
   dismissAgentSuggestion,
   type AgentApprovalResponse,
+  type AgentFilePart,
   type AgentMessage,
   type AgentMessagePart,
   type AgentMessageSource,
@@ -66,4 +67,4 @@ export {
 } from "./agent";
 export { fetchWeather, type WeatherData } from "./weather";
 export { fetchFxRates, type FxRatesData } from "./fx";
-export { uploadTripMedia } from "./media";
+export { uploadTripMedia, TRIP_MEDIA_ACCEPT } from "./media";

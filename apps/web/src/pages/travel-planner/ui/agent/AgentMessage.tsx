@@ -74,6 +74,88 @@ export function textFromParts(parts: UIMessage["parts"] | undefined): string {
     .join("\n");
 }
 
+function filePartsFromMessage(
+  parts: UIMessage["parts"] | undefined,
+): Array<{
+  mediaType: string;
+  url: string;
+  filename?: string;
+}> {
+  if (!parts?.length) return [];
+  const out: Array<{ mediaType: string; url: string; filename?: string }> = [];
+  for (const part of parts) {
+    if (part.type !== "file") continue;
+    const mediaType =
+      typeof (part as { mediaType?: unknown }).mediaType === "string"
+        ? (part as { mediaType: string }).mediaType
+        : "";
+    const url =
+      typeof (part as { url?: unknown }).url === "string"
+        ? (part as { url: string }).url
+        : "";
+    if (!mediaType || !url) continue;
+    const filename =
+      typeof (part as { filename?: unknown }).filename === "string"
+        ? (part as { filename: string }).filename
+        : undefined;
+    out.push({ mediaType, url, filename });
+  }
+  return out;
+}
+
+function AgentFileAttachments({
+  files,
+  align,
+}: {
+  files: Array<{ mediaType: string; url: string; filename?: string }>;
+  align: "start" | "end";
+}) {
+  const { t } = useTranslation("agent");
+  if (files.length === 0) return null;
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap gap-1.5",
+        align === "end" ? "justify-end" : "justify-start",
+      )}
+    >
+      {files.map((file, i) => {
+        const key = `${file.url}-${i}`;
+        if (file.mediaType.startsWith("image/")) {
+          return (
+            <a
+              key={key}
+              href={file.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="block overflow-hidden rounded-lg border border-border"
+            >
+              <img
+                src={file.url}
+                alt={file.filename ?? t("attach.imageAlt")}
+                className="max-h-48 max-w-[14rem] object-cover"
+              />
+            </a>
+          );
+        }
+        return (
+          <a
+            key={key}
+            href={file.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex max-w-[14rem] items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground hover:bg-accent"
+          >
+            <span className="min-w-0 truncate">
+              {file.filename ?? t("attach.fileFallback")}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function reasoningFromParts(parts: UIMessage["parts"] | undefined): {
   text: string;
   streaming: boolean;
@@ -156,12 +238,14 @@ export function AgentMessageItem({
   // back to the flattened `text` field for persisted history rows.
   const displayText =
     message.parts?.length ? textFromParts(message.parts) : message.text;
+  const fileAttachments = filePartsFromMessage(message.parts);
   const reasoning = isAgent ? reasoningFromParts(message.parts) : null;
   const { stopName, body } = parseStopContext(displayText);
   const showThinking =
     isAgent &&
     message.streaming === true &&
     !body &&
+    !fileAttachments.length &&
     !toolParts.length &&
     !(reasoning?.text);
 
@@ -241,6 +325,13 @@ export function AgentMessageItem({
               <span className="inline-block size-1.5 animate-pulse rounded-full bg-muted-foreground/70" />
               {t("panel.thinking")}
             </div>
+          ) : null}
+
+          {fileAttachments.length > 0 ? (
+            <AgentFileAttachments
+              files={fileAttachments}
+              align={isAgent ? "start" : "end"}
+            />
           ) : null}
 
           {body ? (

@@ -1,7 +1,7 @@
 import {
-  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_TRIP_MEDIA_MIME_TYPES,
   MAX_IMAGE_BYTES,
-  detectImageMimeType,
+  detectTripMediaMimeType,
   extensionOf,
   storageNamespaceOf,
   type FileStorage,
@@ -12,9 +12,10 @@ import type { TripService } from "../use-cases";
 export interface TripMediaUpload {
   content: Uint8Array;
   claimedMimeType: string;
+  filename?: string;
 }
 
-/** Stores trip note images through the shared FileStorage port. */
+/** Stores trip note images and agent chat attachments through FileStorage. */
 export class TripMediaService {
   constructor(
     private storage: FileStorage,
@@ -30,18 +31,18 @@ export class TripMediaService {
     await this.trips.assertEditable(tripId, userId);
 
     if (file.content.byteLength > MAX_IMAGE_BYTES) {
-      throw new TripMediaError("media_too_large", "Image exceeds the maximum size");
+      throw new TripMediaError("media_too_large", "File exceeds the maximum size");
     }
 
-    const mimeType = detectImageMimeType(file.content);
-    if (
-      !mimeType ||
-      !ALLOWED_IMAGE_MIME_TYPES.has(mimeType) ||
-      file.claimedMimeType !== mimeType
-    ) {
+    const mimeType = detectTripMediaMimeType(
+      file.content,
+      file.claimedMimeType,
+      file.filename,
+    );
+    if (!mimeType || !ALLOWED_TRIP_MEDIA_MIME_TYPES.has(mimeType)) {
       throw new TripMediaError(
         "media_unsupported_mime",
-        "Only PNG, JPEG and WebP images are allowed",
+        "Only PNG, JPEG, WebP, PDF, and plain text files are allowed",
       );
     }
 

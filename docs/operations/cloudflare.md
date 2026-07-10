@@ -192,6 +192,29 @@ Worker isolate freezes), connection timeouts, no session preload on
 `/api/auth/*`, and emergency CORS on uncaught Worker errors. Hyperdrive still
 pools origin TCP at the edge.
 
+## Hyperdrive read-after-write
+
+Hyperdrive **caches eligible `SELECT` responses** (default `max_age` 60s) and
+**does not invalidate** that cache when the Worker writes to the origin. A
+matching `SELECT` right after an `INSERT`/`UPDATE` can therefore return a
+stale row until `max_age` expires (or during `stale_while_revalidate`).
+
+Application rules:
+
+1. **Mutation responses must not re-`SELECT` the row just written.** Repository
+   update methods return the written domain snapshot (e.g.
+   `SqlUserPreferenceRepository.updateAgentPanel`). Echoing a post-write
+   `findByUserId` into the HTTP body caused the agent panel to snap shut after
+   open: optimistic `collapsed: false` was overwritten by a cached `true`.
+2. **Keep Hyperdrive query caching enabled** for ordinary reads. Do not disable
+   caching globally to paper over write-then-read bugs.
+3. **Use a second, cache-disabled Hyperdrive binding** only for paths that must
+   read fresh data from the origin (auth/session/permissions). Prefer returning
+   the write result for UI preference mutations.
+
+Cloudflare reference:
+[Query caching — read-after-write](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/#read-after-write-behavior).
+
 ## Rollback
 
 ```bash

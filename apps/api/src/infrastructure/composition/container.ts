@@ -86,7 +86,7 @@ export function createContainer(
     ? new AgentService(
         tripRepository,
         new SqlAgentSessionRepository(pool),
-        new AiSdkAgentModel(config.ai, weatherService, geoService),
+        new AiSdkAgentModel(config.ai, weatherService, geoService, fileStorage),
         {
           proactiveThreshold: config.ai.proactiveThreshold,
         },

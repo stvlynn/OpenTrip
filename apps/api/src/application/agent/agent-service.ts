@@ -17,7 +17,12 @@ import {
   type AgentEventsDto,
   type AgentHistoryDto,
 } from "./dto";
-import { buildUserMessageParts, containsAgentMention } from "./mentions";
+import {
+  filePartsFromMessageParts,
+  sanitizeAgentFileParts,
+  type AgentFilePart,
+} from "./file-parts";
+import { buildUserMessageParts, containsAgentMention, mentionedUserIdsFromParts } from "./mentions";
 
 export { containsAgentMention } from "./mentions";
 
@@ -134,20 +139,29 @@ export class AgentService {
   async postMessage(
     tripId: string,
     userId: string,
-    text: string,
+    input: { text?: string; files?: AgentFilePart[] },
     defer: Defer,
   ): Promise<{ addressed: boolean }> {
     const trip = await this.loadReadable(tripId, userId);
-    const trimmed = text.trim();
-    if (!trimmed) throw new DomainError("empty_message", "Message text is required");
+    const trimmed = (input.text ?? "").trim();
+    const files = sanitizeAgentFileParts(input.files ?? [], tripId);
+    if (!trimmed && files.length === 0) {
+      throw new DomainError(
+        "empty_message",
+        "Message text or attachment is required",
+      );
+    }
 
     const explicitMention = containsAgentMention(trimmed);
     await this.appendMessage(trip, {
       role: "user",
-      parts: buildUserMessageParts(trimmed, trip, userId),
+      parts: buildUserMessageParts(trimmed, trip, userId, files),
       actorUserId: userId,
       source: explicitMention ? "mention" : "chat",
     });
+
+    const addressedHint =
+      trimmed || (files.length > 0 ? "(attachment)" : "");
 
     // Explicit @agent always replies; otherwise ask the model whether this
     // message is addressing the agent. Member-to-member chatter stays quiet.
@@ -156,7 +170,7 @@ export class AgentService {
       return { addressed: true };
     }
 
-    defer(this.maybeReplyIfAddressed(tripId, trimmed));
+    defer(this.maybeReplyIfAddressed(tripId, addressedHint));
     return { addressed: false };
   }
 
@@ -184,15 +198,24 @@ export class AgentService {
     const canEdit = trip.permissionsFor(userId).canEdit;
     const approvalContinue = input.approvalContinue === true;
 
-    if (!approvalContinue && input.text !== null) {
-      const trimmed = input.text.trim();
-      if (!trimmed) throw new DomainError("empty_message", "Message text is required");
+    if (!approvalContinue) {
+      const trimmed = (input.text ?? "").trim();
+      const latestUser = [...(input.clientMessages ?? [])]
+        .reverse()
+        .find((m) => m.role === "user");
+      const files = filePartsFromMessageParts(latestUser?.parts, tripId);
+      if (!trimmed && files.length === 0) {
+        throw new DomainError(
+          "empty_message",
+          "Message text or attachment is required",
+        );
+      }
       await this.appendMessage(trip, {
         // Prefer the AI SDK client id so AgentChat can filter live vs
         // persisted with `persistedIds.has(m.id)` during the stream.
-        id: input.clientMessageId?.trim() || undefined,
+        id: input.clientMessageId?.trim() || latestUser?.id?.trim() || undefined,
         role: "user",
-        parts: buildUserMessageParts(trimmed, trip, userId),
+        parts: buildUserMessageParts(trimmed, trip, userId, files),
         actorUserId: userId,
         source: containsAgentMention(trimmed) ? "mention" : "chat",
       });
@@ -268,22 +291,42 @@ export class AgentService {
     defer(this.evaluateOperation(trip, event));
   }
 
-  /** Record an @agent mention from a collaborative surface (stop comments) and
-   * schedule an ambient reply so the panel session picks it up. */
-  async recordMention(
+  /**
+   * Mirror a stop comment into the shared agent session when it @mentions
+   * members and/or @agent. Member mentions drive the same toast path as chat;
+   * ambient reply runs only for explicit @agent.
+   */
+  async recordStopComment(
     tripId: string,
     userId: string,
     text: string,
     defer: Defer,
   ): Promise<void> {
     const trip = await this.load(tripId);
+    const parts = buildUserMessageParts(text, trip, userId);
+    const wantsAgent = containsAgentMention(text);
+    const memberIds = mentionedUserIdsFromParts(parts);
+    if (!wantsAgent && memberIds.length === 0) return;
+
     await this.appendMessage(trip, {
       role: "user",
-      parts: buildUserMessageParts(text, trip, userId),
+      parts,
       actorUserId: userId,
       source: "mention",
     });
-    defer(this.generateAmbientReply(tripId));
+    if (wantsAgent) {
+      defer(this.generateAmbientReply(tripId));
+    }
+  }
+
+  /** @deprecated Prefer `recordStopComment` — kept as a thin alias. */
+  async recordMention(
+    tripId: string,
+    userId: string,
+    text: string,
+    defer: Defer,
+  ): Promise<void> {
+    return this.recordStopComment(tripId, userId, text, defer);
   }
 
   /**

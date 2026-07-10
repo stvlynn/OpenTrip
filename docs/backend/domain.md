@@ -91,12 +91,17 @@ only through aggregate methods.
 business aggregate. It lives in `domain/preferences`:
 
 - `PlannerSidebarPreference` — value object `{ width: number, collapsed: boolean }`.
-- `UserPreferenceSnapshot` — `{ userId, plannerSidebar, updatedAt }`.
+- `UserPreferenceSnapshot` — `{ userId, plannerSidebar, agentPanelCollapsed, updatedAt }`.
 
 The repository port (`UserPreferenceRepository`) is implemented by
-`PgUserPreferenceRepository`. Preferences are exposed through the application
+`SqlUserPreferenceRepository`. Preferences are exposed through the application
 layer as DTOs; there are no domain invariants beyond clamping the width to the
 allowed range at the edge.
+
+Update methods (`updatePlannerSidebar`, `updateAgentPanel`) return the **written**
+snapshot (command result), not a post-write `findByUserId`. Re-SELECT after UPSERT
+is unsafe under Hyperdrive query caching — see
+[../operations/cloudflare.md](../operations/cloudflare.md#hyperdrive-read-after-write).
 
 ## Repository ports
 
@@ -116,7 +121,8 @@ Defined in `domain/trip/ports`:
 `domain/preferences/ports`:
 
 - `UserPreferenceRepository` — `findByUserId(userId)`,
-  `updatePlannerSidebar(userId, width, collapsed)`.
+  `updatePlannerSidebar(userId, width, collapsed)`,
+  `updateAgentPanel(userId, collapsed)`.
 
 One repository per aggregate/model. Adapters live in `infrastructure/persistence`.
 

@@ -8,6 +8,7 @@ const TOOL_NAME_KEYS = {
   routeCompute: "tool.names.routeCompute",
   routeMatrix: "tool.names.routeMatrix",
   reviewLookup: "tool.names.reviewLookup",
+  readTripMedia: "tool.names.readTripMedia",
 } as const;
 
 type KnownToolName = keyof typeof TOOL_NAME_KEYS;

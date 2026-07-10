@@ -31,7 +31,14 @@ function toSnapshot(userId: string, row: PreferenceRow): UserPreferenceSnapshot 
   };
 }
 
-/** Dialect-agnostic per-user UI preferences repository. */
+/**
+ * Dialect-agnostic per-user UI preferences repository.
+ *
+ * Update methods return the written snapshot — they must not re-SELECT after
+ * UPSERT. Hyperdrive caches eligible SELECTs and does not invalidate them on
+ * write, so a post-write findByUserId can return a stale row for up to
+ * max_age (default 60s) and break read-after-write for the mutation response.
+ */
 export class SqlUserPreferenceRepository implements UserPreferenceRepository {
   private dialect;
 
@@ -65,35 +72,59 @@ export class SqlUserPreferenceRepository implements UserPreferenceRepository {
     width: number,
     collapsed: boolean,
   ): Promise<UserPreferenceSnapshot> {
+    const current = await this.findByUserId(userId);
+    const updatedAt = new Date();
     const now = this.dialect.now;
     const sql = this.dialect.upsert(
       "user_preferences",
-      "user_id, planner_sidebar_width, planner_sidebar_collapsed, updated_at",
-      `$1, $2, $3, ${now}`,
+      "user_id, planner_sidebar_width, planner_sidebar_collapsed, agent_panel_collapsed, updated_at",
+      `$1, $2, $3, $4, ${now}`,
       "user_id",
       `planner_sidebar_width = EXCLUDED.planner_sidebar_width,
          planner_sidebar_collapsed = EXCLUDED.planner_sidebar_collapsed,
          updated_at = EXCLUDED.updated_at`,
     );
-    await this.db.query(sql, [userId, width, collapsed]);
-    return this.findByUserId(userId);
+    await this.db.query(sql, [
+      userId,
+      width,
+      collapsed,
+      current.agentPanelCollapsed,
+    ]);
+    return {
+      userId,
+      plannerSidebar: { width, collapsed },
+      agentPanelCollapsed: current.agentPanelCollapsed,
+      updatedAt,
+    };
   }
 
   async updateAgentPanel(
     userId: string,
     collapsed: boolean,
   ): Promise<UserPreferenceSnapshot> {
+    const current = await this.findByUserId(userId);
+    const updatedAt = new Date();
     const now = this.dialect.now;
     const sql = this.dialect.upsert(
       "user_preferences",
-      "user_id, agent_panel_collapsed, updated_at",
-      `$1, $2, ${now}`,
+      "user_id, planner_sidebar_width, planner_sidebar_collapsed, agent_panel_collapsed, updated_at",
+      `$1, $2, $3, $4, ${now}`,
       "user_id",
       `agent_panel_collapsed = EXCLUDED.agent_panel_collapsed,
          updated_at = EXCLUDED.updated_at`,
     );
-    await this.db.query(sql, [userId, collapsed]);
-    return this.findByUserId(userId);
+    await this.db.query(sql, [
+      userId,
+      current.plannerSidebar.width,
+      current.plannerSidebar.collapsed,
+      collapsed,
+    ]);
+    return {
+      userId,
+      plannerSidebar: current.plannerSidebar,
+      agentPanelCollapsed: collapsed,
+      updatedAt,
+    };
   }
 }
 
