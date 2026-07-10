@@ -169,7 +169,17 @@ transition) with `useChat` + `DefaultChatTransport` for streaming (full message 
 approvals round-trip), a 12-second poll of `GET …/agent/events` shared by all
 members, and bottom-right intervention cards with approve / discuss / deny
 actions (AI SDK approval DTO). Chat tool parts render Approve/Deny via
-`addToolApprovalResponse`. The collapsed state persists via
+`addToolApprovalResponse`. Plain (non-`@agent`) sends use
+`POST …/agent/messages`, which returns the inserted `message`; the SPA merges
+it with `setQueryData` so the bubble appears immediately without relying on a
+list GET that may hit a stale Hyperdrive cache. Avatars resolve members by
+`actorUserId` (not display name) so duplicate names stay distinct. The
+collapsed state persists via
 `PUT /api/users/preferences/agent-panel` (response is the written preference
 snapshot — not a post-write re-read; see
 [../operations/cloudflare.md](../operations/cloudflare.md#hyperdrive-read-after-write)).
+
+On Workers, Better Auth and `SqlAgentSessionRepository` use the
+`HYPERDRIVE_CACHE_DISABLED` binding (`poolFresh`) so history/events polls see
+fresh rows after writes. Deferred ambient replies are tracked on the container
+and finish before `pool.end()` (`disposeAfterDeferred`).

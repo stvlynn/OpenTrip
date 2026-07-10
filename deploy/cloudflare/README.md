@@ -41,7 +41,8 @@ Production config lives in **GitHub Actions secrets/variables**, not in git.
 | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | Wrangler auth (Workers Scripts Write, Pages Write, DNS Write, Account Read, Hyperdrive, R2) |
 | `CLOUDFLARE_ACCOUNT_ID` | Account id |
-| `HYPERDRIVE_ID` | Hyperdrive config id (deploy inject) |
+| `HYPERDRIVE_ID` | Hyperdrive config id (deploy inject, cached) |
+| `HYPERDRIVE_CACHE_DISABLED_ID` | Cache-disabled Hyperdrive for auth/agent |
 | `DATABASE_URL` | Origin DB URL for CI migrate only |
 | `BETTER_AUTH_SECRET` | Auth signing secret |
 | `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | R2 credentials |
@@ -80,15 +81,19 @@ See [vars.example.json](vars.example.json). At minimum for auth:
 
 ### 1. Database: Hyperdrive (Postgres / PlanetScale)
 
-**Do not commit** the Hyperdrive id. Store it as a GitHub secret:
+**Do not commit** the Hyperdrive ids. Store them as GitHub secrets:
 
 ```bash
 gh secret set HYPERDRIVE_ID -R stvlynn/OpenTrip
-# paste the id from the Cloudflare dashboard
+# paste the cached config id
+
+gh secret set HYPERDRIVE_CACHE_DISABLED_ID -R stvlynn/OpenTrip
+# paste the --caching-disabled config id (same origin DB)
 ```
 
-CI passes `HYPERDRIVE_ID` into `deploy-api.mjs`, which injects the binding at
-deploy time into a temporary wrangler file.
+CI passes both into `deploy-api.mjs`, which injects `HYPERDRIVE` and
+`HYPERDRIVE_CACHE_DISABLED` at deploy time into a temporary wrangler file.
+See [hyperdrive.md](hyperdrive.md).
 
 Optional: keep origin `DATABASE_URL` as a GitHub secret for `db:migrate` only
 (Worker runtime uses Hyperdrive, not this secret).

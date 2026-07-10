@@ -29,15 +29,17 @@ On Cloudflare Workers, prefer either:
 1. **Worker secret `DATABASE_URL`** (direct connect; use when Hyperdrive TLS
    fails — e.g. some managed MySQL SSL modes), plus vars `DATABASE_PROVIDER`
    and optional `DATABASE_SSL` (`required` | `off` | `verify`), or
-2. **Hyperdrive binding** `HYPERDRIVE` (pooling). Worker uses Hyperdrive when
-   present, otherwise `DATABASE_URL`.
+2. **Hyperdrive bindings** `HYPERDRIVE` (query cache) and optional
+   `HYPERDRIVE_CACHE_DISABLED` (auth + agent fresh reads). Worker uses
+   Hyperdrive when present, otherwise `DATABASE_URL`.
 
 ## Runtime architecture
 
 ```
 createContainer
-  → createSqlClient(provider, url)     # repositories
-  → createAuthDatabase(provider, url)  # Better Auth (pg.Pool | mysql2 Pool)
+  → createDatabaseHandles(cached url)   # trip / invites / preferences
+  → createDatabaseHandles(fresh url)    # Better Auth + agent session
+     (or one shared pool when fresh url is omitted / identical)
 ```
 
 Repositories live under `infrastructure/persistence/*-repository.db.ts` and
@@ -57,7 +59,8 @@ Postgres. Prefer `SqlClient` for app code so both backends stay supported.
 
 | Layer | Connection | Where it lives |
 | --- | --- | --- |
-| Worker runtime | Hyperdrive binding `HYPERDRIVE` | Deploy injects id from GitHub secret `HYPERDRIVE_ID` |
+| Worker runtime (cached) | Hyperdrive `HYPERDRIVE` | GitHub secret `HYPERDRIVE_ID` |
+| Worker runtime (fresh) | Hyperdrive `HYPERDRIVE_CACHE_DISABLED` | GitHub secret `HYPERDRIVE_CACHE_DISABLED_ID` |
 | CI migrations | Origin Postgres URL | GitHub secret `DATABASE_URL` only (never required on Worker) |
 
 On every push to `main`, GitHub Actions runs `prisma migrate deploy` against

@@ -262,12 +262,15 @@ describe("client API documentation coverage", () => {
       agentService.indexOf("async postMessage"),
       agentService.indexOf("async streamChat"),
     );
-    expect(postMsg).toContain("return { addressed: true }");
-    expect(postMsg).toContain("return { addressed: false }");
+    expect(postMsg).toContain("return { addressed: true, message: messageDto }");
+    expect(postMsg).toContain(
+      "return { addressed: false, message: messageDto }",
+    );
     expect(postMsg).toContain("maybeReplyIfAddressed");
     expect(docs).toMatch(
       /addressed[\s\S]*?explicit `@agent`|addressed[\s\S]*?explicit @agent/,
     );
     expect(docs).toMatch(/maybeReplyIfAddressed|non-mention/);
+    expect(docs).toMatch(/message:\s*AgentMessageDto|message` — the inserted/);
   });
 });

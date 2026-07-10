@@ -28,13 +28,34 @@ import { AiSdkAgentModel } from "../ai/agent-model.ai-sdk";
 import type { AppConfig } from "../config";
 
 export interface CreateContainerOptions {
-  /** Max connections for SQL + auth pools (Workers direct MySQL: use 1). */
+  /**
+   * Max connections for the cached domain pool (Workers: prefer 3 when a
+   * separate fresh pool is also open).
+   */
   poolMax?: number;
+  /**
+   * Max connections for the cache-disabled fresh pool (auth + agent).
+   * Ignored when `freshDatabaseUrl` is omitted or equals `config.databaseUrl`
+   * (single shared pool).
+   */
+  poolMaxFresh?: number;
+  /**
+   * Connection string for auth + agent session reads that must not hit
+   * Hyperdrive query cache. When omitted or identical to `config.databaseUrl`,
+   * a single shared pool is used (Node / single-binding Workers).
+   */
+  freshDatabaseUrl?: string;
 }
 
 export interface Container {
   config: AppConfig;
+  /** Cached (or sole) SQL client — trip aggregate and ordinary reads. */
   pool: Pool;
+  /**
+   * Cache-disabled SQL client for Better Auth + agent session. Same object as
+   * `pool` when no separate fresh URL is configured.
+   */
+  poolFresh: Pool;
   auth: Auth;
   tripService: TripService;
   tripInviteService: TripInviteService;
@@ -48,7 +69,18 @@ export interface Container {
   tripMediaService: TripMediaService;
   /** Null when AI is not configured; agent routes then respond 404. */
   agentService: AgentService | null;
-  /** Close SQL + auth driver pools (required on Workers per-request graphs). */
+  /**
+   * Register a promise that must finish before pools are closed (Workers
+   * `waitUntil` ambient agent work).
+   */
+  trackDeferred: (task: Promise<unknown>) => void;
+  /**
+   * Wait for tracked deferred tasks, then close SQL + auth driver pools.
+   * Prefer this over `dispose` on Workers so ambient work is not racing
+   * `pool.end()`.
+   */
+  disposeAfterDeferred: () => Promise<void>;
+  /** Close SQL + auth driver pools immediately (Node shutdown / tests). */
   dispose: () => Promise<void>;
 }
 
@@ -59,12 +91,35 @@ export function createContainer(
   options?: CreateContainerOptions,
 ): Container {
   const poolMax = options?.poolMax ?? 5;
-  // One shared Postgres pool for domain + Better Auth (Workers/Hyperdrive).
-  const { pool, authDatabase } = createDatabaseHandles(config, {
-    max: poolMax,
-  });
+  const poolMaxFresh = options?.poolMaxFresh ?? 2;
+  const freshUrl = options?.freshDatabaseUrl?.trim();
+  const sharePool =
+    !freshUrl || freshUrl === config.databaseUrl.trim();
+
+  const cached = createDatabaseHandles(config, { max: poolMax });
+  const pool = cached.pool;
+
+  let poolFresh: Pool;
+  let authDriver: unknown;
+  let endAuthSide: () => Promise<void>;
+  let endCachedSide: () => Promise<void>;
+
+  if (sharePool) {
+    poolFresh = pool;
+    authDriver = cached.authDatabase.driver;
+    endAuthSide = cached.authDatabase.end;
+    endCachedSide = async () => {};
+  } else {
+    const freshConfig: AppConfig = { ...config, databaseUrl: freshUrl };
+    const fresh = createDatabaseHandles(freshConfig, { max: poolMaxFresh });
+    poolFresh = fresh.pool;
+    authDriver = fresh.authDatabase.driver;
+    endAuthSide = fresh.authDatabase.end;
+    endCachedSide = cached.authDatabase.end;
+  }
+
   const tripRepository = new SqlTripRepository(pool);
-  const auth = createAuth(config, authDatabase.driver, {
+  const auth = createAuth(config, authDriver, {
     tripRepository,
     loadSampleTripTemplate: createSampleTripTemplateLoader(tripRepository),
   });
@@ -91,7 +146,7 @@ export function createContainer(
   const agentService = config.ai
     ? new AgentService(
         tripRepository,
-        new SqlAgentSessionRepository(pool),
+        new SqlAgentSessionRepository(poolFresh),
         new AiSdkAgentModel(
           config.ai,
           weatherService,
@@ -105,9 +160,25 @@ export function createContainer(
       )
     : null;
 
+  const deferred: Promise<unknown>[] = [];
+
+  const disposePools = async () => {
+    if (sharePool) {
+      await Promise.allSettled([pool.end(), endAuthSide()]);
+      return;
+    }
+    await Promise.allSettled([
+      pool.end(),
+      endCachedSide(),
+      poolFresh.end(),
+      endAuthSide(),
+    ]);
+  };
+
   return {
     config,
     pool,
+    poolFresh,
     auth,
     tripService,
     tripInviteService,
@@ -120,9 +191,15 @@ export function createContainer(
     avatarService,
     tripMediaService,
     agentService,
-    dispose: async () => {
-      // Postgres: pool.end() owns the shared driver. MySQL: end both handles.
-      await Promise.allSettled([pool.end(), authDatabase.end()]);
+    trackDeferred: (task) => {
+      deferred.push(task);
     },
+    disposeAfterDeferred: async () => {
+      if (deferred.length > 0) {
+        await Promise.allSettled(deferred);
+      }
+      await disposePools();
+    },
+    dispose: disposePools,
   };
 }

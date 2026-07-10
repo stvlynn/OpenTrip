@@ -84,8 +84,8 @@ export function fetchAgentMessages(tripId: string): Promise<AgentHistory> {
 export function postAgentMessage(
   tripId: string,
   input: { text?: string; files?: AgentFilePart[] },
-): Promise<{ addressed: boolean }> {
-  return apiFetch<{ addressed: boolean }>(
+): Promise<{ addressed: boolean; message: AgentMessage }> {
+  return apiFetch<{ addressed: boolean; message: AgentMessage }>(
     `/api/trips/${tripId}/agent/messages`,
     { method: "POST", body: JSON.stringify(input) },
   );

@@ -4,7 +4,8 @@
  *
  * Database (pick one):
  *   - GitHub secret / env HYPERDRIVE_ID → injects Hyperdrive binding at deploy time
- *     (never commit the id)
+ *     (never commit the id). Optional HYPERDRIVE_CACHE_DISABLED_ID adds a second
+ *     cache-disabled binding for auth + agent fresh reads.
  *   - Worker secret DATABASE_URL for direct connect
  *
  * Non-secret Worker vars are taken from process.env when set (GitHub Actions
@@ -12,7 +13,8 @@
  * separately via sync-secrets.mjs.
  *
  * Usage:
- *   CLOUDFLARE_API_TOKEN=… HYPERDRIVE_ID=… node deploy/cloudflare/scripts/deploy-api.mjs
+ *   CLOUDFLARE_API_TOKEN=… HYPERDRIVE_ID=… \
+ *     HYPERDRIVE_CACHE_DISABLED_ID=… node deploy/cloudflare/scripts/deploy-api.mjs
  */
 import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -85,12 +87,17 @@ function resolveBaseUrlEnv() {
 
 const config = loadConfigObject(baseConfigPath);
 const hyperdriveId = process.env.HYPERDRIVE_ID?.trim();
+const hyperdriveFreshId = process.env.HYPERDRIVE_CACHE_DISABLED_ID?.trim();
 
-if (hyperdriveId) {
-  if (hyperdriveId.startsWith("<") || hyperdriveId.includes("your-")) {
-    console.error("HYPERDRIVE_ID looks like a placeholder.");
+function assertHyperdriveId(name, id) {
+  if (id.startsWith("<") || id.includes("your-")) {
+    console.error(`${name} looks like a placeholder.`);
     process.exit(1);
   }
+}
+
+if (hyperdriveId) {
+  assertHyperdriveId("HYPERDRIVE_ID", hyperdriveId);
   config.hyperdrive = [
     {
       binding: "HYPERDRIVE",
@@ -100,6 +107,20 @@ if (hyperdriveId) {
   console.log(
     "Injecting Hyperdrive binding HYPERDRIVE (id from env, not written to git).",
   );
+  if (hyperdriveFreshId) {
+    assertHyperdriveId("HYPERDRIVE_CACHE_DISABLED_ID", hyperdriveFreshId);
+    config.hyperdrive.push({
+      binding: "HYPERDRIVE_CACHE_DISABLED",
+      id: hyperdriveFreshId,
+    });
+    console.log(
+      "Injecting Hyperdrive binding HYPERDRIVE_CACHE_DISABLED (cache-disabled fresh reads).",
+    );
+  } else {
+    console.log(
+      "No HYPERDRIVE_CACHE_DISABLED_ID — auth/agent fresh reads fall back to HYPERDRIVE.",
+    );
+  }
 } else {
   delete config.hyperdrive;
   console.log(

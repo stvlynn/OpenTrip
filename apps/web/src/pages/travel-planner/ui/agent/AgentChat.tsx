@@ -51,6 +51,7 @@ export function AgentChat({
       .filter((p) => p.type === "text" && typeof p.text === "string")
       .map((p) => p.text)
       .join("\n"),
+    actorUserId: m.actorUserId,
     actorName: m.actorName,
     source: m.source,
     createdAt: m.createdAt,
@@ -70,6 +71,7 @@ export function AgentChat({
       // Keep flattened text for stop-context parsing / system fallbacks, but
       // AgentMessageItem prefers `parts` so text/reasoning deltas re-render.
       text: textFromParts(m.parts),
+      actorUserId: null,
       actorName: null,
       source: "chat" as const,
       createdAt: null,

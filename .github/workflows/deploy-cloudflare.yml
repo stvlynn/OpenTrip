@@ -9,6 +9,7 @@
 # Required secrets:
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 #   HYPERDRIVE_ID — Hyperdrive config id (deploy inject only; never commit)
+#   HYPERDRIVE_CACHE_DISABLED_ID — cache-disabled Hyperdrive for auth/agent fresh reads
 #   DATABASE_URL  — origin Postgres URL for CI migrations only (not Worker runtime)
 #   BETTER_AUTH_SECRET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY
 #
@@ -152,6 +153,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Injected into wrangler at deploy time — never committed
           HYPERDRIVE_ID: ${{ secrets.HYPERDRIVE_ID }}
+          HYPERDRIVE_CACHE_DISABLED_ID: ${{ secrets.HYPERDRIVE_CACHE_DISABLED_ID }}
           # Non-secret Worker vars (overlay wrangler.api.jsonc defaults)
           API_BASE_URL: ${{ vars.API_BASE_URL }}
           TRUSTED_ORIGINS: ${{ vars.TRUSTED_ORIGINS }}

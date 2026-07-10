@@ -60,6 +60,8 @@ export interface AgentDisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
   text: string;
+  /** Better Auth user id of the human author when known. */
+  actorUserId: string | null;
   actorName: string | null;
   source: AgentMessageSource;
   createdAt: string | null;
@@ -260,15 +262,21 @@ export function AgentMessageItem({
     !toolParts.length &&
     !(reasoning?.text);
 
-  // Match the author to a trip member for their avatar. Live messages this
-  // client just sent carry no actorName yet, so fall back to the current user.
+  // Match the author to a trip member for their avatar. Prefer userId so
+  // duplicate display names still resolve to distinct members. Live messages
+  // this client just sent carry no actor yet, so fall back to the current user.
   const member = isAgent
     ? undefined
-    : message.actorName
-      ? trip.members.find((m) => m.name === message.actorName)
-      : trip.members.find((m) => m.isCurrentUser);
+    : message.actorUserId
+      ? trip.members.find((m) => m.userId === message.actorUserId)
+      : message.actorName
+        ? trip.members.find((m) => m.name === message.actorName)
+        : trip.members.find((m) => m.isCurrentUser);
 
-  const isOwnMessage = !isAgent && (member?.isCurrentUser ?? !message.actorName);
+  const isOwnMessage =
+    !isAgent &&
+    (member?.isCurrentUser ??
+      (!message.actorUserId && !message.actorName));
   const authorLabel = isAgent
     ? t("panel.agentName")
     : (message.actorName ?? t("panel.systemName"));

@@ -30,7 +30,10 @@ export function useAgentEvents(
       const batch = first ? [] : data.messages;
       lastSeqRef.current = data.latestSeq;
       setNewMessages(batch);
-      if (!first && batch.length > 0) {
+      // Always refresh history when the cursor advances — even if this poll
+      // returned an empty batch (e.g. stale Hyperdrive cache on the delta
+      // query). Skipping invalidate left clients stuck past the new seq.
+      if (!first) {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.agentMessages(tripId),
         });

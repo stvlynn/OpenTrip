@@ -142,11 +142,14 @@ export function createApp(container: Container) {
     agentService,
   } = container;
 
-  /** Schedule work past the response: waitUntil on Workers, floating on Node. */
+  /** Schedule work past the response: waitUntil on Workers, floating on Node.
+   * Also track on the container so Workers disposeAfterDeferred waits for it
+   * before pool.end(). */
   const deferOf = (c: Context<Env>): Defer => (task) => {
     const guarded = task.catch((err) =>
       console.error("Deferred agent task failed:", err),
     );
+    container.trackDeferred(guarded);
     try {
       c.executionCtx.waitUntil(guarded);
     } catch {

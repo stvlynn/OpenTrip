@@ -4,8 +4,13 @@ import { createWorkerStorage } from "./infrastructure/storage/create-worker-stor
 import { createApp } from "./interfaces/http/app";
 
 interface WorkerEnv extends RawEnv {
-  /** Optional Hyperdrive binding. Prefer when available (pooling). */
+  /** Optional Hyperdrive binding (query cache enabled). Prefer when available. */
   HYPERDRIVE?: { connectionString: string };
+  /**
+   * Optional cache-disabled Hyperdrive for auth + agent session reads that
+   * need read-after-write consistency. Falls back to HYPERDRIVE / DATABASE_URL.
+   */
+  HYPERDRIVE_CACHE_DISABLED?: { connectionString: string };
   /** Required when HYPERDRIVE is not bound (direct MySQL/Postgres). */
   DATABASE_URL?: string;
   BETTER_AUTH_SECRET: string;
@@ -25,13 +30,31 @@ function resolveConnectionString(env: WorkerEnv): string | undefined {
   return env.DATABASE_URL?.trim() || undefined;
 }
 
-function buildApp(env: WorkerEnv, poolMax: number) {
+function resolveFreshConnectionString(
+  env: WorkerEnv,
+  cached: string | undefined,
+): string | undefined {
+  const fromFresh = env.HYPERDRIVE_CACHE_DISABLED?.connectionString?.trim();
+  if (fromFresh) return fromFresh;
+  return cached;
+}
+
+function buildApp(env: WorkerEnv) {
   const connectionString = resolveConnectionString(env);
+  const freshDatabaseUrl = resolveFreshConnectionString(env, connectionString);
   const config = loadConfig(env, connectionString);
+  const dualPools =
+    Boolean(freshDatabaseUrl) &&
+    freshDatabaseUrl !== config.databaseUrl.trim();
+  // Keep total per-request client slots ≤ 5 when both Hyperdrive bindings are live.
   const container = createContainer(
     config,
     createWorkerStorage(config.storage),
-    { poolMax },
+    {
+      poolMax: dualPools ? 3 : 5,
+      poolMaxFresh: 2,
+      freshDatabaseUrl,
+    },
   );
   return { app: createApp(container), container };
 }
@@ -76,9 +99,7 @@ export default {
     // Hyperdrive still pools TCP to the origin at the edge; caching a
     // node-postgres Pool across isolate freezes left connections "pending"
     // forever → CF hang cancel (1101) which browsers report as CORS.
-    // max:5 allows Better Auth concurrent queries within one request; the
-    // pool is disposed after the response (shared with domain SqlClient).
-    const { app, container } = buildApp(env, 5);
+    const { app, container } = buildApp(env);
     try {
       return await app.fetch(request);
     } catch (err) {
@@ -90,8 +111,10 @@ export default {
         "Something went wrong",
       );
     } finally {
+      // Dispose only after deferred ambient agent work finishes so we do not
+      // race pool.end() against waitUntil(maybeReplyIfAddressed).
       ctx.waitUntil(
-        container.dispose().catch((err) => {
+        container.disposeAfterDeferred().catch((err) => {
           console.error("Failed to dispose DB pools:", err);
         }),
       );

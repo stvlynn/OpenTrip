@@ -81,6 +81,7 @@ function createTestApp(options: {
   const container = {
     config: baseConfig(options.googleOAuth),
     pool: {} as Container["pool"],
+    poolFresh: {} as Container["poolFresh"],
     auth: auth as unknown as Container["auth"],
     tripService: {} as Container["tripService"],
     tripInviteService: {} as Container["tripInviteService"],
@@ -93,6 +94,8 @@ function createTestApp(options: {
     avatarService: {} as Container["avatarService"],
     tripMediaService: {} as Container["tripMediaService"],
     agentService: null,
+    trackDeferred: () => {},
+    disposeAfterDeferred: async () => {},
     dispose: async () => {},
   } satisfies Container;
 

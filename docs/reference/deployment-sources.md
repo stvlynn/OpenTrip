@@ -21,11 +21,14 @@
   after config changes; never hand-write bindings. Store secrets with
   `wrangler secret put`, never in config/source. Enable `observability`.
 - Access the binding as `env.HYPERDRIVE.connectionString` inside the Worker.
+  Optional `env.HYPERDRIVE_CACHE_DISABLED.connectionString` for auth/agent
+  fresh reads (see [Hyperdrive query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/#read-after-write-behavior)).
 
 ### Project decision
 
 - API deploys as a Worker using `deploy/cloudflare/wrangler.api.jsonc`
-  (`nodejs_compat_v2`, `hyperdrive` binding `HYPERDRIVE`, `observability`).
+  (`nodejs_compat_v2`, Hyperdrive bindings `HYPERDRIVE` +
+  `HYPERDRIVE_CACHE_DISABLED`, `observability`).
 - Frontend deploys to Pages (build `apps/web`, publish `apps/web/dist`).
 - `BETTER_AUTH_SECRET` is a Worker secret; `BASE_URL` is a Worker var, never
   committed. `deploy/cloudflare/secrets.example.json` lists key names only.

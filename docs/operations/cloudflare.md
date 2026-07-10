@@ -36,7 +36,8 @@ local/manual defaults only.
 | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | yes | Workers + Pages + DNS + Hyperdrive + R2 |
 | `CLOUDFLARE_ACCOUNT_ID` | yes | Account id |
-| `HYPERDRIVE_ID` | for API | Injected at deploy; never commit |
+| `HYPERDRIVE_ID` | for API | Cached Hyperdrive id (deploy inject; never commit) |
+| `HYPERDRIVE_CACHE_DISABLED_ID` | for API | Cache-disabled Hyperdrive for auth + agent fresh reads |
 | `DATABASE_URL` | for migrate | Origin Postgres URL (CI only, not Worker runtime) |
 | `BETTER_AUTH_SECRET` | for API | ≥ 32 chars |
 | `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | for API | R2 S3 API credentials |
@@ -76,15 +77,17 @@ Manual re-run: **Actions → Deploy Cloudflare → Run workflow**.
 
 ### A. Hyperdrive (recommended — PlanetScale Postgres)
 
-1. Create Hyperdrive in the Cloudflare dashboard against your Postgres origin.
-2. Store **only** the config id as GitHub secret `HYPERDRIVE_ID` (never commit):
+1. Create **two** Hyperdrive configs against the same Postgres origin:
+   - `opentrip-db` — query caching enabled (ordinary reads).
+   - `opentrip-db-fresh` — `--caching-disabled` (auth + agent session).
+2. Store the ids as GitHub secrets (never commit):
 
 ```bash
 gh secret set HYPERDRIVE_ID -R stvlynn/OpenTrip
-# paste the id from the Cloudflare dashboard
+gh secret set HYPERDRIVE_CACHE_DISABLED_ID -R stvlynn/OpenTrip
 ```
 
-3. On deploy, `deploy-api.mjs` injects the binding from that env into a
+3. On deploy, `deploy-api.mjs` injects both bindings from those env vars into a
    temporary wrangler config (not checked into git).
 
 Committed fallback in `wrangler.api.jsonc`: `DATABASE_PROVIDER=postgres`
@@ -114,6 +117,7 @@ prisma migrate deploy   # uses GitHub secret DATABASE_URL (origin)
 | Secret | Role |
 | --- | --- |
 | `HYPERDRIVE_ID` | Inject Hyperdrive binding for the Worker |
+| `HYPERDRIVE_CACHE_DISABLED_ID` | Inject cache-disabled Hyperdrive for auth/agent |
 | `DATABASE_URL` | Origin Postgres URL **only for CI migrate/seed** |
 
 `prisma migrate deploy` is idempotent: if there are no new migration folders,
@@ -245,14 +249,21 @@ Application rules:
    `SqlUserPreferenceRepository.updateAgentPanel`). Echoing a post-write
    `findByUserId` into the HTTP body caused the agent panel to snap shut after
    open: optimistic `collapsed: false` was overwritten by a cached `true`.
+   Agent `POST …/messages` returns the inserted `message` DTO so the SPA can
+   `setQueryData` without an immediate list GET.
 2. **Keep Hyperdrive query caching enabled** for ordinary reads. Do not disable
    caching globally to paper over write-then-read bugs.
-3. **Use a second, cache-disabled Hyperdrive binding** only for paths that must
-   read fresh data from the origin (auth/session/permissions). Prefer returning
-   the write result for UI preference mutations.
+3. **Use a second, cache-disabled Hyperdrive binding** (`HYPERDRIVE_CACHE_DISABLED`)
+   for reads that must be fresh: Better Auth session/permissions and the agent
+   session repository (`GET/POST …/agent/messages`, `GET …/agent/events`). The
+   Worker wires `poolFresh` from that binding (falls back to `HYPERDRIVE` when
+   unset). Prefer returning the write result for UI preference mutations.
 
 Cloudflare reference:
 [Query caching — read-after-write](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/#read-after-write-behavior).
+
+See [deploy/cloudflare/hyperdrive.md](../../deploy/cloudflare/hyperdrive.md) for
+create/bind steps.
 
 ## Rollback
 

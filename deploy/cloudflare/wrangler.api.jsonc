@@ -20,10 +20,13 @@
       "custom_domain": true
     }
   ],
-  // Hyperdrive binding is NOT committed here.
-  // Set GitHub secret HYPERDRIVE_ID (or env HYPERDRIVE_ID) and deploy-api.mjs
-  // injects:
-  //   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<from-env>" }]
+  // Hyperdrive bindings are NOT committed here.
+  // Set GitHub secrets HYPERDRIVE_ID and HYPERDRIVE_CACHE_DISABLED_ID (or env)
+  // and deploy-api.mjs injects:
+  //   "hyperdrive": [
+  //     { "binding": "HYPERDRIVE", "id": "<cached>" },
+  //     { "binding": "HYPERDRIVE_CACHE_DISABLED", "id": "<fresh>" }
+  //   ]
   //
   // Production non-secret config lives in GitHub Actions variables (see
   // vars.example.json). deploy-api.mjs overlays them onto `vars` at deploy

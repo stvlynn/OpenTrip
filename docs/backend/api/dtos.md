@@ -215,6 +215,17 @@ Example:
 { messages: AgentMessageDto[]; suggestions: AgentSuggestionDto[] }
 ```
 
+### `AgentPostMessageResultDto`
+
+Returned by `POST …/agent/messages` (inside `{ data }`):
+
+```ts
+{ addressed: boolean; message: AgentMessageDto }
+```
+
+`message` is the inserted row so clients can update the history cache without
+an immediate list GET (Hyperdrive may serve a stale cached SELECT).
+
 ### `AgentEventsDto`
 
 ```ts

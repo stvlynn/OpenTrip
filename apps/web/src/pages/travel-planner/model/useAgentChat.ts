@@ -11,11 +11,23 @@ import {
   fetchAgentMessages,
   postAgentMessage,
   type AgentFilePart,
+  type AgentHistory,
+  type AgentMessage,
 } from "@/shared/api";
 import { uploadTripMedia } from "@/shared/api/media";
 import { config, queryKeys } from "@/shared/config";
 
 const MENTION_PATTERN = /@agent\b/i;
+
+/** Merge a POST …/messages echo into the shared history cache. */
+export function appendAgentMessageToHistory(
+  old: AgentHistory | undefined,
+  message: AgentMessage,
+): AgentHistory {
+  if (!old) return { messages: [message], suggestions: [] };
+  if (old.messages.some((m) => m.id === message.id)) return old;
+  return { ...old, messages: [...old.messages, message] };
+}
 
 function hasPendingToolApproval(messages: UIMessage[]): boolean {
   return messages.some((m) =>
@@ -135,13 +147,20 @@ export function useAgentChat(tripId: string, enabled: boolean) {
       return;
     }
 
-    await postAgentMessage(tripId, {
+    // Cancel in-flight history GETs so a stale Hyperdrive-cached response
+    // cannot overwrite the write echo we are about to merge.
+    await queryClient.cancelQueries({
+      queryKey: queryKeys.agentMessages(tripId),
+    });
+    const { message } = await postAgentMessage(tripId, {
       text: trimmed || undefined,
       files: fileParts.length > 0 ? fileParts : undefined,
     });
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.agentMessages(tripId),
-    });
+    queryClient.setQueryData(
+      queryKeys.agentMessages(tripId),
+      (old: AgentHistory | undefined) =>
+        appendAgentMessageToHistory(old, message),
+    );
   };
 
   return {

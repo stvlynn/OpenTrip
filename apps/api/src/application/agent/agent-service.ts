@@ -17,6 +17,7 @@ import {
   toAgentSuggestionDto,
   type AgentEventsDto,
   type AgentHistoryDto,
+  type AgentMessageDto,
 } from "./dto";
 import {
   filePartsFromMessageParts,
@@ -148,13 +149,15 @@ export class AgentService {
 
   /** Persist a plain (non-streaming) member message. Every message is read by
    * the model; an ambient reply is generated only when the agent judges that
-   * it was addressed (explicit @agent, a direct ask, or a clear request). */
+   * it was addressed (explicit @agent, a direct ask, or a clear request).
+   * Returns the inserted message so clients can update cache without a stale
+   * Hyperdrive list GET. */
   async postMessage(
     tripId: string,
     userId: string,
     input: { text?: string; files?: AgentFilePart[] },
     defer: Defer,
-  ): Promise<{ addressed: boolean }> {
+  ): Promise<{ addressed: boolean; message: AgentMessageDto }> {
     const trip = await this.loadReadable(tripId, userId);
     const trimmed = (input.text ?? "").trim();
     const files = sanitizeAgentFileParts(input.files ?? [], tripId);
@@ -166,12 +169,13 @@ export class AgentService {
     }
 
     const explicitMention = containsAgentMention(trimmed);
-    await this.appendMessage(trip, {
+    const message = await this.appendMessage(trip, {
       role: "user",
       parts: buildUserMessageParts(trimmed, trip, userId, files),
       actorUserId: userId,
       source: explicitMention ? "mention" : "chat",
     });
+    const messageDto = toAgentMessageDto(message, trip);
 
     const addressedHint =
       trimmed || (files.length > 0 ? "(attachment)" : "");
@@ -180,11 +184,11 @@ export class AgentService {
     // message is addressing the agent. Member-to-member chatter stays quiet.
     if (explicitMention) {
       defer(this.generateAmbientReply(tripId));
-      return { addressed: true };
+      return { addressed: true, message: messageDto };
     }
 
     defer(this.maybeReplyIfAddressed(tripId, addressedHint));
-    return { addressed: false };
+    return { addressed: false, message: messageDto };
   }
 
   /**

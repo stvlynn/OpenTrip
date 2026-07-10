@@ -30,15 +30,18 @@ Shared session model, tools, and intervention policy: [agent.md](../agent.md).
 At least one of `text` (non-empty) or `files` is required. File URLs must belong
 to this trip’s managed upload namespace; unsupported MIME types are dropped.
 
-- **Response:** `{ addressed: boolean }` — **immediate** flag only:
-  - `true` when the text contains an explicit `@agent` mention (ambient reply
-    is deferred and will arrive via polling).
-  - `false` for every non-mention message, **even when** the server still
-    schedules `maybeReplyIfAddressed` in the background. A later model
-    judgment may still produce an ambient reply; that outcome is **not**
-    reflected in this response. Clients should poll
-    `GET …/agent/events` for any reply rather than treating `addressed: false`
-    as “no reply will ever come.”
+- **Response:** `{ addressed: boolean; message: AgentMessageDto }`
+  - `message` — the inserted row (echo the write so clients can `setQueryData`
+    without an immediate list GET that may hit a stale Hyperdrive cache).
+  - `addressed` — **immediate** flag only:
+    - `true` when the text contains an explicit `@agent` mention (ambient reply
+      is deferred and will arrive via polling).
+    - `false` for every non-mention message, **even when** the server still
+      schedules `maybeReplyIfAddressed` in the background. A later model
+      judgment may still produce an ambient reply; that outcome is **not**
+      reflected in this response. Clients should poll
+      `GET …/agent/events` for any reply rather than treating `addressed: false`
+      as “no reply will ever come.”
 
 ### `POST /api/trips/:tripId/agent/chat`
 
