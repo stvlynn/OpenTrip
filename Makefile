@@ -183,5 +183,9 @@ clean:
 	@echo "Cleaned build artifacts."
 
 deploy:
-	@echo "Cloudflare: see deploy/cloudflare/README.md"
+	@echo "Cloudflare (git push to main auto-deploys):"
+	@echo "  Web  https://opentrip.im"
+	@echo "  API  https://api.opentrip.im"
+	@echo "  Docs deploy/cloudflare/README.md"
+	@echo "  Manual: CLOUDFLARE_API_TOKEN=… node deploy/cloudflare/scripts/deploy-web.mjs"
 	@echo "Docker:     see deploy/docker/README.md"

@@ -1,26 +1,41 @@
 # Pages (frontend)
 
-The SPA is a static build (`apps/web/dist`) deployed to Cloudflare Pages.
+The SPA is a static build (`apps/web/dist`) deployed to Cloudflare Pages
+project **`opentrip-web`**.
 
-## Build
+## Production
 
-The API/auth origin is baked in at build time via `BASE_URL`:
+| Item | Value |
+| --- | --- |
+| Project | `opentrip-web` |
+| Custom domains | `opentrip.im`, `www.opentrip.im` |
+| Default hostname | `opentrip-web.pages.dev` |
+| Build-time `BASE_URL` | `https://api.opentrip.im` |
+
+## Deploy (preferred)
 
 ```bash
-BASE_URL="https://opentrip-api.<subdomain>.workers.dev" \
-  pnpm --filter @opentrip/web build
+export CLOUDFLARE_API_TOKEN=…
+export CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID>
+node deploy/cloudflare/scripts/deploy-web.mjs
 ```
 
-## Deploy
+On every push to `main`, GitHub Actions runs the same script.
+
+## Deploy (manual)
 
 ```bash
-wrangler pages deploy apps/web/dist --project-name opentrip-web
+BASE_URL="https://api.opentrip.im" \
+  pnpm --filter @opentrip/web build
+npx wrangler pages deploy apps/web/dist \
+  --project-name opentrip-web \
+  --branch main
 ```
 
 ## SPA routing
 
-The app uses history-based client routing. Add a `_redirects` file (already in
-`apps/web/public`) so deep links resolve to `index.html`:
+The app uses history-based client routing. `apps/web/public/_redirects` is
+copied into `dist` so deep links resolve to `index.html`:
 
 ```
 /*  /index.html  200
@@ -28,8 +43,7 @@ The app uses history-based client routing. Add a `_redirects` file (already in
 
 ## CORS / auth
 
-- Set the Worker var `TRUSTED_ORIGINS` to the Pages origin
-  (e.g. `https://opentrip-web.pages.dev`).
-- Set `BASE_URL` to the Worker origin for both frontend calls and Better Auth.
-- The SPA sends credentials; the API's CORS is configured from
-  `TRUSTED_ORIGINS`.
+- Worker var `TRUSTED_ORIGINS` includes `https://opentrip.im`,
+  `https://www.opentrip.im`, and `https://opentrip-web.pages.dev`.
+- Worker var / frontend build `BASE_URL` is `https://api.opentrip.im`.
+- The SPA sends credentials; the API CORS list comes from `TRUSTED_ORIGINS`.

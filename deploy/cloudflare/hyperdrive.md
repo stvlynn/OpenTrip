@@ -3,14 +3,23 @@
 Hyperdrive pools and caches connections to an external PostgreSQL from Workers.
 The API reads the connection string from the binding at runtime.
 
+Until Hyperdrive is configured, the GitHub Actions workflow still deploys
+**Pages**, but **skips** the API Worker deploy (placeholder id detection).
+
 ## Create
 
 ```bash
-wrangler hyperdrive create opentrip-db \
+npx wrangler hyperdrive create opentrip-db \
   --connection-string "postgres://USER:PASSWORD@HOST:5432/DBNAME"
 ```
 
-Copy the returned id into [wrangler.api.jsonc](wrangler.api.jsonc):
+Write the returned id into [wrangler.api.jsonc](wrangler.api.jsonc) and commit:
+
+```bash
+node deploy/cloudflare/scripts/set-hyperdrive.mjs <paste-id-here>
+```
+
+Equivalent hand edit:
 
 ```jsonc
 "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<paste-id-here>" }]

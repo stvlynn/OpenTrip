@@ -11,6 +11,8 @@ coverage/
 !.env.example
 .dev.vars
 deploy/**/secrets.json
+deploy/**/.secrets*.json
+deploy/**/.env.production
 
 # logs
 *.log

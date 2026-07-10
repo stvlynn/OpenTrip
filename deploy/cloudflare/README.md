@@ -3,41 +3,109 @@
 Frontend on **Pages**, API on **Workers**, PostgreSQL fronted by **Hyperdrive**.
 Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cloudflare.md).
 
+## Production URLs
+
+| Surface | Hostname |
+| --- | --- |
+| Web (Pages) | https://opentrip.im · https://www.opentrip.im · https://opentrip-web.pages.dev |
+| API (Worker) | https://api.opentrip.im · https://opentrip-api.stvlynn.workers.dev |
+
 ## Files
 
-- [wrangler.api.jsonc](wrangler.api.jsonc) — Workers config for the API
-  (`nodejs_compat_v2`, `HYPERDRIVE` binding, observability, vars).
-- [secrets.example.json](secrets.example.json) — secret key names (no values).
-- [hyperdrive.md](hyperdrive.md) — create/configure the Hyperdrive binding.
-- [pages.md](pages.md) — build and deploy the SPA to Pages.
+| Path | Purpose |
+| --- | --- |
+| [wrangler.api.jsonc](wrangler.api.jsonc) | Workers config (routes, Hyperdrive, vars) |
+| [secrets.example.json](secrets.example.json) | Secret key names only (no values) |
+| [scripts/deploy-web.mjs](scripts/deploy-web.mjs) | Build SPA + `wrangler pages deploy` |
+| [scripts/deploy-api.mjs](scripts/deploy-api.mjs) | Deploy API Worker (requires Hyperdrive) |
+| [scripts/sync-secrets.mjs](scripts/sync-secrets.mjs) | Bulk-upload Worker secrets |
+| [scripts/set-hyperdrive.mjs](scripts/set-hyperdrive.mjs) | Patch Hyperdrive id into wrangler config |
+| [hyperdrive.md](hyperdrive.md) | Create/configure Hyperdrive |
+| [pages.md](pages.md) | Pages build notes |
 
-## Quick start
+## Git push auto-deploy
+
+Pushing to `main` runs [`.github/workflows/deploy-cloudflare.yml`](../../.github/workflows/deploy-cloudflare.yml):
+
+1. **Pages** always deploys (`opentrip-web` → `opentrip.im`).
+2. **API Worker** deploys only when `wrangler.api.jsonc` has a real Hyperdrive id (not the placeholder).
+3. When API deploys, GitHub secrets whose names match Worker secret keys are bulk-synced.
+
+### Required GitHub secrets
+
+| Secret | Purpose |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Wrangler auth (Workers Scripts Write, Pages Write, DNS Write, Account Read, Hyperdrive, R2) |
+| `CLOUDFLARE_ACCOUNT_ID` | `<CLOUDFLARE_ACCOUNT_ID>` |
+
+### Optional GitHub secrets (synced to the Worker)
+
+`BETTER_AUTH_SECRET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `AI_API_KEY`,
+`OPENWEATHERMAP_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_MAPS_API_KEY`, `CAPTCHA_SECRET_KEY`.
 
 ```bash
-# 1. Hyperdrive over your external Postgres
-wrangler hyperdrive create opentrip-db \
-  --connection-string "postgres://USER:PASSWORD@HOST:5432/DBNAME"
-# paste the id into wrangler.api.jsonc
-
-# 2. Schema + seed (from a host that can reach the DB)
-DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DBNAME" pnpm db:migrate
-DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DBNAME" pnpm db:seed
-
-# 3. API (Workers)
-cd deploy/cloudflare
-wrangler secret put BETTER_AUTH_SECRET --config wrangler.api.jsonc
-# Optional: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET for Google sign-in.
-wrangler secret put GOOGLE_CLIENT_ID --config wrangler.api.jsonc
-wrangler secret put GOOGLE_CLIENT_SECRET --config wrangler.api.jsonc
-wrangler secret put S3_ACCESS_KEY_ID --config wrangler.api.jsonc
-wrangler secret put S3_SECRET_ACCESS_KEY --config wrangler.api.jsonc
-wrangler deploy --config wrangler.api.jsonc
-
-# 4. Frontend (Pages)
-BASE_URL="https://<api-worker-domain>" pnpm --filter @opentrip/web build
-wrangler pages deploy apps/web/dist --project-name opentrip-web
+# Example: update one secret and re-sync on next deploy
+gh secret set AI_API_KEY -R stvlynn/OpenTrip
 ```
 
-Set `TRUSTED_ORIGINS` (var in `wrangler.api.jsonc`) to the Pages origin so auth
-CSRF checks pass, and `BASE_URL` to the Worker's public URL. Replace the R2 S3
-endpoint and bucket placeholders before deployment.
+## One-time bootstrap
+
+### 1. Hyperdrive (manual — external Postgres)
+
+```bash
+npx wrangler hyperdrive create opentrip-db \
+  --connection-string "postgres://USER:PASSWORD@HOST:5432/DBNAME"
+
+node deploy/cloudflare/scripts/set-hyperdrive.mjs <id>
+# commit wrangler.api.jsonc
+
+DATABASE_URL="postgres://…" pnpm db:migrate
+# optional: DATABASE_URL="postgres://…" pnpm db:seed
+```
+
+### 2. Local secret file (optional, gitignored)
+
+Copy real values into `deploy/cloudflare/.secrets.local.json` (same shape as
+`secrets.example.json`). Or rely on GitHub secrets only.
+
+```bash
+export CLOUDFLARE_API_TOKEN=…
+export CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID>
+
+# After Hyperdrive is set and the Worker exists:
+node deploy/cloudflare/scripts/sync-secrets.mjs
+```
+
+### 3. Manual deploy
+
+```bash
+export CLOUDFLARE_API_TOKEN=…
+export CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID>
+
+node deploy/cloudflare/scripts/deploy-web.mjs
+node deploy/cloudflare/scripts/deploy-api.mjs
+node deploy/cloudflare/scripts/sync-secrets.mjs
+```
+
+## Vars vs secrets
+
+- **Vars** (non-secret) live in `wrangler.api.jsonc` → `vars`.
+  Production defaults: `BASE_URL=https://api.opentrip.im`,
+  `TRUSTED_ORIGINS` includes `https://opentrip.im`, R2 endpoint/bucket,
+  agent model settings.
+- **Secrets** are never committed. Set with `sync-secrets.mjs` or
+  `wrangler secret put <KEY> --config deploy/cloudflare/wrangler.api.jsonc`.
+
+## R2
+
+Bucket `opentrip-uploads` holds avatars/media via the S3-compatible API
+(`STORAGE_BACKEND=s3`). Access key id + secret access key are Worker secrets.
+
+## Rollback
+
+```bash
+npx wrangler rollback --config deploy/cloudflare/wrangler.api.jsonc
+```
+
+Pages: redeploy a previous build, or promote a prior deployment in the dashboard.

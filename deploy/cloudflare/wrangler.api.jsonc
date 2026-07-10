@@ -7,37 +7,47 @@
   "compatibility_date": "2025-01-01",
   // pg + Better Auth need Node built-ins on Workers.
   "compatibility_flags": ["nodejs_compat_v2"],
+  "account_id": "<CLOUDFLARE_ACCOUNT_ID>",
+  "workers_dev": true,
   "observability": {
     "enabled": true
   },
-  // Hyperdrive fronts the external PostgreSQL. Replace `id` with the value from
-  // `wrangler hyperdrive create opentrip-db --connection-string ...`.
+  // Custom domain for the API (zone opentrip.im is on this account).
+  "routes": [
+    {
+      "pattern": "api.opentrip.im",
+      "custom_domain": true
+    }
+  ],
+  // Hyperdrive fronts the external PostgreSQL. Replace `id` after:
+  //   wrangler hyperdrive create opentrip-db --connection-string "postgres://…"
+  // or set via `node deploy/cloudflare/scripts/set-hyperdrive.mjs <id>`.
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
       "id": "<your-hyperdrive-id>"
     }
   ],
-  // Non-secret vars. BASE_URL is the public API Worker origin. Set
-  // TRUSTED_ORIGINS to your Pages origin. Secrets go through `wrangler secret put`.
+  // Non-secret vars. Secrets go through `wrangler secret put` or
+  // `node deploy/cloudflare/scripts/sync-secrets.mjs`.
+  // Frontend: https://opentrip.im  ·  API: https://api.opentrip.im
   "vars": {
-    "BASE_URL": "https://opentrip-api.<your-subdomain>.workers.dev",
-    "TRUSTED_ORIGINS": "https://opentrip-web.pages.dev",
+    "BASE_URL": "https://api.opentrip.im",
+    "TRUSTED_ORIGINS": "https://opentrip.im,https://www.opentrip.im,https://opentrip-web.pages.dev",
     "STORAGE_BACKEND": "s3",
     "STORAGE_ROOT": "uploads",
     "S3_BUCKET": "opentrip-uploads",
     "S3_REGION": "auto",
-    "S3_ENDPOINT": "https://<account-id>.r2.cloudflarestorage.com",
+    "S3_ENDPOINT": "https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
     "S3_FORCE_PATH_STYLE": "false",
-    // Trip agent. Leave AI_MODEL empty (and skip the AI_API_KEY secret) to
-    // disable the agent entirely.
+    // Trip agent. Requires AI_API_KEY secret; leave AI_MODEL empty to disable.
     "AI_PROVIDER": "openai",
-    "AI_MODEL": "",
-    "AI_BASE_URL": "",
+    "AI_MODEL": "deepseek-v4-pro",
+    "AI_BASE_URL": "https://api.deepseek.com/v1",
     "AI_PROACTIVE_THRESHOLD": "0.7",
     "AI_MAX_TOOL_STEPS": "5",
     // Geo agent tools. Default OSM; set google + GOOGLE_MAPS_API_KEY secret to switch.
     "GEO_PROVIDER": "osm",
-    "GEO_OSM_USER_AGENT": "OpenTrip/0.1 (https://github.com/stvlynn/OpenTrip; geo-agent)"
+    "GEO_OSM_USER_AGENT": "OpenTrip/0.1 (https://opentrip.im; geo-agent)"
   }
 }
