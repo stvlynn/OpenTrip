@@ -59,6 +59,15 @@
   `payer` / `participants`, balances, and settlements — not Better Auth user
   ids (those are `members[].userId`).
 
+### Mutation responses and client caches
+
+Create/update handlers return the **written** DTO (echo), not a post-write
+`SELECT` through Hyperdrive. Clients must apply that body to local caches
+instead of immediately refetching the list — see
+[../../frontend/data-caching.md](../../frontend/data-caching.md) and
+[../../operations/cloudflare.md#hyperdrive-read-after-write](../../operations/cloudflare.md#hyperdrive-read-after-write).
+Examples: `POST /api/trips`, agent `POST …/messages`, preference PATCH.
+
 ---
 
 [← API index](./README.md)

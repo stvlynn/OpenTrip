@@ -18,6 +18,8 @@ Travel Planner SaaS — plan trips together, split everything.
 - [frontend/ui-system.md](frontend/ui-system.md)
 - [frontend/map.md](frontend/map.md)
 - [frontend/i18n.md](frontend/i18n.md)
+- [frontend/data-caching.md](frontend/data-caching.md) — React Query write-echo
+  (Hyperdrive read-after-write)
 
 ### Client API (web, mobile, other apps)
 

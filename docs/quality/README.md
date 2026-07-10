@@ -32,6 +32,11 @@ pnpm docs:check  # docs structure + link integrity
 - FSD import direction downward only; slices expose a public `index.ts`.
 - DDD: domain has no framework/DB imports; dependencies point inward.
 - Transitions name explicit properties; numeric UI uses `tabular-nums`.
+- **Write-echo for mutations:** after create/update, `setQueryData` from the
+  response; do not rely on an immediate list/detail refetch through Hyperdrive.
+  See [../frontend/data-caching.md](../frontend/data-caching.md) and
+  [../decisions/0006-mutation-echo-over-refetch.md](../decisions/0006-mutation-echo-over-refetch.md).
+  Create → list flows must be checked on Cloudflare, not only `make dev`.
 
 ## Documentation rules
 

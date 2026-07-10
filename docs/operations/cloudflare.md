@@ -242,7 +242,14 @@ Hyperdrive **caches eligible `SELECT` responses** (default `max_age` 60s) and
 matching `SELECT` right after an `INSERT`/`UPDATE` can therefore return a
 stale row until `max_age` expires (or during `stale_while_revalidate`).
 
-Application rules:
+**Local Docker does not use Hyperdrive** — write-then-refetch bugs often pass
+`make dev` and only show on `opentrip.im` (or any Worker + Hyperdrive deploy).
+
+SPA conventions and checklists:
+[../frontend/data-caching.md](../frontend/data-caching.md).
+ADR: [../decisions/0006-mutation-echo-over-refetch.md](../decisions/0006-mutation-echo-over-refetch.md).
+
+### Application rules
 
 1. **Mutation responses must not re-`SELECT` the row just written.** Repository
    update methods return the written domain snapshot (e.g.
@@ -258,6 +265,25 @@ Application rules:
    session repository (`GET/POST …/agent/messages`, `GET …/agent/events`). The
    Worker wires `poolFresh` from that binding (falls back to `HYPERDRIVE` when
    unset). Prefer returning the write result for UI preference mutations.
+4. **Trip create** follows the same echo pattern: `POST /api/trips` returns the
+   full `TripDto`; the SPA `setQueryData`s the list + detail caches and opens
+   the planner instead of refetching `GET /api/trips`.
+
+### Anti-patterns (will bite in prod)
+
+| Anti-pattern | What happens |
+| --- | --- |
+| `useMutation({ onSuccess: () => invalidateQueries(trips) })` after create | Stale `GET /api/trips` overwrites cache; new trip missing ~60s |
+| Repository `update` then `findById` for the HTTP body | Client receives pre-write values from SELECT cache |
+| “Fix” by turning off Hyperdrive query cache | Higher origin load; hides the real contract bug |
+| QA only on `make dev` for create → list flows | False confidence; Hyperdrive never in the path |
+
+### How to verify a suspected stale list
+
+1. Network: `POST` returns `201` with the new `id`.
+2. Immediate `GET /api/trips` omits that `id` (or returns old fields).
+3. Direct `GET /api/trips/:id` is `200` (row exists; list/cache path is wrong).
+4. Same flow on local Docker shows the new row immediately.
 
 Cloudflare reference:
 [Query caching — read-after-write](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/#read-after-write-behavior).

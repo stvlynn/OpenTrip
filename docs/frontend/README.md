@@ -47,3 +47,5 @@ import { Button } from "@/shared/ui/button/button";
 - [ui-system.md](ui-system.md) — cossUI tokens, primitives, polish.
 - [map.md](map.md) — MapLibre wrapper.
 - [i18n.md](i18n.md) — internationalization.
+- [data-caching.md](data-caching.md) — React Query write-echo vs Hyperdrive
+  stale SELECTs (create-trip and other mutations).

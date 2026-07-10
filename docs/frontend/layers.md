@@ -72,7 +72,11 @@ Reusable composite blocks used by more than one page:
   Pins a brand (or a page-provided `top`, e.g. the planner's back + trip title)
   above a scrollable content slot, with the account menu docked at the bottom.
   The trips page opens a guided create-trip wizard from the main header (and
-  empty-state CTA); the planner injects its itinerary into the middle slot.
+  empty-state CTA). On success the wizard echoes the `POST /api/trips` body into
+  the trips list + trip detail caches (see [data-caching.md](data-caching.md);
+  no immediate list refetch — Hyperdrive read-after-write) and navigates to the
+  planner so the one-shot `@agent` seed can run. The planner injects its
+  itinerary into the middle slot.
   It is the base layer: pages set the shell background to the sidebar color and
   float the main panel above it with rounded left corners + a left shadow. A
   collapse control sits at the sidebar's top-right; collapsing hides it and shows

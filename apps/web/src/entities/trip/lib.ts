@@ -1,5 +1,5 @@
 import type { Stop } from "@/entities/stop";
-import type { Trip, TripDay } from "./model";
+import type { Trip, TripDay, TripSummary, TripSummaryMember } from "./model";
 
 export function dayRepresentativeStop(
   trip: Trip,
@@ -200,4 +200,43 @@ function addDaysIso(date: string, days: number): string {
     String(dt.getUTCMonth() + 1).padStart(2, "0"),
     String(dt.getUTCDate()).padStart(2, "0"),
   ].join("-");
+}
+
+const DEFAULT_COVER_COLOR = "#3f6fc9";
+
+/** Build a list-card summary from a full trip DTO (e.g. POST /api/trips echo). */
+export function toTripSummary(
+  trip: Trip,
+  createdAt: string = new Date().toISOString(),
+): TripSummary {
+  const firstDay = trip.days[0];
+  const lastDay = trip.days[trip.days.length - 1];
+  const members: TripSummaryMember[] = trip.members.map((m) => ({
+    id: m.id,
+    name: m.name,
+    initials: m.initials,
+    avatarBg: m.avatarBg,
+    avatarFg: m.avatarFg,
+    image: m.image,
+    isCurrentUser: m.isCurrentUser,
+  }));
+  const located = trip.stops.find(
+    (s) => !s.transit && Number.isFinite(s.lat) && Number.isFinite(s.lng),
+  );
+  return {
+    id: trip.id,
+    title: trip.title,
+    startLabel: firstDay?.date || trip.startDate || "",
+    endLabel: lastDay?.date || trip.startDate || "",
+    status: trip.status,
+    currency: trip.currency,
+    coverColor: firstDay?.color ?? DEFAULT_COVER_COLOR,
+    coverUrl: trip.coverUrl,
+    memberCount: trip.members.length,
+    stopCount: trip.stops.length,
+    createdAt,
+    creatorName: members[0]?.name ?? "",
+    members,
+    location: located ? { lat: located.lat, lng: located.lng } : null,
+  };
 }

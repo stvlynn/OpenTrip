@@ -20,8 +20,8 @@ what to keep, and splitting shared expenses fairly.
 
 - Trips home (read) and a fully interactive single-trip planner.
 - Guided create-trip wizard (destination, days, dates, budget, party — each
-  optional / TBD), Unsplash cover when a destination is set, and a one-shot
-  `@agent` seed message on first open.
+  optional / TBD), Unsplash cover when a destination is set, then navigate to
+  the planner with a one-shot `@agent` seed message on first open.
 - Stops: list/group by day, detail panel, vote toggle, comments, inline insert.
 - Budget: expense list, add expense with payer + split, balances, settlement.
 - Email + password authentication (Better Auth).

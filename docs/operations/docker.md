@@ -58,7 +58,9 @@ cat backup.sql | docker compose exec -T postgres psql -U opentrip opentrip
 ## Notes
 
 - The API uses a plain `DATABASE_URL` pointing at the `postgres` service; there
-  is no Hyperdrive locally.
+  is no Hyperdrive locally. Write-then-`invalidateQueries` therefore looks fine
+  here and can still hide new trips (or other rows) for ~60s on Cloudflare —
+  always follow [../frontend/data-caching.md](../frontend/data-caching.md).
 - `WEB_ORIGIN` must be listed in `TRUSTED_ORIGINS` for auth to accept requests
   from the SPA.
 - `STORAGE_BACKEND=fs` and `STORAGE_ROOT=/app/apps/api/uploads` are explicit in

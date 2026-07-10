@@ -19,5 +19,6 @@ export {
   dayIsoDate,
   parseHm,
   stopDateTime,
+  toTripSummary,
   type MoveTripStopInput,
 } from "./lib";

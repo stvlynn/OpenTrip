@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@/app/router";
+import { toTripSummary, type TripSummary } from "@/entities/trip";
 import { createTrip, type CreateTripInput } from "@/shared/api";
 import { queryKeys } from "@/shared/config";
 import { useSession } from "@/shared/auth";
@@ -126,6 +128,7 @@ export function CreateTripWizardDialog({
   const locale = i18n.resolvedLanguage ?? "en";
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const { navigate } = useRouter();
   const preferredCurrency = session?.user?.defaultCurrency?.trim() || "JPY";
 
   const [step, setStep] = useState<WizardStep>("destination");
@@ -137,10 +140,21 @@ export function CreateTripWizardDialog({
 
   const create = useMutation({
     mutationFn: (input: CreateTripInput) => createTrip(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.trips });
+    onSuccess: (trip) => {
+      // Echo the POST body into caches — do not invalidate/refetch GET /api/trips
+      // immediately (Hyperdrive may serve a stale SELECT for up to ~60s).
+      // See TanStack Query "Updates from Mutation Responses" and
+      // docs/operations/cloudflare.md (Hyperdrive read-after-write).
+      queryClient.setQueryData(queryKeys.trip(trip.id), trip);
+      queryClient.setQueryData<TripSummary[]>(queryKeys.trips, (prev) => {
+        const summary = toTripSummary(trip);
+        if (!prev) return [summary];
+        if (prev.some((t) => t.id === trip.id)) return prev;
+        return [summary, ...prev];
+      });
       onOpenChange(false);
       reset();
+      navigate(`/trips/${trip.id}`);
     },
   });
 

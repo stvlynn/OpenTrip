@@ -195,7 +195,9 @@ actions (AI SDK approval DTO). Chat tool parts render Approve/Deny via
 `addToolApprovalResponse`. Plain (non-`@agent`) sends use
 `POST …/agent/messages`, which returns the inserted `message`; the SPA merges
 it with `setQueryData` so the bubble appears immediately without relying on a
-list GET that may hit a stale Hyperdrive cache. Avatars resolve members by
+list GET that may hit a stale Hyperdrive cache (same write-echo rule as trip
+create — [../frontend/data-caching.md](../frontend/data-caching.md)). Avatars
+resolve members by
 `actorUserId` (not display name) so duplicate names stay distinct. The
 collapsed state persists via
 `PUT /api/users/preferences/agent-panel` (response is the written preference

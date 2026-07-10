@@ -82,7 +82,10 @@ Better Auth and S3 credential values are set with `wrangler secret`.
 - Cloudflare (Pages + Workers + Hyperdrive): [cloudflare.md](cloudflare.md).
   Production: **https://opentrip.im** (web) · **https://api.opentrip.im** (API).
   Pushing to `main` auto-deploys via GitHub Actions; see the Cloudflare doc for
-  required repo secrets and the Hyperdrive bootstrap step.
+  required repo secrets and the Hyperdrive bootstrap step. Read-after-write
+  pitfalls (create trip missing from list, etc.):
+  [cloudflare.md#hyperdrive-read-after-write](cloudflare.md#hyperdrive-read-after-write)
+  and [../frontend/data-caching.md](../frontend/data-caching.md).
 - Docker Compose (postgres + api + web): [docker.md](docker.md).
 
 ## Logs and backup

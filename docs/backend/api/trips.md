@@ -40,6 +40,14 @@ today). Day 1’s `city` is set from `destination` when provided.
 
 - **Response:** full [`TripDto`](./dtos.md#tripdto-full-trip) (owner is first member).
 
+Clients should apply the returned `TripDto` to the React Query cache
+(`setQueryData` for both the trip detail and a prepended `TripSummary` on the
+list via `toTripSummary`) and navigate to the planner. Do **not** rely on an
+immediate `GET /api/trips` after create — Hyperdrive may serve a stale cached
+SELECT for up to ~60s (same pattern as agent message echo; see
+[data-caching.md](../../frontend/data-caching.md) and
+[cloudflare.md](../../operations/cloudflare.md#hyperdrive-read-after-write)).
+
 ### `GET /api/trips/:id`
 
 - **Auth:** session + member (`404` if not)  

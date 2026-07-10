@@ -20,3 +20,6 @@ Each ADR uses: **Context**, **Decision**, **Consequences**, **Status**
   explicit filesystem or S3-compatible avatar storage across runtimes.
 - [0005-trip-agent.md](0005-trip-agent.md) — non-intrusive shared trip agent
   using Vercel AI SDK, AI SDK UI, proactive toasts, and pending patches.
+- [0006-mutation-echo-over-refetch.md](0006-mutation-echo-over-refetch.md) —
+  echo mutation DTOs into React Query instead of immediate list refetch under
+  Hyperdrive.
