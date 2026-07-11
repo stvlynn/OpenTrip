@@ -34,13 +34,11 @@ export function useAgentEvents(
       // returned an empty batch (e.g. stale Hyperdrive cache on the delta
       // query). Skipping invalidate left clients stuck past the new seq.
       if (!first) {
+        // Agent history uses poolFresh — safe to invalidate. Do not invalidate
+        // queryKeys.trip: Hyperdrive-cached GET /trips/:id can overwrite a
+        // write-echo (e.g. a just-added stop) with a stale SELECT for ~60s.
         void queryClient.invalidateQueries({
           queryKey: queryKeys.agentMessages(tripId),
-        });
-        // Stop-comment @agent replies are written into stop_comments; refresh
-        // the trip so StopDetail picks them up without a full page reload.
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.trip(tripId),
         });
       }
     }

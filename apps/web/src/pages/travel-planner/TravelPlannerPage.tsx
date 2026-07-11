@@ -21,8 +21,7 @@ import {
   type AgentSuggestion,
 } from "@/shared/api";
 import { queryKeys } from "@/shared/config";
-import { stopNumbers } from "@/entities/trip";
-import type { Trip } from "@/entities/trip";
+import { stopNumbers, toTripSummary, type Trip, type TripSummary } from "@/entities/trip";
 import { CalendarRange, Map as MapIcon, Wallet } from "lucide-react";
 import { useRouter } from "@/app/router";
 import { useSession } from "@/shared/auth";
@@ -219,11 +218,13 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
               : ta("toast.applied"),
             type: "info",
           });
-          void queryClient.invalidateQueries({ queryKey: queryKeys.trip(tripId) });
+          // Do not invalidate trip here — Hyperdrive may return a stale trip
+          // and erase concurrent local edits. Collaborators pick up the change
+          // on the next write-echo or full navigation.
         }
       }
     }
-  }, [agentSuggestions, currentUserId, trip, ta, queryClient, tripId]);
+  }, [agentSuggestions, currentUserId, trip, ta]);
 
   const seenMentionToastRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -261,6 +262,7 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
       approveAgentSuggestion(tripId, input),
     onSuccess: (result, variables) => {
       if (variables.approved && result && "id" in result) {
+        void queryClient.cancelQueries({ queryKey: queryKeys.trip(tripId) });
         queryClient.setQueryData(queryKeys.trip(tripId), result);
         toastManager.add({ title: ta("toast.applied"), type: "success" });
       }
@@ -302,9 +304,19 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
 
   const rename = useMutation({
     mutationFn: (title: string) => renameTrip(tripId, title),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.trip(tripId) });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.trips });
+    onSuccess: (trip) => {
+      void queryClient.cancelQueries({ queryKey: queryKeys.trip(tripId) });
+      queryClient.setQueryData(queryKeys.trip(tripId), trip);
+      queryClient.setQueryData(
+        queryKeys.trips,
+        (old: TripSummary[] | undefined) => {
+          if (!old) return old;
+          const summary = toTripSummary(trip);
+          return old.map((row) =>
+            row.id === trip.id ? { ...row, ...summary, createdAt: row.createdAt } : row,
+          );
+        },
+      );
     },
   });
 

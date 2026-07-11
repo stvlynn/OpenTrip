@@ -20,6 +20,9 @@ We already hit this for:
 - Agent panel preference UPSERT (re-`SELECT` returned a stale `collapsed`).
 - Agent message history (list GET after insert).
 - Trip create wizard (`invalidateQueries` on `GET /api/trips` hid the new trip).
+- Trip detail after stop insert (`invalidateQueries(trip)` from agent stream
+  settle / events poll served a pre-write Hyperdrive SELECT and the new stop
+  vanished for ~60s).
 
 TanStack Query’s recommended pattern for this shape is to update the cache from
 the mutation response

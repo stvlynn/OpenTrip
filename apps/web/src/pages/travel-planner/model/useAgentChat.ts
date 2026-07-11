@@ -7,6 +7,7 @@ import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
+import type { Trip } from "@/entities/trip";
 import {
   fetchAgentMessages,
   postAgentMessage,
@@ -19,6 +20,33 @@ import { config, queryKeys } from "@/shared/config";
 import { looksLikeAgentThreadFollowUp } from "../lib/agentThreadFollowUp";
 
 const MENTION_PATTERN = /@agent\b/i;
+
+/** Latest write-tool trip echo from the live stream (Hyperdrive-safe). */
+function tripFromToolOutputs(messages: UIMessage[]): Trip | null {
+  let latest: Trip | null = null;
+  for (const message of messages) {
+    for (const part of message.parts) {
+      if (!isToolUIPart(part) || part.state !== "output-available") continue;
+      const output = part.output;
+      if (!output || typeof output !== "object") continue;
+      const record = output as { ok?: unknown; trip?: unknown };
+      if (record.ok !== true || !isTripEcho(record.trip)) continue;
+      latest = record.trip;
+    }
+  }
+  return latest;
+}
+
+function isTripEcho(value: unknown): value is Trip {
+  if (!value || typeof value !== "object") return false;
+  const trip = value as Partial<Trip>;
+  return (
+    typeof trip.id === "string" &&
+    Array.isArray(trip.stops) &&
+    Array.isArray(trip.days) &&
+    Array.isArray(trip.members)
+  );
+}
 
 /** Merge a POST …/messages echo into the shared history cache. */
 export function appendAgentMessageToHistory(
@@ -109,6 +137,16 @@ export function useAgentChat(tripId: string, enabled: boolean) {
   });
 
   const { status, messages: liveMessages, setMessages } = chat;
+
+  // Apply write-tool trip echoes as they land — never invalidate GET /trips/:id
+  // after a stream (Hyperdrive can return a pre-write SELECT and wipe stops).
+  useEffect(() => {
+    const echoed = tripFromToolOutputs(liveMessages);
+    if (!echoed) return;
+    void queryClient.cancelQueries({ queryKey: queryKeys.trip(tripId) });
+    queryClient.setQueryData(queryKeys.trip(tripId), echoed);
+  }, [liveMessages, queryClient, tripId]);
+
   const settledRef = useRef(false);
   useEffect(() => {
     if (status === "streaming" || status === "submitted") {
@@ -122,7 +160,6 @@ export function useAgentChat(tripId: string, enabled: boolean) {
     void queryClient
       .invalidateQueries({ queryKey: queryKeys.agentMessages(tripId) })
       .then(() => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.trip(tripId) });
         setMessages([]);
       });
   }, [status, liveMessages, queryClient, tripId, setMessages]);

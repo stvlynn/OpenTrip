@@ -36,7 +36,9 @@ TanStack Query documents this as
 | Flow | Mutation | Client update |
 | --- | --- | --- |
 | Create trip wizard | `POST /api/trips` → full `Trip` | `setQueryData(tripId)` + prepend `toTripSummary(trip)` on `queryKeys.trips`, then `navigate(/trips/:id)` — see `CreateTripWizardDialog` |
-| Trip mutations (stops, days, …) | Most return full `Trip` | `setQueryData(queryKeys.trip(id), trip)` via `useTripActions` |
+| Trip mutations (stops, days, …) | Most return full `Trip` | `cancelQueries` + `setQueryData(queryKeys.trip(id), trip)` via `useTripActions` |
+| Rename trip | `PATCH` → full `Trip` | `setQueryData` trip + merge `toTripSummary` into `queryKeys.trips` |
+| Agent write tools | Tool `execute` returns `{ ok, summary, trip }` | Live stream: `setQueryData(trip)` from tool output — **never** `invalidateQueries(trip)` after stream settle |
 | Agent message | `POST …/agent/messages` echoes `message` | `setQueryData` on agent history (no immediate list GET) |
 | Agent panel preference | PATCH preferences returns written row | `setQueryData(queryKeys.preferences, data)` — must not re-read cached SELECT |
 
@@ -50,6 +52,9 @@ Helpers:
 | Symptom | Likely cause |
 | --- | --- |
 | New trip missing from home grid for ~30–60s after wizard success (prod only) | `invalidateQueries(trips)` → stale `GET /api/trips` |
+| Stop appears then vanishes after add (prod only) | `invalidateQueries(trip)` after agent stream/events → stale `GET /api/trips/:id` overwrites write-echo |
+| Approve suggestion applies but UI reverts (prod only) | API `applySuggestion` re-`SELECT`ed trip for response body |
+| Joined trip missing from home after invite accept (prod only) | `invalidateQueries(trips)` after accept → stale list GET |
 | Agent panel snaps shut after open | Preference PATCH response re-`SELECT`ed a cached `collapsed: true` |
 | New agent bubble missing until poll/refresh | History list GET after insert hit stale cache |
 

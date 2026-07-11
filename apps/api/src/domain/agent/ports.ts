@@ -42,9 +42,11 @@ export interface AgentClientUIMessage {
   parts: AgentMessagePart[];
 }
 
-/** Result returned by write tools after the user approves them. */
+/** Result returned by write tools after the user approves them.
+ * `trip` is the post-apply client DTO (write-echo) so the SPA can
+ * `setQueryData` without refetching through Hyperdrive. */
 export type AgentToolApplyResult =
-  | { ok: true; summary: string }
+  | { ok: true; summary: string; trip: object }
   | { ok: false; error: string };
 
 export interface AgentChatRequest {

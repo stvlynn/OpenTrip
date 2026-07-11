@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AuthForm } from "@/features/auth";
 import { useSession } from "@/shared/auth";
 import { useRouter } from "@/app/router";
@@ -9,7 +9,6 @@ import {
   ApiError,
   type InvitePreview,
 } from "@/shared/api";
-import { queryKeys } from "@/shared/config";
 import { LanguageSwitch } from "@/shared/i18n/LanguageSwitch";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -101,10 +100,10 @@ function AcceptCard({
 }) {
   const { t } = useTranslation("invite");
   const { navigate } = useRouter();
-  const qc = useQueryClient();
 
   const openTrip = (tripId: string) => {
-    void qc.invalidateQueries({ queryKey: queryKeys.trips });
+    // Do not invalidate GET /api/trips — Hyperdrive may omit the newly joined
+    // trip for ~60s. Detail navigation uses GET /trips/:id which still works.
     navigate(`/trips/${tripId}`);
   };
 

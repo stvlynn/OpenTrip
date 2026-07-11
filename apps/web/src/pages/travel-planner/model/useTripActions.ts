@@ -28,7 +28,12 @@ import { queryKeys } from "@/shared/config";
  * query cache so the UI reflects server-computed budget/settlement. */
 export function useTripActions(tripId: string) {
   const qc = useQueryClient();
-  const onSuccess = (trip: Trip) => qc.setQueryData(queryKeys.trip(tripId), trip);
+  const onSuccess = (trip: Trip) => {
+    // Cancel in-flight GET /trips/:id so a Hyperdrive-stale response cannot
+    // land after this echo and erase the mutation (e.g. new stops).
+    void qc.cancelQueries({ queryKey: queryKeys.trip(tripId) });
+    qc.setQueryData(queryKeys.trip(tripId), trip);
+  };
 
   const vote = useMutation({
     mutationFn: (stopId: string) => toggleVote(tripId, stopId),

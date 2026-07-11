@@ -274,6 +274,7 @@ ADR: [../decisions/0006-mutation-echo-over-refetch.md](../decisions/0006-mutatio
 | Anti-pattern | What happens |
 | --- | --- |
 | `useMutation({ onSuccess: () => invalidateQueries(trips) })` after create | Stale `GET /api/trips` overwrites cache; new trip missing ~60s |
+| `invalidateQueries(trip)` after agent stream settle or agent events poll | Stale `GET /api/trips/:id` wipes a just-echoed stop insert (prod only) |
 | Repository `update` then `findById` for the HTTP body | Client receives pre-write values from SELECT cache |
 | “Fix” by turning off Hyperdrive query cache | Higher origin load; hides the real contract bug |
 | QA only on `make dev` for create → list flows | False confidence; Hyperdrive never in the path |

@@ -223,8 +223,11 @@ actions (AI SDK approval DTO). Chat tool parts render Approve/Deny via
 `POST …/agent/messages`, which returns the inserted `message`; the SPA merges
 it with `setQueryData` so the bubble appears immediately without relying on a
 list GET that may hit a stale Hyperdrive cache (same write-echo rule as trip
-create — [../frontend/data-caching.md](../frontend/data-caching.md)). Avatars
-resolve members by
+create — [../frontend/data-caching.md](../frontend/data-caching.md)). Approved
+write tools return `{ ok, summary, trip }` (in-memory `TripDto`, not a
+re-`SELECT`); the SPA applies `trip` via `setQueryData` and must **not**
+`invalidateQueries(trip)` after stream settle or agent-events polls — that
+path was wiping freshly added stops in production. Avatars resolve members by
 `actorUserId` (not display name) so duplicate names stay distinct. The
 collapsed state persists via
 `PUT /api/users/preferences/agent-panel` (response is the written preference

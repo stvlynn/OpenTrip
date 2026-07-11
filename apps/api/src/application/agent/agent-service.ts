@@ -269,7 +269,14 @@ export class AgentService {
           // them one at a time so each patch reloads the trip after the prior
           // patch has saved the aggregate.
           const editable = await this.loadEditable(tripId, userId);
-          return await this.applyPatch(editable, patch, userId);
+          const result = await this.applyPatch(editable, patch, userId);
+          if (!result.ok) return result;
+          // Echo the in-memory aggregate — do not re-SELECT (Hyperdrive).
+          return {
+            ok: true as const,
+            summary: result.summary,
+            trip: toTripDto(editable, userId),
+          };
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to apply trip change";
@@ -471,9 +478,9 @@ export class AgentService {
       source: "threshold",
     });
 
-    // Reload so the DTO reflects the bumped version and persisted state.
-    const updated = await this.load(tripId);
-    return toTripDto(updated, userId);
+    // Echo the in-memory aggregate after apply — do not re-SELECT through
+    // Hyperdrive (can omit the just-applied patch for ~60s).
+    return toTripDto(trip, userId);
   }
 
   /** Hide a suggestion's toast for this user only; the shared record stays. */
