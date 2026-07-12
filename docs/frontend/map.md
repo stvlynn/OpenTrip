@@ -57,6 +57,8 @@ tracks the user with `watchPosition` while active.
   floating tile). Waiting state does not spin the icon.
 - **FloatingMembers**: clicking the current user's avatar switches to the map
   tab if needed and raises `locateSignal` so the map starts or recenters.
+  While that locate is pending, sync does not fly to the trip destination /
+  stop bounds — the camera waits for the Geolocation fix.
 
 ## Behavior
 

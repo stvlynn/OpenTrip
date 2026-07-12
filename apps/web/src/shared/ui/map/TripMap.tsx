@@ -103,6 +103,8 @@ export function TripMap({
   const lastReverseRef = useRef<{ lng: number; lat: number } | null>(null);
   const reverseAbortRef = useRef<AbortController | null>(null);
   const trackingRef = useRef(false);
+  /** True while a user-initiated locate is waiting on the Geolocation API. */
+  const locatePendingRef = useRef(false);
   const userAvatarRef = useRef(userAvatar);
   const locateLabelRef = useRef(t("map.locate"));
   const locateUserRef = useRef<() => void>(() => {});
@@ -158,20 +160,26 @@ export function TripMap({
   // Stable callbacks for the one-shot map boot + Marker click handlers.
   locateUserRef.current = () => {
     const geolocate = geolocateRef.current;
-    if (!geolocate) return;
-    // Avoid trigger() while already locked — it would toggle tracking off.
-    if (!trackingRef.current) {
-      geolocate.trigger();
+    const map = mapRef.current;
+    const known = lastUserPosRef.current;
+
+    // Already tracking with a known fix — go there immediately.
+    if (known && trackingRef.current && map) {
+      locatePendingRef.current = false;
+      map.flyTo({
+        center: [known.lng, known.lat],
+        zoom: Math.max(map.getZoom(), 14),
+        duration: 900,
+      });
       return;
     }
-    const map = mapRef.current;
-    const pos = lastUserPosRef.current;
-    if (!map || !pos) return;
-    map.flyTo({
-      center: [pos.lng, pos.lat],
-      zoom: Math.max(map.getZoom(), 14),
-      duration: 900,
-    });
+
+    // Wait for the Geolocation API; suppress destination/stop camera until then.
+    locatePendingRef.current = true;
+    if (!geolocate) return;
+    if (!trackingRef.current) {
+      geolocate.trigger();
+    }
   };
 
   ensureUserMarkerRef.current = (lng, lat) => {
@@ -225,7 +233,11 @@ export function TripMap({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const boot = fallbackCenterRef.current;
+    // Avatar/locate opened the map — don't boot on trip destination or the
+    // first paint steals the camera before Geolocation returns.
+    const openForLocate = locateSignal > 0;
+    if (openForLocate) locatePendingRef.current = true;
+    const boot = openForLocate ? null : fallbackCenterRef.current;
     let map: MlMap;
     try {
       map = new MlMap({
@@ -273,7 +285,18 @@ export function TripMap({
     }
 
     geolocate.on("geolocate", (e: { coords: GeolocationCoordinates }) => {
-      ensureUserMarkerRef.current(e.coords.longitude, e.coords.latitude);
+      const { longitude, latitude } = e.coords;
+      ensureUserMarkerRef.current(longitude, latitude);
+      if (!locatePendingRef.current) return;
+      locatePendingRef.current = false;
+      map.flyTo({
+        center: [longitude, latitude],
+        zoom: Math.max(map.getZoom(), 14),
+        duration: 900,
+      });
+    });
+    geolocate.on("error", () => {
+      locatePendingRef.current = false;
     });
     geolocate.on("trackuserlocationstart", () => {
       trackingRef.current = true;
@@ -295,6 +318,7 @@ export function TripMap({
         return;
       }
       trackingRef.current = false;
+      locatePendingRef.current = false;
       clearUserMarkerRef.current();
     });
 
@@ -332,12 +356,15 @@ export function TripMap({
       syncRef.current();
       const pos = lastUserPosRef.current;
       if (pos) ensureUserMarkerRef.current(pos.lng, pos.lat);
+      // Locate was requested before the control existed — start it now.
+      if (locatePendingRef.current) locateUserRef.current();
     });
     mapRef.current = map;
     return () => {
       clearUserMarkerRef.current();
       geolocateRef.current = null;
       trackingRef.current = false;
+      locatePendingRef.current = false;
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
@@ -395,6 +422,9 @@ export function TripMap({
       }));
     const src = map.getSource("trip-route") as GeoJSONSource | undefined;
     src?.setData({ type: "FeatureCollection", features });
+
+    // User asked to locate — don't steal the camera with destination/stops.
+    if (locatePendingRef.current) return;
 
     const activeStop = visible.find((s) => s.id === active);
     if (activeStop && !searchResult) {
