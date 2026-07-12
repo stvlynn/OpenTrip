@@ -51,6 +51,54 @@
     0 0 0 1px rgba(20, 26, 48, 0.08) !important;
 }
 
+/* No spin while waiting / recovering — keep the control calm under load. */
+.maplibregl-ctrl-geolocate-waiting .maplibregl-ctrl-icon {
+  animation: none !important;
+}
+
+.trip-map-user-location {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #e9ecf4;
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
+  box-shadow:
+    0 0 0 3px rgba(63, 111, 201, 0.22),
+    0 1px 3px rgba(20, 26, 48, 0.35);
+  transition: transform var(--dur-base) cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.trip-map-user-location:hover {
+  transform: scale(1.08);
+}
+
+.trip-map-user-location:active {
+  transform: scale(0.97);
+}
+
+.trip-map-user-location img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-map-user-location {
+    transition: none;
+  }
+  .trip-map-user-location:hover,
+  .trip-map-user-location:active {
+    transform: none;
+  }
+}
+
 .trip-map-search-marker {
   width: 28px;
   height: 36px;

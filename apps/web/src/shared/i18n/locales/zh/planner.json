@@ -132,7 +132,9 @@
     },
     "popup": {
       "addStop": "在此添加地点"
-    }
+    },
+    "locate": "我的位置",
+    "locateUnavailable": "无法获取位置"
   },
   "budget": {
     "total": "行程总计",

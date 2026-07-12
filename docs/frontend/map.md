@@ -16,10 +16,14 @@ The wrapper lives at `apps/web/src/shared/ui/map` and reproduces the prototype's
   onPick={(lng, lat) => ...}
   onContext={(lng, lat) => ...} // right-click / long-press coordinate
   fallbackCenter={pt}   // optional; empty trip opens near this point
+  userAvatar={avatar}   // optional; live location marker
+  locateSignal={n}      // increment to start/recenter geolocation
 />
 ```
 
 `MapStop`: `{ id, name, lat, lng, day, color, num, transit }`.
+
+`UserLocationAvatar`: `{ name, bg, fg, src?, seed }`.
 
 ## Point picking
 
@@ -37,6 +41,21 @@ geocoding source.
 offers pointer-anchored actions: **Add a stop here** (opens the schedule composer
 pre-filled at that point, reverse-geocoded for a name) and **Copy coordinates**.
 
+## Geolocation
+
+MapLibre `GeolocateControl` sits under the zoom controls (mapcn-style
+`showLocate`). It requests high-accuracy browser permission on first use and
+tracks the user with `watchPosition` while active.
+
+- **Avatar marker**: while tracking, the user's member avatar is shown on the
+  map (custom Marker; default blue dot is disabled). Clicking it recenters
+  without toggling tracking off. Zoom/pan moves the control to background
+  tracking but keeps the avatar visible.
+- **Locate button**: lives in the same control group as zoom (no separate
+  floating tile). Waiting state does not spin the icon.
+- **FloatingMembers**: clicking the current user's avatar switches to the map
+  tab if needed and raises `locateSignal` so the map starts or recenters.
+
 ## Behavior
 
 - **Basemap**: CARTO positron GL style (free, light).
@@ -47,7 +66,7 @@ pre-filled at that point, reverse-geocoded for a name) and **Copy coordinates**.
   day's stops in order.
 - **Focus**: selecting a stop flies to it and opens a name popup.
 - **Fit**: when no stop is active, the map fits bounds to the visible stops.
-- **Empty trip + destination**: create stores geocoded `intake.destinationLat/Lng`
+- **Empty trip + destination**: create stores geocoded `trip.destinationLat/Lng`
   (via GeoService). `TripMapView` uses those as `fallbackCenter` so the first
   view opens near the destination. If coords are missing, it falls back to a
   Photon geocode of the destination label. Trips with no destination open on a

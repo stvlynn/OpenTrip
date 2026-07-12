@@ -4,7 +4,12 @@ import type { PlaceResult } from "@/shared/api";
 import type { Trip } from "@/entities/trip";
 import { dayColor } from "@/entities/trip";
 import { interactive } from "@/shared/lib";
-import { TripMap, type MapStop, type SearchResult } from "@/shared/ui/map";
+import {
+  TripMap,
+  type MapStop,
+  type SearchResult,
+  type UserLocationAvatar,
+} from "@/shared/ui/map";
 import {
   ContextMenu,
   ContextMenuItem,
@@ -25,6 +30,7 @@ export function TripMapView({
   onPick,
   onCancelPick,
   onAddStopHere,
+  locateSignal = 0,
 }: {
   trip: Trip;
   numbers: Map<string, number>;
@@ -35,6 +41,8 @@ export function TripMapView({
   onPick?: (lng: number, lat: number) => void;
   onCancelPick?: () => void;
   onAddStopHere?: (lng: number, lat: number) => void;
+  /** Increment to fly/start geolocation for the current user. */
+  locateSignal?: number;
 }) {
   const { t } = useTranslation("planner");
   const { t: tc } = useTranslation("common");
@@ -48,6 +56,18 @@ export function TripMapView({
     if (first) return { lat: first.lat, lng: first.lng };
     return destinationCenter ?? undefined;
   }, [trip, destinationCenter]);
+
+  const userAvatar = useMemo<UserLocationAvatar | null>(() => {
+    const me = trip.members.find((m) => m.isCurrentUser);
+    if (!me) return null;
+    return {
+      name: me.name,
+      bg: me.avatarBg,
+      fg: me.avatarFg,
+      src: me.image,
+      seed: me.id,
+    };
+  }, [trip.members]);
 
   useEffect(() => {
     setSearchResult(null);
@@ -131,37 +151,41 @@ export function TripMapView({
           searchResult={searchResult}
           onAddSearchResult={handleAddSearchResult}
           fallbackCenter={destinationCenter}
+          userAvatar={userAvatar}
+          locateSignal={locateSignal}
         />
-      {picking ? (
-        <div className="absolute inset-x-0 top-4 flex justify-center px-4">
-          <div className="wf-enter flex items-center gap-3 rounded-full bg-card/95 py-3 pl-4 pr-2 text-sm shadow-[var(--shadow-border),var(--shadow-md)] backdrop-blur-sm">
-            <span className="text-pretty font-medium">{t("pick.hint")}</span>
-            <button
-              type="button"
-              onClick={onCancelPick}
-              className={`h-10 rounded-full px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground ${interactive}`}
-            >
-              {tc("actions.cancel")}
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {day === 0 ? (
-        <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 rounded-xl bg-card/90 p-3 shadow-[var(--shadow-border),var(--shadow-md)] backdrop-blur-sm">
-          {trip.days.map((d) => (
-            <div key={d.number} className="flex items-center gap-2 text-xs">
-              <span
-                className="size-2.5 flex-none rounded-full"
-                style={{ background: d.color }}
-              />
-              <span className="font-medium">
-                {t("days.day", { n: d.number })}
-              </span>
-              <span className="text-pretty text-muted-foreground">{d.city}</span>
+        {picking ? (
+          <div className="absolute inset-x-0 top-4 flex justify-center px-4">
+            <div className="wf-enter flex items-center gap-3 rounded-full bg-card/95 py-3 pl-4 pr-2 text-sm shadow-[var(--shadow-border),var(--shadow-md)] backdrop-blur-sm">
+              <span className="text-pretty font-medium">{t("pick.hint")}</span>
+              <button
+                type="button"
+                onClick={onCancelPick}
+                className={`h-10 rounded-full px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground ${interactive}`}
+              >
+                {tc("actions.cancel")}
+              </button>
             </div>
-          ))}
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+        {day === 0 ? (
+          <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 rounded-xl bg-card/90 p-3 shadow-[var(--shadow-border),var(--shadow-md)] backdrop-blur-sm">
+            {trip.days.map((d) => (
+              <div key={d.number} className="flex items-center gap-2 text-xs">
+                <span
+                  className="size-2.5 flex-none rounded-full"
+                  style={{ background: d.color }}
+                />
+                <span className="font-medium">
+                  {t("days.day", { n: d.number })}
+                </span>
+                <span className="text-pretty text-muted-foreground">
+                  {d.city}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </ContextMenuTrigger>
       <ContextMenuPopup>
         <ContextMenuItem

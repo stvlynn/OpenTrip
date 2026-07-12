@@ -133,7 +133,9 @@
     },
     "popup": {
       "addStop": "Add stop here"
-    }
+    },
+    "locate": "My location",
+    "locateUnavailable": "Location unavailable"
   },
   "budget": {
     "total": "Trip total",

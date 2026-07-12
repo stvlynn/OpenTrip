@@ -70,6 +70,7 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
   );
   const [compose, setCompose] = useState<ComposeDraft | null>(null);
   const [picking, setPicking] = useState(false);
+  const [locateSignal, setLocateSignal] = useState(0);
 
   const queryClient = useQueryClient();
   const { data: trip, isPending, isError, refetch } = useQuery({
@@ -609,6 +610,7 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
                 picking={picking}
                 onPick={handleMapPick}
                 onAddStopHere={addStopAt}
+                locateSignal={locateSignal}
                 onCancelPick={() => {
                   setPicking(false);
                   setTab("schedule");
@@ -672,6 +674,10 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
               members={trip.members}
               canInvite={trip.permissions.canInvite}
               onlineUserIds={realtime.presence.map((member) => member.userId)}
+              onLocateMe={() => {
+                if (tab !== "map") setTab("map");
+                setLocateSignal((n) => n + 1);
+              }}
             />
           )}
       </main>

@@ -3,13 +3,15 @@ import { createRoot, type Root } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import {
   type GeoJSONSource,
+  GeolocateControl,
   LngLatBounds,
   Map as MlMap,
   Marker,
   NavigationControl,
   Popup,
 } from "maplibre-gl";
-import type { MapStop, SearchResult } from "./types";
+import { gradientAvatarUrl } from "@/shared/lib";
+import type { MapStop, SearchResult, UserLocationAvatar } from "./types";
 import { SearchPopup } from "./SearchPopup";
 import "./map.css";
 
@@ -35,6 +37,38 @@ export interface TripMapProps {
   onAddSearchResult?: () => void;
   /** Used when there are no stops yet (e.g. geocoded create-wizard destination). */
   fallbackCenter?: { lat: number; lng: number } | null;
+  /** Current user's avatar for the live location marker. */
+  userAvatar?: UserLocationAvatar | null;
+  /**
+   * Increment to request centering on the user (e.g. from FloatingMembers).
+   * Starts geolocation if needed; otherwise flies to the last known position.
+   */
+  locateSignal?: number;
+}
+
+function createUserLocationElement(
+  avatar: UserLocationAvatar,
+  label: string,
+  onActivate: () => void,
+): HTMLButtonElement {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "trip-map-user-location";
+  el.setAttribute("aria-label", label);
+  el.title = label;
+
+  const img = document.createElement("img");
+  img.src = avatar.src || gradientAvatarUrl(avatar.seed);
+  img.alt = "";
+  img.draggable = false;
+  img.style.background = avatar.bg;
+  el.appendChild(img);
+
+  el.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    onActivate();
+  });
+  return el;
 }
 
 const DEFAULT_CENTER: [number, number] = [0, 20];
@@ -63,6 +97,8 @@ export function TripMap({
   searchResult = null,
   onAddSearchResult,
   fallbackCenter = null,
+  userAvatar = null,
+  locateSignal = 0,
 }: TripMapProps) {
   const { t, i18n } = useTranslation("planner");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,12 +115,62 @@ export function TripMap({
   const searchMarkerRef = useRef<Marker | null>(null);
   const searchPopupRef = useRef<Popup | null>(null);
   const searchRootRef = useRef<Root | null>(null);
+  const geolocateRef = useRef<GeolocateControl | null>(null);
+  const userMarkerRef = useRef<Marker | null>(null);
+  const lastUserPosRef = useRef<{ lng: number; lat: number } | null>(null);
+  const trackingRef = useRef(false);
+  const userAvatarRef = useRef(userAvatar);
+  const locateLabelRef = useRef(t("map.locate"));
+  const locateUserRef = useRef<() => void>(() => {});
+  const ensureUserMarkerRef = useRef<(lng: number, lat: number) => void>(
+    () => {},
+  );
   const [failed, setFailed] = useState(false);
   selectRef.current = onSelectStop;
   pickRef.current = onPick;
   contextRef.current = onContext;
   onAddSearchResultRef.current = onAddSearchResult;
   fallbackCenterRef.current = fallbackCenter;
+  userAvatarRef.current = userAvatar;
+  locateLabelRef.current = t("map.locate");
+
+  // Stable callbacks for the one-shot map boot + Marker click handlers.
+  locateUserRef.current = () => {
+    const geolocate = geolocateRef.current;
+    if (!geolocate) return;
+    // Avoid trigger() while already locked — it would toggle tracking off.
+    if (!trackingRef.current) {
+      geolocate.trigger();
+      return;
+    }
+    const map = mapRef.current;
+    const pos = lastUserPosRef.current;
+    if (!map || !pos) return;
+    map.flyTo({
+      center: [pos.lng, pos.lat],
+      zoom: Math.max(map.getZoom(), 14),
+      duration: 900,
+    });
+  };
+
+  ensureUserMarkerRef.current = (lng, lat) => {
+    lastUserPosRef.current = { lng, lat };
+    const map = mapRef.current;
+    const avatar = userAvatarRef.current;
+    if (!map || !avatar || !readyRef.current) return;
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setLngLat([lng, lat]);
+      return;
+    }
+
+    const el = createUserLocationElement(avatar, locateLabelRef.current, () =>
+      locateUserRef.current(),
+    );
+    userMarkerRef.current = new Marker({ element: el, anchor: "center" })
+      .setLngLat([lng, lat])
+      .addTo(map);
+  };
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -97,12 +183,72 @@ export function TripMap({
         center: boot ? [boot.lng, boot.lat] : DEFAULT_CENTER,
         zoom: boot ? FALLBACK_ZOOM : DEFAULT_ZOOM,
         attributionControl: false,
+        locale: {
+          "GeolocateControl.FindMyLocation": locateLabelRef.current,
+          "GeolocateControl.LocationNotAvailable": locateLabelRef.current,
+        },
       });
     } catch {
       setFailed(true);
       return;
     }
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
+
+    const geolocate = new GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true,
+        maximumAge: 5_000,
+        timeout: 10_000,
+      },
+      fitBoundsOptions: { maxZoom: 15 },
+      trackUserLocation: true,
+      showAccuracyCircle: false,
+      showUserLocation: false,
+    });
+    map.addControl(geolocate, "top-right");
+    geolocateRef.current = geolocate;
+
+    // Fold locate into the zoom control group so the stack is one level surface.
+    const topRight = map.getContainer().querySelector(".maplibregl-ctrl-top-right");
+    const groups = topRight?.querySelectorAll(":scope > .maplibregl-ctrl-group");
+    if (groups && groups.length >= 2) {
+      const zoomGroup = groups[0]!;
+      const locateGroup = groups[1]!;
+      const locateBtn = locateGroup.querySelector("button");
+      if (locateBtn) {
+        zoomGroup.appendChild(locateBtn);
+        locateGroup.remove();
+      }
+    }
+
+    geolocate.on("geolocate", (e: { coords: GeolocationCoordinates }) => {
+      ensureUserMarkerRef.current(e.coords.longitude, e.coords.latitude);
+    });
+    geolocate.on("trackuserlocationstart", () => {
+      trackingRef.current = true;
+    });
+    geolocate.on("trackuserlocationend", () => {
+      // Zoom/pan moves ACTIVE_LOCK → BACKGROUND and fires this event, but
+      // watchPosition keeps running. Only clear the avatar when fully OFF.
+      const btn = map
+        .getContainer()
+        .querySelector(".maplibregl-ctrl-geolocate");
+      const stillTracking =
+        btn?.classList.contains("maplibregl-ctrl-geolocate-background") ||
+        btn?.classList.contains("maplibregl-ctrl-geolocate-background-error") ||
+        btn?.classList.contains("maplibregl-ctrl-geolocate-active") ||
+        btn?.classList.contains("maplibregl-ctrl-geolocate-active-error") ||
+        btn?.classList.contains("maplibregl-ctrl-geolocate-waiting");
+      if (stillTracking) {
+        trackingRef.current = true;
+        return;
+      }
+      trackingRef.current = false;
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+      lastUserPosRef.current = null;
+    });
+
     map.on("error", () => setFailed(true));
     map.on("contextmenu", (e) => {
       contextRef.current?.(e.lngLat.lng, e.lngLat.lat);
@@ -135,9 +281,16 @@ export function TripMap({
       // trigger the first sync
       setFailed((f) => f);
       syncRef.current();
+      const pos = lastUserPosRef.current;
+      if (pos) ensureUserMarkerRef.current(pos.lng, pos.lat);
     });
     mapRef.current = map;
     return () => {
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+      geolocateRef.current = null;
+      trackingRef.current = false;
+      lastUserPosRef.current = null;
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
@@ -235,6 +388,43 @@ export function TripMap({
   useEffect(() => {
     syncRef.current();
   }, [stops, day, activeStopId, searchResult, fallbackCenter]);
+
+  // Refresh avatar marker when the current user identity changes.
+  useEffect(() => {
+    const pos = lastUserPosRef.current;
+    if (!pos || !userAvatar) return;
+    userMarkerRef.current?.remove();
+    userMarkerRef.current = null;
+    ensureUserMarkerRef.current(pos.lng, pos.lat);
+  }, [userAvatar]);
+
+  // External locate request (FloatingMembers avatar click, etc.).
+  useEffect(() => {
+    if (!locateSignal) return;
+    locateUserRef.current();
+  }, [locateSignal]);
+
+  // Keep control labels in sync with the active language.
+  useEffect(() => {
+    const label = t("map.locate");
+    const unavailable = t("map.locateUnavailable");
+    const btn = containerRef.current?.querySelector(
+      ".maplibregl-ctrl-geolocate",
+    ) as HTMLButtonElement | null;
+    if (btn) {
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+      if (btn.disabled || btn.getAttribute("aria-disabled") === "true") {
+        btn.title = unavailable;
+        btn.setAttribute("aria-label", unavailable);
+      }
+    }
+    const markerBtn = userMarkerRef.current?.getElement();
+    if (markerBtn instanceof HTMLButtonElement) {
+      markerBtn.title = label;
+      markerBtn.setAttribute("aria-label", label);
+    }
+  }, [i18n.language, t]);
 
   // Point-picking mode: pushpin cursor + one click resolves a coordinate.
   useEffect(() => {
