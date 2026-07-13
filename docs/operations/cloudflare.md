@@ -181,6 +181,19 @@ Workers Logs are retained at 100%, platform traces at 10%, and Sentry samples
 trip-agent routes at 100%. Configure the Sentry Actions values and use the
 shared request/turn identifiers described in [observability.md](observability.md).
 
+Wrangler exposes only live tailing. Historical queries use the Workers
+Observability Telemetry Query API through the repository command:
+
+```bash
+cp deploy/cloudflare/observability.example.env .env.observability
+set -a; source .env.observability; set +a
+pnpm logs:cf -- --request-id <application-request-id> --since 1h
+pnpm logs:cf -- --live --contains <request-or-turn-id>
+```
+
+Create a dedicated token with `Workers Observability Write`; do not reuse or
+sync it as `CLOUDFLARE_API_TOKEN`. See [observability.md](observability.md).
+
 The Worker has two independent Durable Object namespaces:
 
 | Binding | Class | Purpose |

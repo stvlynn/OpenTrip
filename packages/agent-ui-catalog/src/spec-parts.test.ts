@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   agentUiModelContext,
+  allowedStreetViewImageIds,
+  sanitizeAgentUiParts,
   isAgentUiPart,
   specFromAgentUiParts,
   safeAgentUiSpec,
@@ -136,7 +138,11 @@ describe("agent UI spec parts", () => {
         },
       },
     };
-    expect(safeAgentUiSpec(spec)?.elements.view?.type).toBe("StreetViewCard");
+    expect(
+      safeAgentUiSpec(spec, { allowedStreetViewImageIds: new Set(["123456"]) })
+        ?.elements.view?.type,
+    ).toBe("StreetViewCard");
+    expect(safeAgentUiSpec(spec)?.elements.view).toBeUndefined();
     const sanitized = safeAgentUiSpec({
         ...spec,
         elements: {
@@ -146,8 +152,61 @@ describe("agent UI spec parts", () => {
             on: { press: { action: "openStreetView", params: { imageId: "../token" } } },
           },
         },
-      });
+      }, { allowedStreetViewImageIds: new Set(["123456"]) });
     expect(sanitized?.elements.open).toBeUndefined();
     expect(sanitized?.elements.stack?.children).toEqual(["view"]);
+  });
+
+  it("trusts street-view ids only from successful tool outputs", () => {
+    const parts = [
+      {
+        type: "tool-streetViewSearch",
+        state: "output-available",
+        output: {
+          outcome: "found",
+          images: [{ id: "trusted-search" }, { id: "also-trusted" }],
+        },
+      },
+      {
+        type: "tool-streetViewInspect",
+        state: "output-available",
+        output: { id: "trusted-inspect" },
+      },
+      {
+        type: "tool-streetViewSearch",
+        state: "output-error",
+        output: { outcome: "found", images: [{ id: "not-trusted" }] },
+      },
+    ];
+    expect([...allowedStreetViewImageIds(parts)]).toEqual([
+      "trusted-search",
+      "also-trusted",
+      "trusted-inspect",
+    ]);
+  });
+
+  it("flattens and removes ungrounded generated UI before persistence", () => {
+    const parts = [
+      ...validParts,
+      {
+        type: "data-spec",
+        data: {
+          type: "flat",
+          spec: {
+            root: "view",
+            elements: {
+              view: {
+                type: "StreetViewCard",
+                props: { imageId: "invented" },
+                children: [],
+              },
+            },
+          },
+        },
+      },
+      { type: "text", text: "The prose remains" },
+    ];
+    const sanitized = sanitizeAgentUiParts(parts);
+    expect(sanitized).toEqual([{ type: "text", text: "The prose remains" }]);
   });
 });

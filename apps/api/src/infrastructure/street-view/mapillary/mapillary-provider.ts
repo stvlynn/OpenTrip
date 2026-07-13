@@ -7,6 +7,7 @@ import type {
   StreetViewViewerConfig,
 } from "../../../domain/street-view";
 import { StreetViewError } from "../../../application/street-view";
+import { captureException, logger } from "../../observability";
 
 const GRAPH_URL = "https://graph.mapillary.com";
 const IMAGE_FIELDS = [
@@ -128,8 +129,7 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
       const batch = queue.splice(0, LANE_CONCURRENCY);
       const results = await Promise.all(
         batch.map(async (region) => {
-          const requestTimeoutMs = takeRequestBudget(budget);
-          if (requestTimeoutMs === null) {
+          if (budget.remainingRequests <= 0 || Date.now() >= budget.deadline) {
             return { region, outcome: "budget_exhausted" as const };
           }
           attemptedRegions += 1;
@@ -137,7 +137,11 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
             return {
               region,
               outcome: "success" as const,
-              images: await this.searchRegion(region.bbox, requestTimeoutMs, imageType),
+              images: await this.searchRegion(
+                region.bbox,
+                budget,
+                imageType,
+              ),
             };
           } catch (error) {
             return { region, outcome: "failure" as const, error };
@@ -182,7 +186,7 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
 
   private async searchRegion(
     bbox: BoundingBox,
-    timeoutMs: number,
+    budget: SearchBudget,
     imageType?: "pano",
   ): Promise<StreetViewImage[]> {
     const url = new URL(`${GRAPH_URL}/images`);
@@ -193,7 +197,8 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
     if (imageType) url.searchParams.set("image_type", imageType);
     const payload = await this.readJson<{ data?: MapillaryImageJson[] }>(url, {
       recognizeOversizedRegion: true,
-      timeoutMs,
+      budget,
+      operation: imageType ? "search_panoramas" : "search_images",
     });
     const images = (payload.data ?? [])
       .map(toImage)
@@ -206,20 +211,24 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
     url.searchParams.set("access_token", this.accessToken);
     url.searchParams.set("fields", IMAGE_FIELDS);
     try {
-      return toImage(await this.readJson<MapillaryImageJson>(url));
+      return toImage(
+        await this.readJson<MapillaryImageJson>(url, {
+          budget: this.singleRequestBudget(),
+          operation: "get_image",
+        }),
+      );
     } catch (error) {
       if (error instanceof StreetViewError && error.code === "street_view_image_not_found") return null;
       throw error;
     }
   }
 
-  async readPreview(imageId: string): Promise<StreetViewPreview> {
-    const image = await this.getImage(imageId);
-    if (!image) {
-      throw new StreetViewError("street_view_image_not_found", "Street-view image not found");
-    }
-    const response = await this.fetchWithTimeout(image.previewSource);
-    if (!response.ok) throw upstreamError(response.status);
+  async readPreview(image: StreetViewImage): Promise<StreetViewPreview> {
+    const response = await this.requestWithRetry(
+      image.previewSource,
+      this.singleRequestBudget(),
+      "read_preview",
+    );
     const mediaType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
     if (!mediaType || !SUPPORTED_MEDIA.has(mediaType)) {
       throw new StreetViewError("street_view_unsupported_preview", "Unsupported street-view preview format");
@@ -241,31 +250,148 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
 
   private async readJson<T>(
     url: URL,
-    options?: { recognizeOversizedRegion?: boolean; timeoutMs?: number },
+    options: {
+      recognizeOversizedRegion?: boolean;
+      budget: SearchBudget;
+      operation: string;
+    },
   ): Promise<T> {
-    const response = await this.fetchWithTimeout(url, options?.timeoutMs);
-    if (!response.ok) {
-      if (options?.recognizeOversizedRegion && (await isOversizedRegionResponse(response))) {
-        throw new MapillaryQueryTooLargeError();
-      }
-      throw upstreamError(response.status);
-    }
+    const response = await this.requestWithRetry(
+      url,
+      options.budget,
+      options.operation,
+      options.recognizeOversizedRegion
+        ? async (candidate) =>
+            (await isOversizedRegionResponse(candidate))
+              ? new MapillaryQueryTooLargeError()
+              : null
+        : undefined,
+    );
     try {
       return (await response.json()) as T;
-    } catch {
-      throw new StreetViewError("street_view_upstream_error", "Street-view provider returned invalid JSON");
+    } catch (cause) {
+      throw new StreetViewError(
+        "street_view_upstream_error",
+        "Street-view provider returned invalid JSON",
+        {
+          retryable: false,
+          providerOperation: options.operation,
+          cause,
+        },
+      );
     }
   }
 
-  private async fetchWithTimeout(input: URL | string, timeoutMs = this.timeoutMs): Promise<Response> {
-    try {
-      return await this.fetchImpl(input, { signal: AbortSignal.timeout(Math.max(1, timeoutMs)) });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "TimeoutError") {
-        throw new StreetViewError("street_view_timeout", "Street-view provider timed out");
+  private async requestWithRetry(
+    input: URL | string,
+    budget: SearchBudget,
+    operation: string,
+    classifyResponse?: (response: Response) => Promise<Error | null>,
+  ): Promise<Response> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const timeoutMs = takeRequestBudget(budget);
+      if (timeoutMs === null) {
+        throw new StreetViewError(
+          Date.now() >= budget.deadline
+            ? "street_view_timeout"
+            : "street_view_upstream_error",
+          Date.now() >= budget.deadline
+            ? "Street-view provider timed out"
+            : "Street-view provider request budget exhausted",
+          {
+            retryable: false,
+            providerOperation: operation,
+            attempt,
+          },
+        );
       }
-      throw new StreetViewError("street_view_upstream_error", "Street-view provider request failed");
+      const startedAt = Date.now();
+      try {
+        const response = await this.fetchImpl(input, {
+          signal: AbortSignal.timeout(Math.max(1, timeoutMs)),
+        });
+        if (response.ok) {
+          logger.info("street_view.provider.request_completed", {
+            provider: "mapillary",
+            providerOperation: operation,
+            attempt,
+            upstreamStatus: response.status,
+            durationMs: Date.now() - startedAt,
+          });
+          return response;
+        }
+        const classified = await classifyResponse?.(response.clone());
+        if (classified) throw classified;
+        const error = upstreamError(response.status, operation, attempt);
+        lastError = error;
+        if (!isRetryableError(error) || attempt === 2) throw error;
+        logger.warn("street_view.provider.request_failed", {
+          provider: "mapillary",
+          providerOperation: operation,
+          attempt,
+          upstreamStatus: error.upstreamStatus,
+          errorCode: error.code,
+          retryable: error.retryable,
+          durationMs: Date.now() - startedAt,
+        });
+        await this.waitBeforeRetry(response, budget, operation, attempt);
+      } catch (cause) {
+        if (cause instanceof MapillaryQueryTooLargeError) throw cause;
+        const error = normalizeRequestError(cause, operation, attempt);
+        lastError = error;
+        logger.warn("street_view.provider.request_failed", {
+          provider: "mapillary",
+          providerOperation: operation,
+          attempt,
+          upstreamStatus: error.upstreamStatus,
+          errorCode: error.code,
+          retryable: error.retryable,
+          durationMs: Date.now() - startedAt,
+        });
+        if (!error.retryable || attempt === 2) {
+          if (error.code !== "street_view_image_not_found") {
+            captureException(error, {
+              provider: "mapillary",
+              providerOperation: operation,
+              attempt,
+              upstreamStatus: error.upstreamStatus,
+              errorCode: error.code,
+            });
+          }
+          throw error;
+        }
+        if (!(cause instanceof StreetViewError)) {
+          await this.waitBeforeRetry(null, budget, operation, attempt);
+        }
+      }
     }
+    throw lastError;
+  }
+
+  private async waitBeforeRetry(
+    response: Response | null,
+    budget: SearchBudget,
+    operation: string,
+    attempt: number,
+  ): Promise<void> {
+    const retryAfterMs = Math.min(2_000, parseRetryAfterMs(response));
+    const remainingMs = budget.deadline - Date.now();
+    if (remainingMs <= retryAfterMs) return;
+    logger.info("street_view.provider.retry_scheduled", {
+      provider: "mapillary",
+      providerOperation: operation,
+      attempt,
+      nextAttempt: attempt + 1,
+      retryAfterMs,
+    });
+    if (retryAfterMs > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, retryAfterMs));
+    }
+  }
+
+  private singleRequestBudget(): SearchBudget {
+    return { remainingRequests: 2, deadline: Date.now() + this.timeoutMs };
   }
 }
 
@@ -355,8 +481,73 @@ async function isOversizedRegionResponse(response: Response): Promise<boolean> {
   }
 }
 
-function upstreamError(status: number): StreetViewError {
-  if (status === 404) return new StreetViewError("street_view_image_not_found", "Street-view image not found");
-  if (status === 429) return new StreetViewError("street_view_rate_limited", "Street-view provider rate limit reached");
-  return new StreetViewError("street_view_upstream_error", "Street-view provider request failed");
+function upstreamError(
+  status: number,
+  operation: string,
+  attempt: number,
+): StreetViewError {
+  const options = {
+    upstreamStatus: status,
+    providerOperation: operation,
+    attempt,
+  };
+  if (status === 401 || status === 403) {
+    return new StreetViewError(
+      "street_view_provider_auth_error",
+      "Street-view provider authentication failed",
+      { ...options, retryable: false },
+    );
+  }
+  if (status === 404) {
+    return new StreetViewError(
+      "street_view_image_not_found",
+      "Street-view image not found",
+      { ...options, retryable: false },
+    );
+  }
+  if (status === 429) {
+    return new StreetViewError(
+      "street_view_rate_limited",
+      "Street-view provider rate limit reached",
+      { ...options, retryable: true },
+    );
+  }
+  return new StreetViewError(
+    "street_view_upstream_error",
+    "Street-view provider request failed",
+    { ...options, retryable: [500, 502, 503, 504].includes(status) },
+  );
+}
+
+function normalizeRequestError(
+  cause: unknown,
+  operation: string,
+  attempt: number,
+): StreetViewError {
+  if (cause instanceof StreetViewError) return cause;
+  if (cause instanceof DOMException && cause.name === "TimeoutError") {
+    return new StreetViewError(
+      "street_view_timeout",
+      "Street-view provider timed out",
+      { retryable: true, providerOperation: operation, attempt, cause },
+    );
+  }
+  return new StreetViewError(
+    "street_view_upstream_error",
+    "Street-view provider request failed",
+    { retryable: true, providerOperation: operation, attempt, cause },
+  );
+}
+
+function isRetryableError(error: unknown): boolean {
+  return error instanceof StreetViewError && error.retryable;
+}
+
+function parseRetryAfterMs(response: Response | null): number {
+  const value = response?.headers.get("retry-after")?.trim();
+  if (!value) return 0;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000);
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
 }

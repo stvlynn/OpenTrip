@@ -43,6 +43,7 @@ export {
   AgentService,
   ConflictError,
   containsAgentMention,
+  initiatingAgentTurnId,
   type Defer,
 } from "./agent/agent-service";
 export {

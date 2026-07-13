@@ -11,6 +11,7 @@ import {
 } from "@json-render/react";
 import {
   agentUiCatalog,
+  allowedStreetViewImageIds,
   safeAgentUiSpec,
 } from "@opentrip/agent-ui-catalog";
 import {
@@ -32,7 +33,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
-import { fetchStreetViewImage, streetViewPreviewSrc } from "@/shared/api";
+import {
+  ApiError,
+  fetchStreetViewImage,
+  streetViewPreviewSrc,
+} from "@/shared/api";
 import { useStreetViewViewer } from "../street-view/StreetViewViewerProvider";
 
 interface AgentGeneratedUiProps {
@@ -85,6 +90,9 @@ function GeneratedStreetViewCard({ imageId, placeLabel }: { imageId: string; pla
     queryKey: ["street-view", tripId, "image", imageId],
     queryFn: () => fetchStreetViewImage(tripId, imageId),
     staleTime: 15 * 60 * 1000,
+    retry: (failureCount, error) =>
+      failureCount < 1 && isTransientStreetViewError(error),
+    retryOnMount: false,
   });
   const captured = query.data?.capturedAt
     ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(
@@ -96,6 +104,33 @@ function GeneratedStreetViewCard({ imageId, placeLabel }: { imageId: string; pla
     (query.data
       ? `${query.data.coordinate.lat.toFixed(5)}, ${query.data.coordinate.lng.toFixed(5)}`
       : t("generated.streetView.placeFallback"));
+
+  if (query.isError || previewFailed) {
+    const transient =
+      previewFailed || isTransientStreetViewError(query.error);
+    return (
+      <Card className="w-full rounded-xl">
+        <CardContent className="flex items-center justify-between gap-3 p-3">
+          <p className="text-xs text-muted-foreground">
+            {t("generated.streetView.previewUnavailable")}
+          </p>
+          {transient ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setPreviewFailed(false);
+                void query.refetch();
+              }}
+            >
+              {t("generated.streetView.retry")}
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full overflow-hidden rounded-xl">
@@ -140,6 +175,13 @@ function GeneratedStreetViewCard({ imageId, placeLabel }: { imageId: string; pla
   );
 }
 
+function isTransientStreetViewError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 429 || [502, 503, 504].includes(error.status))
+  );
+}
+
 export function AgentGeneratedUi({
   parts,
   streaming,
@@ -150,7 +192,15 @@ export function AgentGeneratedUi({
   const { t, i18n } = useTranslation("agent");
   const { tripId, openStreetView } = useStreetViewViewer();
   const { spec, hasSpec } = useJsonRenderMessage(parts as unknown as DataPart[]);
-  const safeSpec = useMemo(() => (spec ? safeAgentUiSpec(spec) : null), [spec]);
+  const safeSpec = useMemo(
+    () =>
+      spec
+        ? safeAgentUiSpec(spec, {
+            allowedStreetViewImageIds: allowedStreetViewImageIds(parts),
+          })
+        : null,
+    [parts, spec],
+  );
 
   const runtime = useMemo(() => {
     const definition = defineRegistry(agentUiCatalog, {

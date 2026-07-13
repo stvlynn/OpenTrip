@@ -52,6 +52,7 @@ export function AgentChat({
     streaming,
     send,
     addToolApprovalResponse,
+    streamDebug,
   } = useAgentChat(tripId, enabled);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [quote, setQuote] = useState<QuoteTarget | null>(null);
@@ -93,6 +94,8 @@ export function AgentChat({
       createdAt: null,
       parts: m.parts,
       streaming: streaming && m.role === "assistant",
+      debugRequestId: streamDebug.requestId,
+      debugTurnId: streamDebug.turnId,
     }));
 
   // Stop-comment @agent threads live in StopDetail; keep them out of the drawer.

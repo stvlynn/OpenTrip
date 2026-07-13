@@ -41,6 +41,9 @@
   "context": {
     "commentingOnStop": "评论地点 {{stop}}"
   },
+  "debug": {
+    "copy": "复制调试信息"
+  },
   "generated": {
     "day": "第 {{day}} 天",
     "recommended": "推荐",
@@ -57,7 +60,8 @@
       "loading": "正在加载街景…",
       "placeFallback": "街景",
       "captureUnknown": "拍摄时间未知",
-      "open": "展开街景"
+      "open": "展开街景",
+      "retry": "重试"
     }
   },
   "tool": {

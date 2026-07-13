@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
-import { type Defer } from "../../application";
+import { initiatingAgentTurnId, type Defer } from "../../application";
 import type { OperationEvent } from "../../domain/agent";
 import { MAX_AVATAR_BYTES } from "../../application/avatar";
 import { MAX_TRIP_MEDIA_BYTES } from "../../application/media";
@@ -35,6 +35,7 @@ export interface AppEnv {
     user: Session["user"] | null;
     session: Session["session"] | null;
     requestId: string;
+    agentContext?: { tripId: string; turnId: string };
   };
 }
 
@@ -303,6 +304,7 @@ export function createApp(
         route: c.req.routePath || c.req.path,
         status: c.res.status,
         durationMs: Date.now() - startedAt,
+        ...c.get("agentContext"),
         ...getTraceIds(),
       });
       if (c.res.status >= 400 && c.res.status < 500) {
@@ -322,6 +324,7 @@ export function createApp(
     cors({
       origin: config.trustedOrigins,
       credentials: true,
+      exposeHeaders: ["x-request-id", "x-agent-turn-id"],
     }),
   );
 
@@ -505,7 +508,17 @@ export function createApp(
     const tripId = c.req.param("tripId");
     await tripService.assertReadable(tripId, c.get("user")!.id);
     const query = streetViewSearchQuerySchema.parse(c.req.query());
-    return ok(c, await streetViewService.searchNearby({ tripId, ...query }));
+    return ok(
+      c,
+      await streetViewService.searchNearby({
+        tripId,
+        ...query,
+        observability: {
+          requestId: c.get("requestId"),
+          runtime: options.runtime,
+        },
+      }),
+    );
   });
 
   guard.get("/trips/:tripId/street-view/images/:imageId", async (c) => {
@@ -515,7 +528,13 @@ export function createApp(
     const tripId = c.req.param("tripId");
     await tripService.assertReadable(tripId, c.get("user")!.id);
     const imageId = streetViewImageIdSchema.parse(c.req.param("imageId"));
-    return ok(c, await streetViewService.getImage(tripId, imageId));
+    return ok(
+      c,
+      await streetViewService.getImage(tripId, imageId, {
+        requestId: c.get("requestId"),
+        runtime: options.runtime,
+      }),
+    );
   });
 
   guard.get("/trips/:tripId/street-view/images/:imageId/preview", async (c) => {
@@ -525,7 +544,10 @@ export function createApp(
     const tripId = c.req.param("tripId");
     await tripService.assertReadable(tripId, c.get("user")!.id);
     const imageId = streetViewImageIdSchema.parse(c.req.param("imageId"));
-    const preview = await streetViewService.readPreview(imageId);
+    const preview = await streetViewService.readPreview(imageId, {
+      requestId: c.get("requestId"),
+      runtime: options.runtime,
+    });
     return new Response(preview.bytes, {
       headers: {
         "Content-Type": preview.mediaType,
@@ -1003,11 +1025,16 @@ export function createApp(
       }
     }
 
+    const tripId = c.req.param("tripId")!;
+    const turnId = initiatingAgentTurnId(clientMessages, clientMessageId);
+    c.set("agentContext", { tripId, turnId });
+    c.header("x-agent-turn-id", turnId);
+
     // Streaming response: returned as-is, outside the { data } envelope.
     // Pass defer so onFinish persistence outlives the Response return and
     // Workers do not pool.end() before the assistant row is written.
-    return agentService!.streamChat(
-      c.req.param("tripId")!,
+    const response = await agentService!.streamChat(
+      tripId,
       c.get("user")!.id,
       {
         text,
@@ -1016,9 +1043,12 @@ export function createApp(
         approvalContinue: hasApprovalResponse,
         requestId: c.get("requestId"),
         runtime: options.runtime,
+        turnId,
       },
       deferOf(c),
     );
+    response.headers.set("x-agent-turn-id", turnId);
+    return response;
   });
 
   agent.get("/events", async (c) => {

@@ -12,10 +12,13 @@ export {
 } from "./catalog";
 export {
   agentUiModelContext,
+  allowedStreetViewImageIds,
   isAgentUiPart,
   isSpecDataPartPayload,
+  sanitizeAgentUiParts,
   safeAgentUiSpec,
   specFromAgentUiParts,
   validatedAgentUiSpec,
   type MessagePartLike,
+  type AgentUiSafetyContext,
 } from "./spec-parts";

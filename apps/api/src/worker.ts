@@ -21,6 +21,10 @@ import {
   setErrorReporter,
   setRuntimeName,
 } from "./infrastructure/observability";
+import {
+  CloudflareStreetViewCache,
+  type CloudflareCacheLike,
+} from "./infrastructure/street-view/cloudflare-street-view-cache";
 
 interface WorkerEnv extends RawEnv {
   /** Optional Hyperdrive binding (query cache enabled). Prefer when available. */
@@ -61,6 +65,14 @@ function resolveFreshConnectionString(
   return cached;
 }
 
+function defaultWorkerCache(): CloudflareCacheLike {
+  return (
+    globalThis as typeof globalThis & {
+      caches: { default: CloudflareCacheLike };
+    }
+  ).caches.default;
+}
+
 function buildApp(env: WorkerEnv, ctx: WorkerExecutionContext) {
   const connectionString = resolveConnectionString(env);
   const freshDatabaseUrl = resolveFreshConnectionString(env, connectionString);
@@ -87,6 +99,10 @@ function buildApp(env: WorkerEnv, ctx: WorkerExecutionContext) {
       // Cloudflare sets and protects this edge-derived header. Do not trust
       // browser-controlled forwarding chains when partitioning auth limits.
       authIpAddressHeaders: ["cf-connecting-ip"],
+      streetViewCache: new CloudflareStreetViewCache(
+        defaultWorkerCache(),
+        config.streetView?.provider ?? "mapillary",
+      ),
     },
   );
   return {

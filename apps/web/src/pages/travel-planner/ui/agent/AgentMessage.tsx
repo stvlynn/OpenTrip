@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { MapPinIcon } from "lucide-react";
+import { Copy, MapPinIcon } from "lucide-react";
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
 import { Streamdown } from "streamdown";
 import type { Trip } from "@/entities/trip";
@@ -23,6 +23,10 @@ import { AgentReasoning } from "./AgentReasoning";
 import { AgentAvatar } from "./AgentAvatar";
 import { AgentGeneratedUi } from "./AgentGeneratedUi";
 import { toolDisplayName } from "./toolDisplayName";
+import {
+  fingerprintMessageText,
+  textFromMessageParts,
+} from "@opentrip/observability-contract";
 
 /** AI SDK UI recommends Streamdown for incomplete streaming Markdown. */
 function AgentMarkdown({
@@ -70,6 +74,8 @@ export interface AgentDisplayMessage {
   parts?: UIMessage["parts"];
   /** True while this live assistant turn is still streaming. */
   streaming?: boolean;
+  debugRequestId?: string;
+  debugTurnId?: string;
 }
 
 /** Join AI SDK text parts the way the chatbot docs recommend. */
@@ -303,6 +309,26 @@ export function AgentMessageItem({
     });
   };
 
+  const copyDebugInfo = async () => {
+    const text = textFromMessageParts(message.parts ?? []);
+    const toolCallIds = (message.parts ?? [])
+      .filter(isToolUIPart)
+      .map((part) => part.toolCallId);
+    const payload = {
+      tripId: trip.id,
+      messageId: message.id,
+      turnId: message.debugTurnId,
+      requestId: message.debugRequestId,
+      source: message.source,
+      createdAt: message.createdAt,
+      toolCallIds,
+      messageFingerprint: text
+        ? await fingerprintMessageText(text)
+        : undefined,
+    };
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  };
+
   const avatar = isAgent ? (
     <AgentAvatar />
   ) : member ? (
@@ -325,10 +351,19 @@ export function AgentMessageItem({
   );
 
   return (
-    <div className={cn("flex flex-col gap-1", isAgent ? "items-start" : "items-end")}>
+    <div className={cn("group/message flex flex-col gap-1", isAgent ? "items-start" : "items-end")}>
       <div className="flex items-center gap-1.5 px-0.5 text-[11px] text-muted-foreground">
         <span>{authorLabel}</span>
         <span className="tabular-nums">{timeLabel(message.createdAt, i18n.language)}</span>
+        <button
+          type="button"
+          className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover/message:opacity-100 focus-visible:opacity-100"
+          title={t("debug.copy")}
+          aria-label={t("debug.copy")}
+          onClick={() => void copyDebugInfo()}
+        >
+          <Copy aria-hidden="true" className="size-3" />
+        </button>
       </div>
       <div
         className={cn(

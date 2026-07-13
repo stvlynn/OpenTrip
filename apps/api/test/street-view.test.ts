@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { StreetViewError, StreetViewService } from "../src/application/street-view";
 import type { StreetViewProvider } from "../src/domain/street-view";
-import { buildStreetViewReadTools } from "../src/infrastructure/ai/agent-model.ai-sdk";
+import {
+  buildStreetViewReadTools,
+  StreetViewToolPolicy,
+} from "../src/infrastructure/ai/agent-model.ai-sdk";
 import { MapillaryStreetViewProvider } from "../src/infrastructure/street-view/mapillary/mapillary-provider";
+import { MemoryStreetViewCache } from "../src/infrastructure/street-view/memory-street-view-cache";
 
 function provider(overrides: Partial<StreetViewProvider> = {}): StreetViewProvider {
   return {
@@ -118,6 +122,43 @@ describe("StreetViewService", () => {
       code: "street_view_panorama_inspection_forbidden",
     });
     expect(readPreview).not.toHaveBeenCalled();
+  });
+
+  it("hydrates metadata and preview from the shared cache", async () => {
+    const getImage = vi.fn(async () => image("cached", 10));
+    const readPreview = vi.fn(async () => ({
+      bytes: new Uint8Array([7, 8, 9]),
+      mediaType: "image/jpeg" as const,
+    }));
+    const service = new StreetViewService(
+      provider({
+        searchNearby: async () => ({
+          completeness: "complete",
+          images: [image("cached", 10)],
+        }),
+        getImage,
+        readPreview,
+      }),
+      new MemoryStreetViewCache(),
+    );
+
+    await service.searchNearby({ tripId: "trip", lat: 10, lng: 20 });
+    await expect(service.getImage("trip", "cached")).resolves.toMatchObject({
+      id: "cached",
+    });
+    await service.readPreview("cached");
+    await service.readPreview("cached");
+    expect(getImage).not.toHaveBeenCalled();
+    expect(readPreview).toHaveBeenCalledTimes(1);
+  });
+
+  it("expires memory cache entries after fifteen minutes", async () => {
+    let now = 0;
+    const cache = new MemoryStreetViewCache({ now: () => now });
+    await cache.putImage(image("expires", 10));
+    expect(await cache.getImage("expires")).not.toBeNull();
+    now = 15 * 60 * 1_000;
+    expect(await cache.getImage("expires")).toBeNull();
   });
 });
 
@@ -271,7 +312,23 @@ describe("MapillaryStreetViewProvider", () => {
     await expect(
       adapter.searchNearby({ lat: 10, lng: 20, radiusMeters: 400, limit: 5 }),
     ).rejects.toMatchObject({ code: "street_view_upstream_error" });
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(16);
+  });
+
+  it("classifies provider authentication errors without retrying", async () => {
+    const fetchMock = vi.fn(async () => new Response("no", { status: 401 }));
+    const adapter = new MapillaryStreetViewProvider(
+      "token",
+      5_000,
+      fetchMock as unknown as typeof fetch,
+    );
+    await expect(adapter.getImage("image")).rejects.toMatchObject({
+      code: "street_view_provider_auth_error",
+      upstreamStatus: 401,
+      retryable: false,
+      attempt: 1,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("bounds recursive subdivision with a shared request budget", async () => {
@@ -342,9 +399,58 @@ describe("street-view AI tools", () => {
       ],
     });
     await expect(inspect.execute({ imageId: "pano" })).rejects.toMatchObject({
-      code: "street_view_panorama_inspection_forbidden",
+      code: "street_view_invalid_query",
     });
     expect(readPreview).toHaveBeenCalledTimes(1);
     info.mockRestore();
+  });
+
+  it("allows only one same-center widened retry after empty or partial output", () => {
+    const policy = new StreetViewToolPolicy();
+    const first = { lat: 35.039, lng: 135.729, radiusMeters: 100 };
+    policy.validateSearch(first);
+    policy.recordSearchSuccess(first, {
+      outcome: "empty",
+      completeness: "complete",
+      images: [],
+    });
+
+    expect(() =>
+      policy.validateSearch({ ...first, radiusMeters: 300 }),
+    ).not.toThrow();
+
+    const changedCenterPolicy = new StreetViewToolPolicy();
+    changedCenterPolicy.validateSearch(first);
+    changedCenterPolicy.recordSearchSuccess(first, {
+      outcome: "empty",
+      completeness: "complete",
+      images: [],
+    });
+    expect(() =>
+      changedCenterPolicy.validateSearch({
+        ...first,
+        lat: 35.04,
+        radiusMeters: 300,
+      }),
+    ).toThrow(/same coordinates/);
+  });
+
+  it("reserves a search before I/O so parallel calls cannot reach the provider", () => {
+    const policy = new StreetViewToolPolicy();
+    const first = { lat: 35.039, lng: 135.729 };
+    policy.validateSearch(first);
+    expect(() => policy.validateSearch(first)).toThrow(/no longer available/);
+  });
+
+  it("removes street-view tools and adds truthful instructions after failure", () => {
+    const policy = new StreetViewToolPolicy();
+    policy.recordSearchFailure();
+    const prepared = policy.prepareStep(
+      ["placeSearch", "streetViewSearch", "streetViewInspect"],
+      "Base instructions",
+    );
+    expect(prepared.activeTools).toEqual(["placeSearch"]);
+    expect(prepared.instructions).toContain("one real street-view provider call");
+    expect(prepared.instructions).toContain("Do not call another street-view tool");
   });
 });

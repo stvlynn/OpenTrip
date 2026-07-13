@@ -8,7 +8,14 @@ import type {
   OperationEvent,
   PendingPatch,
 } from "../../domain/agent";
-import { isAgentUiPart } from "@opentrip/agent-ui-catalog";
+import {
+  isAgentUiPart,
+  sanitizeAgentUiParts,
+} from "@opentrip/agent-ui-catalog";
+import {
+  fingerprintMessageText,
+  textFromMessageParts,
+} from "@opentrip/observability-contract";
 import type { Trip, TripRepository } from "../../domain/trip";
 import type { TripChangePublisher } from "../../domain/realtime";
 import { AGENT_COMMENT_AUTHOR } from "../../domain/trip";
@@ -241,12 +248,16 @@ export class AgentService {
     }
 
     const explicitMention = containsAgentMention(trimmed);
+    const executionContext = {
+      ...input.observability,
+      turnId: input.observability?.turnId ?? newId("turn_"),
+    };
     const message = await this.appendMessage(trip, {
       role: "user",
       parts: buildUserMessageParts(trimmed, trip, userId, files),
       actorUserId: userId,
       source: explicitMention ? "mention" : "chat",
-    });
+    }, executionContext);
     const messageDto = toAgentMessageDto(message, trip);
 
     const addressedHint =
@@ -259,7 +270,7 @@ export class AgentService {
         this.generateAmbientReply(
           tripId,
           undefined,
-          modelObservability("ambient", input.observability),
+          modelObservability("ambient", executionContext),
         ),
       );
       return { addressed: true, message: messageDto };
@@ -269,7 +280,7 @@ export class AgentService {
       this.maybeReplyIfAddressed(
         tripId,
         addressedHint,
-        modelObservability("addressed_check", input.observability),
+        modelObservability("addressed_check", executionContext),
       ),
     );
     return { addressed: false, message: messageDto };
@@ -295,6 +306,7 @@ export class AgentService {
       approvalContinue?: boolean;
       requestId?: string;
       runtime?: RuntimeName;
+      turnId?: string;
     },
     /** Keep the Workers SQL pool open until stream persistence finishes. */
     defer: Defer = () => {},
@@ -302,7 +314,9 @@ export class AgentService {
     const trip = await this.loadReadable(tripId, userId);
     const canEdit = trip.permissionsFor(userId).canEdit;
     const approvalContinue = input.approvalContinue === true;
-    const turnId = initiatingAgentTurnId(input.clientMessages, input.clientMessageId);
+    const turnId =
+      input.turnId ??
+      initiatingAgentTurnId(input.clientMessages, input.clientMessageId);
     const observability = modelObservability("chat", {
       requestId: input.requestId,
       runtime: input.runtime,
@@ -329,7 +343,7 @@ export class AgentService {
         parts: buildUserMessageParts(trimmed, trip, userId, files),
         actorUserId: userId,
         source: containsAgentMention(trimmed) ? "mention" : "chat",
-      });
+      }, observability);
     }
 
     const history = await this.listContextMessages(tripId);
@@ -385,15 +399,17 @@ export class AgentService {
               // onFinish with an empty UIMessage. Do not leave a blank bubble.
               if (!assistantPartsHaveContent(parts)) return;
 
+              const safeParts = sanitizeAgentUiParts(parts);
+              if (!assistantPartsHaveContent(safeParts)) return;
               await this.appendMessage(trip, {
                 // Reuse the streamed UIMessage id so the client can drop the live
                 // bubble once history refetches (same key as useChat).
                 id: messageId,
                 role: "assistant",
-                parts,
+                parts: safeParts,
                 actorUserId: null,
                 source: "chat",
-              });
+              }, observability);
               this.observability.logger.info("agent.stream.complete", {
                 runtime: observability.runtime,
                 requestId: observability.requestId,
@@ -442,17 +458,21 @@ export class AgentService {
     context: AgentExecutionContext = {},
   ): Promise<void> {
     const trip = await this.load(event.tripId);
+    const executionContext = {
+      ...context,
+      turnId: context.turnId ?? newId("turn_"),
+    };
     await this.appendMessage(trip, {
       role: "system",
       parts: [{ type: "text", text: event.summary }],
       actorUserId: event.actorUserId,
       source: "operation",
-    });
+    }, executionContext);
     defer(
       this.evaluateOperation(
         trip,
         event,
-        modelObservability("operation", context),
+        modelObservability("operation", executionContext),
       ),
     );
   }
@@ -476,19 +496,23 @@ export class AgentService {
     const wantsAgent = containsAgentMention(text);
     const memberIds = mentionedUserIdsFromParts(parts);
     if (!wantsAgent && memberIds.length === 0) return;
+    const executionContext = {
+      ...context,
+      turnId: context.turnId ?? newId("turn_"),
+    };
 
     await this.appendMessage(trip, {
       role: "user",
       parts,
       actorUserId: userId,
       source: "stop_comment",
-    });
+    }, executionContext);
     if (wantsAgent) {
       defer(
         this.generateAmbientReply(
           tripId,
           { stopId },
-          modelObservability("ambient", context),
+          modelObservability("ambient", executionContext),
         ),
       );
     }
@@ -619,12 +643,23 @@ export class AgentService {
     message: Pick<AgentMessage, "role" | "parts" | "actorUserId" | "source"> & {
       id?: string;
     },
+    context: AgentExecutionContext = {},
   ): Promise<AgentMessage> {
     const { id, ...rest } = message;
     const messageId = id && id.length > 0 ? id : newId("am");
+    const messageText = textFromMessageParts(rest.parts);
+    const messageFingerprint = messageText
+      ? await fingerprintMessageText(messageText)
+      : undefined;
     return this.observability.startSpan(
       "opentrip.agent.persist_message",
-      { tripId: trip.id, messageId, source: rest.source },
+      {
+        ...context,
+        tripId: trip.id,
+        messageId,
+        source: rest.source,
+        messageFingerprint,
+      },
       async () => {
         const persisted = await this.sessionRepo.appendMessage({
           id: messageId,
@@ -633,8 +668,10 @@ export class AgentService {
           ...rest,
         });
         this.observability.logger.info("agent.persist_message", {
+          ...context,
           tripId: trip.id,
           messageId: persisted.id,
+          messageFingerprint,
           source: persisted.source,
           tripVersion: persisted.tripVersion,
         });
@@ -721,7 +758,7 @@ export class AgentService {
           parts,
           actorUserId: null,
           source: stopId ? "stop_comment" : "threshold",
-        });
+        }, observability);
         if (stopId) {
           const text = textFromAgentParts(parts);
           if (text) {
@@ -789,7 +826,7 @@ export class AgentService {
             parts: [{ type: "text", text: `Observation: ${decision.reason}` }],
             actorUserId: null,
             source: "operation",
-          });
+          }, observability);
           return;
         }
 
@@ -800,7 +837,7 @@ export class AgentService {
           ],
           actorUserId: null,
           source: "threshold",
-        });
+        }, observability);
         const suggestionId = newId("as");
         await this.sessionRepo.createSuggestion({
           id: suggestionId,

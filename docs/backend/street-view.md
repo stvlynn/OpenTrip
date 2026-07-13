@@ -14,6 +14,8 @@ driven adapter under `infrastructure/street-view/mapillary`.
 - the Mapillary adapter owns bounded panorama/general candidate queries,
   adaptive spatial subdivision, deduplication, Graph API parsing, timeouts,
   and the 2 MiB JPEG/PNG/WebP preview boundary.
+- `StreetViewCache` keeps normalized metadata and successful preview bytes for
+  15 minutes. Workers use `caches.default`; Node uses bounded TTL/LRU memory.
 - HTTP routes assert trip membership before returning any data.
 - the web keeps MapillaryJS behind the page-private viewer and calls
   `viewer.remove()` on image changes and unmount.
@@ -48,9 +50,11 @@ becoming a false coverage result:
 - any skipped or failed cell makes the result `partial`; the adapter throws only
   when neither lane completed a single cell successfully.
 
-Ordinary provider 5xx responses are never treated as density signals. Search
-logs contain region, split, completeness, and duration counts but never access
-tokens or provider image URLs.
+Ordinary provider 5xx responses are never treated as density signals. Network,
+429, 500, 502, 503, and 504 failures retry once within the shared deadline;
+401/403, 404, validation, and media errors never retry. Search logs contain
+region, split, attempt, upstream status, completeness, and duration but never
+access tokens, response bodies, or provider image URLs.
 
 ## Agent tools and image input
 
@@ -60,9 +64,16 @@ empty result is never a tool failure and does not establish a global provider
 coverage gap.
 
 The agent omits `radiusMeters` on its first attempt to use the 100 m default. It
-may retry once with a larger radius only after a successful `empty` or `partial`
-result. A thrown provider error must not trigger guessed-coordinate retries and
-must not be presented as proof of missing coverage.
+may retry once at the same center with a larger radius only after a successful
+`empty` or `partial` result. A thrown provider error removes both street-view
+tools for the rest of that generation and must not trigger guessed-coordinate
+retries or be presented as proof of missing coverage.
+
+`StreetViewCard` and `openStreetView` are grounded capabilities: their image id
+must appear in a successful street-view tool output in the same assistant
+UIMessage. The shared catalog sanitizer applies this rule during streaming,
+history rendering, and persistence, so text or an older message cannot smuggle
+an opaque id into generated UI.
 
 `streetViewInspect` reads one trusted ordinary static preview through async AI
 SDK `toModelOutput`. The application rejects `supports360=true` images before

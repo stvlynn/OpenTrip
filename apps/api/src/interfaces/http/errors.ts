@@ -109,6 +109,10 @@ export function handleError(err: Error, c: Context, runtime: RuntimeName = "node
     const status =
       err.code === "street_view_not_configured"
         ? 503
+        : err.code === "street_view_provider_auth_error"
+          ? 503
+          : err.code === "street_view_rate_limited"
+            ? 429
         : err.code === "street_view_image_not_found"
           ? 404
           : err.code === "street_view_timeout"

@@ -36,9 +36,13 @@ import { UnsplashCoverProvider } from "../cover/unsplash-cover-provider";
 import type { AppConfig } from "../config";
 import type { TripChangePublisher } from "../../domain/realtime";
 import { MapillaryStreetViewProvider } from "../street-view/mapillary/mapillary-provider";
+import { MemoryStreetViewCache } from "../street-view/memory-street-view-cache";
+import type { StreetViewCache } from "../../application/street-view";
 import { observability } from "../observability";
 
 export interface CreateContainerOptions {
+  /** Shared runtime cache for provider metadata and preview bytes. */
+  streetViewCache?: StreetViewCache;
   /**
    * Max connections for the cache-enabled pool. This pool is reserved for
    * explicitly stale-tolerant read models.
@@ -180,11 +184,13 @@ export function createContainer(
     new AirbnbLodgingProvider(config.lodging),
   );
   const streetViewService = config.streetView
-    ? new StreetViewService(
+      ? new StreetViewService(
         new MapillaryStreetViewProvider(
           config.streetView.mapillaryAccessToken,
           config.streetView.timeoutMs,
         ),
+        options?.streetViewCache ?? new MemoryStreetViewCache(),
+        observability,
       )
     : null;
   const agentService = config.ai

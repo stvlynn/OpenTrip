@@ -14,6 +14,9 @@
   // Do not commit a production account_id here.
   "workers_dev": true,
   "upload_source_maps": true,
+  "cache": {
+    "enabled": true
+  },
   "observability": {
     "enabled": true,
     "logs": {

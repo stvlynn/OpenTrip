@@ -123,6 +123,10 @@ function mediaTypeOf(file: File): string {
  * is refetched and the buffer cleared so nothing renders twice. */
 export function useAgentChat(tripId: string, enabled: boolean) {
   const queryClient = useQueryClient();
+  const streamDebugRef = useRef<{
+    requestId?: string;
+    turnId?: string;
+  }>({});
 
   const history = useQuery({
     queryKey: queryKeys.agentMessages(tripId),
@@ -135,6 +139,14 @@ export function useAgentChat(tripId: string, enabled: boolean) {
       new DefaultChatTransport({
         api: `${config.baseUrl}/api/trips/${tripId}/agent/chat`,
         credentials: "include",
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          streamDebugRef.current = {
+            requestId: response.headers.get("x-request-id") ?? undefined,
+            turnId: response.headers.get("x-agent-turn-id") ?? undefined,
+          };
+          return response;
+        },
         // Send the full live turn so approval-responded parts reach the server
         // (AI SDK convertToModelMessages + tool execute).
         prepareSendMessagesRequest: ({ messages }) => ({
@@ -234,5 +246,6 @@ export function useAgentChat(tripId: string, enabled: boolean) {
     error: chat.error,
     send,
     addToolApprovalResponse: chat.addToolApprovalResponse,
+    streamDebug: streamDebugRef.current,
   };
 }

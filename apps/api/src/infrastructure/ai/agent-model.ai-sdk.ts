@@ -11,9 +11,12 @@ import {
   toUIMessageStream,
   tool,
   type Experimental_DownloadFunction,
+  type GenerateTextStepEndEvent,
   type LanguageModel,
   type ModelMessage,
   type ToolSet,
+  type ToolExecutionEndEvent,
+  type ToolExecutionStartEvent,
   type UIMessage,
 } from "ai";
 import {
@@ -59,6 +62,124 @@ import type { AiConfig } from "../config";
 import { logger, startSpan as startObservabilitySpan } from "../observability";
 
 const NOTE_CONTEXT_MAX = 2_000;
+const STREET_VIEW_TOOLS = new Set(["streetViewSearch", "streetViewInspect"]);
+const STREET_VIEW_FAILURE_INSTRUCTION =
+  "The one real street-view provider call in this turn failed. Do not call another street-view tool, claim that other coordinates were tried, reuse an older image id, or emit StreetViewCard/openStreetView UI. State only that this call failed and let the member choose whether to try again in a new request.";
+const STREET_VIEW_POLICY_INSTRUCTION =
+  "An extra street-view tool call was rejected locally by the one-retry policy and did not reach the provider. Do not claim it ran or that another coordinate was tried. Use only successful tool output already present in this turn.";
+
+interface StreetViewSearchToolInput {
+  lat: number;
+  lng: number;
+  radiusMeters?: number;
+  limit?: number;
+}
+
+interface StreetViewSearchState {
+  input: StreetViewSearchToolInput;
+  outcome: "found" | "empty";
+  completeness: "complete" | "partial";
+}
+
+export class StreetViewToolPolicy {
+  private firstSearch: StreetViewSearchState | null = null;
+  private searchCount = 0;
+  private blockedReason: "provider" | "policy" | null = null;
+  private searchInFlight = false;
+  private readonly inspectableIds = new Set<string>();
+
+  validateSearch(input: StreetViewSearchToolInput): void {
+    if (this.blockedReason || this.searchInFlight || this.searchCount >= 2) {
+      this.blockedReason ??= "policy";
+      throw this.policyError("Street-view search is no longer available in this turn");
+    }
+    if (!this.firstSearch) {
+      this.searchInFlight = true;
+      this.searchCount += 1;
+      return;
+    }
+    const retryableResult =
+      this.firstSearch.outcome === "empty" ||
+      this.firstSearch.completeness === "partial";
+    const firstRadius = this.firstSearch.input.radiusMeters ?? 100;
+    const retryRadius = input.radiusMeters ?? 100;
+    const sameCenter =
+      Math.abs(input.lat - this.firstSearch.input.lat) <= 1e-5 &&
+      Math.abs(input.lng - this.firstSearch.input.lng) <= 1e-5;
+    if (!retryableResult || !sameCenter || retryRadius <= firstRadius) {
+      this.blockedReason = "policy";
+      throw this.policyError(
+        "A street-view retry must follow an empty or partial result at the same coordinates with a larger radius",
+      );
+    }
+    this.searchInFlight = true;
+    this.searchCount += 1;
+  }
+
+  recordSearchSuccess(
+    input: StreetViewSearchToolInput,
+    result: {
+      outcome: "found" | "empty";
+      completeness: "complete" | "partial";
+      images: Array<{ id: string; supports360: boolean }>;
+    },
+  ): void {
+    this.searchInFlight = false;
+    this.firstSearch ??= {
+      input: { ...input },
+      outcome: result.outcome,
+      completeness: result.completeness,
+    };
+    for (const image of result.images) {
+      if (!image.supports360) this.inspectableIds.add(image.id);
+    }
+  }
+
+  recordSearchFailure(): void {
+    this.searchInFlight = false;
+    this.blockedReason = "provider";
+  }
+
+  validateInspect(imageId: string): void {
+    if (this.blockedReason === "provider" || !this.inspectableIds.has(imageId)) {
+      throw this.policyError(
+        "Street-view inspection requires a static image returned by a successful search in this turn",
+      );
+    }
+  }
+
+  prepareStep(toolNames: string[], instructions: unknown) {
+    const searchExhausted =
+      this.blockedReason !== null ||
+      this.searchCount >= 2 ||
+      (this.firstSearch?.outcome === "found" &&
+        this.firstSearch.completeness === "complete");
+    const activeTools = toolNames.filter((name) => {
+      if (this.blockedReason === "provider") return !STREET_VIEW_TOOLS.has(name);
+      if (name === "streetViewInspect" && this.inspectableIds.size === 0) {
+        return false;
+      }
+      return name !== "streetViewSearch" || !searchExhausted;
+    });
+    if (!this.blockedReason) return { activeTools };
+    const base = typeof instructions === "string" ? instructions : "";
+    return {
+      activeTools,
+      instructions: `${base}\n\n${
+        this.blockedReason === "provider"
+          ? STREET_VIEW_FAILURE_INSTRUCTION
+          : STREET_VIEW_POLICY_INSTRUCTION
+      }`.trim(),
+    };
+  }
+
+  private policyError(message: string): StreetViewError {
+    return new StreetViewError("street_view_invalid_query", message, {
+      retryable: false,
+      providerOperation: "tool_policy",
+    });
+  }
+}
 
 function providerCall<T>(
   provider: string,
@@ -70,6 +191,23 @@ function providerCall<T>(
     { provider, providerOperation: operation },
     async () => call(),
   );
+}
+
+function safeToolInputFields(
+  toolName: string,
+  input: unknown,
+): Record<string, unknown> {
+  if (toolName !== "streetViewSearch" || !input || typeof input !== "object") {
+    return {};
+  }
+  const value = input as Record<string, unknown>;
+  return {
+    ...(typeof value.lat === "number" ? { lat: value.lat } : {}),
+    ...(typeof value.lng === "number" ? { lng: value.lng } : {}),
+    radiusMeters:
+      typeof value.radiusMeters === "number" ? value.radiusMeters : 100,
+    requestedLimit: typeof value.limit === "number" ? value.limit : 5,
+  };
 }
 
 /** MiniMax Anthropic-compatible API prefix.
@@ -505,14 +643,23 @@ export class AiSdkAgentModel implements AgentModel {
 
   /** Read-only tools always available (no approval). Not part of trip ops.
    * Weather, geo, and trip media go through application/storage ports. */
-  private readTools(tripId: string): ToolSet {
+  private readTools(
+    tripId: string,
+    streetViewPolicy = new StreetViewToolPolicy(),
+    observability?: AgentObservabilityContext,
+  ): ToolSet {
     return {
       ...buildWeatherReadTools(this.weatherService),
       ...buildGeoReadTools(this.geoService),
       ...buildLodgingReadTools(this.lodgingService),
       ...buildTripMediaReadTools(this.fileStorage, tripId),
       ...(this.streetViewService
-        ? buildStreetViewReadTools(this.streetViewService, tripId)
+        ? buildStreetViewReadTools(
+            this.streetViewService,
+            tripId,
+            streetViewPolicy,
+            observability,
+          )
         : {}),
     };
   }
@@ -520,9 +667,16 @@ export class AiSdkAgentModel implements AgentModel {
   private chatTools(
     tripId: string,
     applyPatch?: (patch: PendingPatch) => Promise<AgentToolApplyResult>,
+    streetViewPolicy = new StreetViewToolPolicy(),
+    observability?: AgentObservabilityContext,
   ): ToolSet {
-    if (!applyPatch) return this.readTools(tripId);
-    return { ...this.readTools(tripId), ...buildWriteTools(applyPatch) };
+    if (!applyPatch) {
+      return this.readTools(tripId, streetViewPolicy, observability);
+    }
+    return {
+      ...this.readTools(tripId, streetViewPolicy, observability),
+      ...buildWriteTools(applyPatch),
+    };
   }
 
   private chatSystem(trip: TripSnapshot): string {
@@ -585,6 +739,66 @@ export class AiSdkAgentModel implements AgentModel {
     } as const;
   }
 
+  private lifecycleCallbacks(
+    tripId: string,
+    observability: AgentObservabilityContext,
+  ) {
+    const common = {
+      runtime: observability.runtime,
+      requestId: observability.requestId,
+      tripId,
+      agentSessionId: tripId,
+      turnId: observability.turnId,
+      trigger: observability.trigger,
+    };
+    return {
+      onToolExecutionStart: (event: ToolExecutionStartEvent) => {
+        logger.info("agent.tool.started", {
+          ...common,
+          toolCallId: event.toolCall.toolCallId,
+          toolName: event.toolCall.toolName,
+          ...safeToolInputFields(event.toolCall.toolName, event.toolCall.input),
+        });
+      },
+      onToolExecutionEnd: (event: ToolExecutionEndEvent) => {
+        const failed = event.toolOutput.type === "tool-error";
+        const error = failed ? event.toolOutput.error : undefined;
+        logger[failed ? "error" : "info"](
+          failed ? "agent.tool.failed" : "agent.tool.completed",
+          {
+            ...common,
+            toolCallId: event.toolCall.toolCallId,
+            toolName: event.toolCall.toolName,
+            durationMs: event.toolExecutionMs,
+            outcome: failed ? "error" : "success",
+            ...(error instanceof StreetViewError
+              ? {
+                  errorCode: error.code,
+                  upstreamStatus: error.upstreamStatus,
+                  attempt: error.attempt,
+                }
+              : {}),
+            ...safeToolInputFields(event.toolCall.toolName, event.toolCall.input),
+          },
+        );
+      },
+      onStepEnd: (event: GenerateTextStepEndEvent) => {
+        logger.info("agent.model.step_completed", {
+          ...common,
+          stepNumber: event.stepNumber,
+          finishReason: event.finishReason,
+          inputTokens: event.usage.inputTokens,
+          outputTokens: event.usage.outputTokens,
+          totalTokens: event.usage.totalTokens,
+          toolCallCount: event.toolCalls.length,
+          toolResultCount: event.toolResults.length,
+          provider: event.model.provider,
+          model: event.model.modelId,
+        });
+      },
+    };
+  }
+
   private async resolveModelMessages(
     request: AgentChatRequest,
     tools: ToolSet,
@@ -607,7 +821,13 @@ export class AiSdkAgentModel implements AgentModel {
   }
 
   async streamChat(request: AgentChatRequest): Promise<Response> {
-    const tools = this.chatTools(request.trip.id, request.applyPatch);
+    const streetViewPolicy = new StreetViewToolPolicy();
+    const tools = this.chatTools(
+      request.trip.id,
+      request.applyPatch,
+      streetViewPolicy,
+      request.observability,
+    );
     const messages = await this.resolveModelMessages(request, tools);
 
     // When the last message is an assistant with tool parts, the UI stream
@@ -633,6 +853,9 @@ export class AiSdkAgentModel implements AgentModel {
         request.trip.id,
       ),
       stopWhen: stepCountIs(this.config.maxToolSteps),
+      prepareStep: ({ instructions }) =>
+        streetViewPolicy.prepareStep(Object.keys(tools), instructions),
+      ...this.lifecycleCallbacks(request.trip.id, request.observability),
       runtimeContext: this.runtimeContext(request.trip.id, request.observability),
       telemetry: {
         ...this.telemetry("agent.chat"),
@@ -680,6 +903,12 @@ export class AiSdkAgentModel implements AgentModel {
   ): Promise<AgentMessagePart[]> {
     // Ambient replies stay read-only: no write tools, no approval loop.
     // Use ambientSystem so the model is not told it has editor write tools.
+    const streetViewPolicy = new StreetViewToolPolicy();
+    const tools = this.readTools(
+      request.trip.id,
+      streetViewPolicy,
+      request.observability,
+    );
     const result = await generateText({
       model: this.model,
       system: this.ambientSystem(request.trip),
@@ -689,13 +918,16 @@ export class AiSdkAgentModel implements AgentModel {
         this.fileStorage,
         request.trip.id,
       ),
-      tools: this.readTools(request.trip.id),
+      tools,
       providerOptions: this.providerOptions(),
       experimental_download: createTripMediaDownload(
         this.fileStorage,
         request.trip.id,
       ),
       stopWhen: stepCountIs(this.config.maxToolSteps),
+      prepareStep: ({ instructions }) =>
+        streetViewPolicy.prepareStep(Object.keys(tools), instructions),
+      ...this.lifecycleCallbacks(request.trip.id, request.observability),
       runtimeContext: this.runtimeContext(request.trip.id, request.observability),
       telemetry: {
         ...this.telemetry("agent.ambient_reply"),
@@ -883,6 +1115,8 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
 export function buildStreetViewReadTools(
   streetViewService: StreetViewService,
   tripId: string,
+  policy = new StreetViewToolPolicy(),
+  observability?: AgentObservabilityContext,
 ): ToolSet {
   return {
     streetViewSearch: tool({
@@ -895,10 +1129,15 @@ export function buildStreetViewReadTools(
         limit: z.number().int().min(1).max(10).optional(),
       }),
       execute: async (input) => {
+        policy.validateSearch(input);
         const startedAt = Date.now();
         try {
           const result = await providerCall("street_view", "search", () =>
-            streetViewService.searchNearby({ tripId, ...input }),
+            streetViewService.searchNearby({
+              tripId,
+              ...input,
+              observability,
+            }),
           );
           logger.info("street_view.search_completed", {
             tripId,
@@ -911,8 +1150,10 @@ export function buildStreetViewReadTools(
             completeness: result.completeness,
             durationMs: Date.now() - startedAt,
           });
+          policy.recordSearchSuccess(input, result);
           return result;
         } catch (error) {
+          policy.recordSearchFailure();
           logger.error("street_view.search_failed", {
             tripId,
             radiusMeters: input.radiusMeters ?? 100,
@@ -931,10 +1172,12 @@ export function buildStreetViewReadTools(
       inputSchema: z.object({
         imageId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/),
       }),
-      execute: async ({ imageId }) =>
-        providerCall("street_view", "inspect", () =>
-          streetViewService.getInspectableImage(tripId, imageId),
-        ),
+      execute: async ({ imageId }) => {
+        policy.validateInspect(imageId);
+        return providerCall("street_view", "inspect", () =>
+          streetViewService.getInspectableImage(tripId, imageId, observability),
+        );
+      },
       toModelOutput: async ({ output }) => {
         const metadata = JSON.stringify(output);
         if (output.supports360) {
@@ -945,7 +1188,7 @@ export function buildStreetViewReadTools(
         }
         try {
           const preview = await providerCall("street_view", "read_preview", () =>
-            streetViewService.readPreview(output.id),
+            streetViewService.readPreview(output.id, observability),
           );
           return {
             type: "content" as const,

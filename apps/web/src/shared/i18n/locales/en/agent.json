@@ -42,6 +42,9 @@
   "context": {
     "commentingOnStop": "Commenting on {{stop}}"
   },
+  "debug": {
+    "copy": "Copy debug info"
+  },
   "generated": {
     "day": "Day {{day}}",
     "recommended": "Recommended",
@@ -58,7 +61,8 @@
       "loading": "Loading street view…",
       "placeFallback": "Street view",
       "captureUnknown": "Capture time unknown",
-      "open": "Open street view"
+      "open": "Open street view",
+      "retry": "Retry"
     }
   },
   "tool": {

@@ -1,5 +1,6 @@
 export type StreetViewErrorCode =
   | "street_view_not_configured"
+  | "street_view_provider_auth_error"
   | "street_view_invalid_query"
   | "street_view_invalid_image"
   | "street_view_image_not_found"
@@ -14,8 +15,24 @@ export class StreetViewError extends Error {
   constructor(
     public readonly code: StreetViewErrorCode,
     message: string,
+    options: {
+      upstreamStatus?: number;
+      retryable?: boolean;
+      providerOperation?: string;
+      attempt?: number;
+      cause?: unknown;
+    } = {},
   ) {
-    super(message);
+    super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = "StreetViewError";
+    this.upstreamStatus = options.upstreamStatus;
+    this.retryable = options.retryable ?? false;
+    this.providerOperation = options.providerOperation;
+    this.attempt = options.attempt;
   }
+
+  readonly upstreamStatus?: number;
+  readonly retryable: boolean;
+  readonly providerOperation?: string;
+  readonly attempt?: number;
 }

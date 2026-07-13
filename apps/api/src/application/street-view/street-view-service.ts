@@ -5,6 +5,15 @@ import type {
   StreetViewViewerConfig,
 } from "../../domain/street-view";
 import { StreetViewError } from "./street-view-error";
+import {
+  noopStreetViewCache,
+  type StreetViewCache,
+} from "./street-view-cache";
+import {
+  noopObservability,
+  type Observability,
+  type RuntimeName,
+} from "../observability";
 
 const DEFAULT_RADIUS_METERS = 100;
 const MAX_RADIUS_METERS = 1_000;
@@ -29,6 +38,13 @@ export interface StreetViewSearchInput {
   lng: number;
   radiusMeters?: number;
   limit?: number;
+  observability?: StreetViewRequestContext;
+}
+
+export interface StreetViewRequestContext {
+  requestId?: string;
+  turnId?: string;
+  runtime?: RuntimeName;
 }
 
 export interface StreetViewSearchResultDto {
@@ -41,7 +57,11 @@ export interface StreetViewSearchResultDto {
 }
 
 export class StreetViewService {
-  constructor(private readonly provider: StreetViewProvider) {}
+  constructor(
+    private readonly provider: StreetViewProvider,
+    private readonly cache: StreetViewCache = noopStreetViewCache,
+    private readonly observability: Observability = noopObservability,
+  ) {}
 
   async searchNearby(input: StreetViewSearchInput): Promise<StreetViewSearchResultDto> {
     validateCoordinate(input.lat, input.lng);
@@ -58,6 +78,13 @@ export class StreetViewService {
       radiusMeters,
       limit,
     });
+    await Promise.all(
+      result.images.map((image) =>
+        this.writeCache("metadata", image.id, input.observability, () =>
+          this.cache.putImage(image),
+        ),
+      ),
+    );
     const candidates = result.images
       .map((image) => ({ image, distance: distanceMeters(input, image.coordinate) }))
       .filter(({ distance }) => distance <= radiusMeters)
@@ -76,17 +103,35 @@ export class StreetViewService {
     };
   }
 
-  async getImage(tripId: string, imageId: string): Promise<StreetViewImageDto> {
+  async getImage(
+    tripId: string,
+    imageId: string,
+    context?: StreetViewRequestContext,
+  ): Promise<StreetViewImageDto> {
     validateImageId(imageId);
+    const cached = await this.readCache(
+      "metadata",
+      imageId,
+      context,
+      () => this.cache.getImage(imageId),
+    );
+    if (cached) return this.toDto(tripId, cached);
     const image = await this.provider.getImage(imageId);
     if (!image) {
       throw new StreetViewError("street_view_image_not_found", "Street-view image not found");
     }
+    await this.writeCache("metadata", imageId, context, () =>
+      this.cache.putImage(image),
+    );
     return this.toDto(tripId, image);
   }
 
-  async getInspectableImage(tripId: string, imageId: string): Promise<StreetViewImageDto> {
-    const image = await this.getImage(tripId, imageId);
+  async getInspectableImage(
+    tripId: string,
+    imageId: string,
+    context?: StreetViewRequestContext,
+  ): Promise<StreetViewImageDto> {
+    const image = await this.getImage(tripId, imageId, context);
     if (image.supports360) {
       throw new StreetViewError(
         "street_view_panorama_inspection_forbidden",
@@ -96,9 +141,36 @@ export class StreetViewService {
     return image;
   }
 
-  async readPreview(imageId: string): Promise<StreetViewPreview> {
+  async readPreview(
+    imageId: string,
+    context?: StreetViewRequestContext,
+  ): Promise<StreetViewPreview> {
     validateImageId(imageId);
-    return this.provider.readPreview(imageId);
+    const cachedPreview = await this.readCache(
+      "preview",
+      imageId,
+      context,
+      () => this.cache.getPreview(imageId),
+    );
+    if (cachedPreview) return cachedPreview;
+    const image =
+      (await this.readCache("metadata", imageId, context, () =>
+        this.cache.getImage(imageId),
+      )) ?? (await this.provider.getImage(imageId));
+    if (!image) {
+      throw new StreetViewError(
+        "street_view_image_not_found",
+        "Street-view image not found",
+      );
+    }
+    await this.writeCache("metadata", imageId, context, () =>
+      this.cache.putImage(image),
+    );
+    const preview = await this.provider.readPreview(image);
+    await this.writeCache("preview", imageId, context, () =>
+      this.cache.putPreview(imageId, preview),
+    );
+    return preview;
   }
 
   getViewerConfig(): StreetViewViewerConfig {
@@ -116,6 +188,48 @@ export class StreetViewService {
       previewUrl: `/api/trips/${encodeURIComponent(tripId)}/street-view/images/${encodeURIComponent(image.id)}/preview`,
       attribution: image.attribution,
     };
+  }
+
+  private async readCache<T>(
+    kind: "metadata" | "preview",
+    imageId: string,
+    context: StreetViewRequestContext | undefined,
+    read: () => Promise<T | null>,
+  ): Promise<T | null> {
+    try {
+      const value = await read();
+      this.observability.logger.debug(
+        value ? "street_view.cache.hit" : "street_view.cache.miss",
+        { ...context, imageId, cacheKind: kind },
+      );
+      return value;
+    } catch (error) {
+      this.observability.logger.warn("street_view.cache.read_failed", {
+        ...context,
+        imageId,
+        cacheKind: kind,
+        error,
+      });
+      return null;
+    }
+  }
+
+  private async writeCache(
+    kind: "metadata" | "preview",
+    imageId: string,
+    context: StreetViewRequestContext | undefined,
+    write: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await write();
+    } catch (error) {
+      this.observability.logger.warn("street_view.cache.write_failed", {
+        ...context,
+        imageId,
+        cacheKind: kind,
+        error,
+      });
+    }
   }
 }
 

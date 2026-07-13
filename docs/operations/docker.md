@@ -49,6 +49,10 @@ open http://localhost:8090
 ```bash
 docker compose logs -f api
 docker compose logs -f web
+
+# Find the same correlation fields used by Cloudflare.
+docker compose logs api \
+  | jq -R 'fromjson? | select(.requestId == "<request-id>" or .turnId == "<turn-id>")'
 ```
 
 ## Backup and restore

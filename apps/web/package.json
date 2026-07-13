@@ -20,6 +20,7 @@
     "@milkdown/crepe": "^7.21.2",
     "@milkdown/react": "^7.21.2",
     "@opentrip/agent-ui-catalog": "workspace:*",
+    "@opentrip/observability-contract": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
     "ai": "^7.0.18",
     "better-auth": "^1.2.7",

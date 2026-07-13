@@ -8,9 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@opentrip/observability-contract':
+        specifier: workspace:*
+        version: link:packages/observability-contract
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.0
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.13.3)(lightningcss@1.32.0)(terser@5.49.0)
 
   apps/api:
     dependencies:
@@ -38,6 +47,9 @@ importers:
       '@opentrip/agent-ui-catalog':
         specifier: workspace:*
         version: link:../../packages/agent-ui-catalog
+      '@opentrip/observability-contract':
+        specifier: workspace:*
+        version: link:../../packages/observability-contract
       '@prisma/adapter-mariadb':
         specifier: ^7.8.0
         version: 7.8.0
@@ -141,6 +153,9 @@ importers:
       '@opentrip/agent-ui-catalog':
         specifier: workspace:*
         version: link:../../packages/agent-ui-catalog
+      '@opentrip/observability-contract':
+        specifier: workspace:*
+        version: link:../../packages/observability-contract
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.101.2(react@19.2.7)
@@ -280,6 +295,15 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.4.3
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.13.3)(lightningcss@1.32.0)(terser@5.49.0)
+
+  packages/observability-contract:
     devDependencies:
       typescript:
         specifier: ^5.7.3

@@ -62,6 +62,7 @@ not part of automated verification.
 | `S3_ACCESS_KEY_ID` | api (`s3`) | secret access key id |
 | `S3_SECRET_ACCESS_KEY` | api (`s3`) | secret access key |
 | `S3_FORCE_PATH_STYLE` | api (`s3`) | optional `true`/`false`, default `false` |
+| `CLOUDFLARE_OBSERVABILITY_TOKEN` | local operator | historical Workers Logs query token; never synced to the Worker |
 
 On Cloudflare, `DATABASE_URL` is replaced by the Hyperdrive binding; set Worker
 var `DATABASE_PROVIDER` to `postgres` or `mysql` to match the origin database.
@@ -90,8 +91,8 @@ Better Auth and S3 credential values are set with `wrangler secret`.
 
 ## Logs and backup
 
-- Cloudflare: Workers Logs (observability enabled in `wrangler.api.jsonc`),
-  `wrangler tail` for live logs.
+- Cloudflare: `pnpm logs:cf` for historical Workers Logs and
+  `pnpm logs:cf -- --live` for Wrangler live logs.
 - Docker: `docker compose logs -f api`; Postgres backup via `pg_dump` (see
   [docker.md](docker.md)).
 - Agent/API trace correlation, Sentry queries, structured-log fields, and

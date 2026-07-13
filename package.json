@@ -24,10 +24,15 @@
         "db:studio": "pnpm --filter @opentrip/api db:studio",
         "deploy:web": "node deploy/cloudflare/scripts/deploy-web.mjs",
         "deploy:api": "node deploy/cloudflare/scripts/deploy-api.mjs",
-        "deploy:secrets": "node deploy/cloudflare/scripts/sync-secrets.mjs"
+        "deploy:secrets": "node deploy/cloudflare/scripts/sync-secrets.mjs",
+        "logs:cf": "tsx --env-file-if-exists=.env scripts/cloudflare-logs.ts",
+        "logs:cf:test": "vitest run scripts/cloudflare-logs.test.ts"
     },
     "devDependencies": {
-        "typescript": "^5.7.3"
+        "@opentrip/observability-contract": "workspace:*",
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.3",
+        "vitest": "^2.1.8"
     },
     "pnpm": {
         "onlyBuiltDependencies": ["@prisma/engines", "prisma", "esbuild"]

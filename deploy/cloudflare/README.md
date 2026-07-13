@@ -1,5 +1,10 @@
 # Cloudflare deployment
 
+Historical and live Worker log queries use the shared runbook in
+[`docs/operations/observability.md`](../../docs/operations/observability.md).
+The operator-only token template is `observability.example.env` and must never
+be synced to Worker secrets.
+
 Frontend on **Pages**, API on **Workers**, PostgreSQL fronted by **Hyperdrive**.
 Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cloudflare.md).
 

@@ -38,6 +38,9 @@ open http://localhost:8090
 
 ## Logs, backup
 
+API logs use the same request/turn/message fields as Cloudflare; see
+[`docs/operations/observability.md`](../../docs/operations/observability.md).
+
 ```bash
 docker compose logs -f api
 docker compose exec postgres pg_dump -U opentrip opentrip > backup.sql

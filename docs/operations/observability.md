@@ -19,6 +19,8 @@ disable the API or trip agent.
 | `SENTRY_ENVIRONMENT` | variable | `production`, `staging`, or `development` |
 | `SENTRY_RELEASE` | CI-generated variable | Git commit SHA shared by runtime events and source maps |
 | `AI_TELEMETRY_RECORD_CONTENT` | variable | Records full textual AI inputs and outputs when `true` |
+| `CLOUDFLARE_OBSERVABILITY_TOKEN` | local operator secret | Historical Workers Logs queries; requires `Workers Observability Write` and is never synced to the Worker |
+| `CLOUDFLARE_ACCOUNT_ID` | local/CI secret | Account queried by the log CLI; inferred from a single Wrangler account when omitted |
 
 Production uses 100% Sentry sampling for trip-agent routes, 10% for other API
 routes, and 0% for health checks. Cloudflare persists all logs and samples
@@ -33,10 +35,15 @@ the flag to `false` and redeploy to stop content capture immediately.
 
 ## Trace model
 
-Every response carries `x-request-id`. A supplied value is retained only when
+Every response carries `x-request-id`. Agent chat responses also carry
+`x-agent-turn-id`; CORS exposes both headers. A supplied request id is retained only when
 it matches the safe request-id format; otherwise the API generates a UUID.
 Agent executions additionally carry `tripId`, `agentSessionId`, `turnId`,
 `messageId`, `suggestionId`, and `toolCallId` when available.
+
+`requestId` is the application UUID. Cloudflare's `$metadata.requestId` is the
+invocation id (often the Ray/request grouping id) and can contain several
+application log events. The log CLI labels and expands these separately.
 
 The initiating user UI message id is the stable `turnId`. A later tool-approval
 request creates a new HTTP trace but keeps the same `turnId` and AI SDK
@@ -82,12 +89,23 @@ while the independent SSE drain finishes successfully, the chat span records
 3. Open the trace waterfall. Inspect authorization/context loading, AI steps,
    inference finish reason and token usage, tool execution, approval, domain
    apply, message persistence, and stream completion in that order.
-4. If Sentry has no sampled trace, search Workers Logs for the same identifier.
-   For a live reproduction:
+4. If Sentry has no sampled trace, query historical Workers Logs. The command
+   first finds the matching event and then expands every Cloudflare invocation
+   so sibling tool/provider/persistence events appear in chronological order:
 
    ```bash
-   pnpm exec wrangler tail opentrip-api --format json \
-     | jq 'select(tostring | contains("<request-or-turn-id>"))'
+   pnpm logs:cf -- --request-id <request-id> --since 1h
+   pnpm logs:cf -- --turn-id <turn-id> --since 24h
+   pnpm logs:cf -- --message-id <message-id>
+   pnpm logs:cf -- --tool-call-id <tool-call-id>
+   pnpm logs:cf -- --trip-id <trip-id> --event agent.tool.failed
+   ```
+
+   Wrangler itself exposes live tailing, not historical replay. For a live
+   reproduction use the same repository command, which delegates to Wrangler:
+
+   ```bash
+   pnpm logs:cf -- --live --contains <request-or-turn-id>
    ```
 
 5. In Docker, use the same fields:
@@ -141,3 +159,80 @@ available correlation ids. Important events include:
 
 Do not paste full Sentry events into public issues. Share the trace or event id
 with an authorized project member instead.
+
+## Historical Workers Logs setup
+
+Create a dedicated Cloudflare API token with `Workers Observability Write`.
+Despite the operation being read-only, this is the permission currently
+required by the Telemetry Query API. Do not reuse the deployment token and do
+not add the query token to Worker secrets.
+
+```bash
+cp deploy/cloudflare/observability.example.env .env.observability
+# Fill the two values, then load them into the current shell.
+set -a; source .env.observability; set +a
+
+pnpm logs:cf -- --request-id <id> --since 1h
+```
+
+Historical options are composable and use AND semantics:
+
+| Option | Meaning |
+| --- | --- |
+| `--request-id` | application `x-request-id` |
+| `--invocation-id` | Cloudflare `$metadata.requestId` |
+| `--turn-id` / `--message-id` / `--tool-call-id` / `--trip-id` | stable agent/business correlation fields |
+| `--event` | exact structured event name |
+| `--contains` | full-text needle across event fields |
+| `--since 15m\|1h\|24h` | relative window; default `1h` |
+| `--from` / `--to` | ISO-8601 bounds |
+| `--limit` | maximum output events, default `100`, maximum `2000` |
+| `--format pretty\|ndjson\|json` | human, pipeline, or complete event output |
+| `--no-expand` | return only directly matching events |
+
+If `CLOUDFLARE_ACCOUNT_ID` is absent, the command uses `wrangler whoami
+--json` only when it exposes exactly one account. Authentication/API errors go
+to stderr and return non-zero; zero matching events is a successful query.
+
+## Find a message from its text
+
+`agent.persist_message` stores a pseudonymous `messageFingerprint`, never the
+message body. Normalization is Unicode NFKC followed by whitespace collapse and
+trim; the digest is lowercase SHA-256 prefixed with `sha256:`. File parts,
+tool payloads, attachments, and generated UI are excluded.
+
+Prefer stdin so sensitive text does not enter shell history or the process
+list:
+
+```bash
+pbpaste | pnpm logs:cf -- --message-stdin --since 2h
+```
+
+The Agent message menu's **Copy debug info** action provides tripId, messageId,
+available live requestId/turnId, toolCallIds, source, createdAt, and the same
+fingerprint. A hash is pseudonymous rather than anonymous and can still be
+dictionary-tested; restrict Workers Logs access accordingly.
+
+## Street-view card runbook
+
+For a missing or invalid generated card, query the copied message id and inspect
+these events in order:
+
+1. `agent.model.step_completed`: confirm the model actually emitted a tool call.
+2. `agent.tool.started` and `agent.tool.completed`/`agent.tool.failed`: verify
+   the real `toolCallId`, coordinates, radius, and tool result state.
+3. `street_view.provider.request_failed` and
+   `street_view.provider.retry_scheduled`: distinguish 401/403 configuration,
+   429, timeout, and provider 5xx; attempts never exceed two.
+4. `street_view.search_completed`: only `outcome=found` ids may ground a card.
+5. `street_view.cache.hit`/`miss`: a card immediately following a successful
+   search should use the 15-minute metadata cache; preview bytes are cached
+   after their first successful read.
+6. `agent.persist_message`: confirm the sanitized assistant message and its
+   fingerprint were written.
+
+If the provider call failed, the generation policy removes both street-view
+tools for the remainder of that reply. Any prose claiming additional
+coordinates were tried is therefore a model-grounding defect and should be
+reported with the turnId and toolCallId; an ungrounded `StreetViewCard` is
+discarded both during rendering and before persistence.

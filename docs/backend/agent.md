@@ -216,7 +216,10 @@ dismiss). `POST …/apply` and `…/dismiss` remain as aliases.
 
 Agent calls emit AI SDK 7 OpenTelemetry spans beneath application-owned
 `opentrip.agent.*` spans. The initiating user UI message id is reused as the
-turn id across tool-approval continuations. Structured logs and the debugging
+turn id across tool-approval continuations. Generated street-view UI accepts
+only image ids grounded by a successful tool output in the same assistant
+message. Each message exposes a localized “Copy debug info” action containing
+safe correlation ids and a text fingerprint. Structured logs and the debugging
 runbook are documented in
 [../operations/observability.md](../operations/observability.md).
 

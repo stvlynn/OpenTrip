@@ -42,6 +42,6 @@ export interface StreetViewViewerConfig {
 export interface StreetViewProvider {
   searchNearby(query: StreetViewSearchQuery): Promise<StreetViewProviderSearchResult>;
   getImage(imageId: string): Promise<StreetViewImage | null>;
-  readPreview(imageId: string): Promise<StreetViewPreview>;
+  readPreview(image: StreetViewImage): Promise<StreetViewPreview>;
   getViewerConfig(): StreetViewViewerConfig;
 }
