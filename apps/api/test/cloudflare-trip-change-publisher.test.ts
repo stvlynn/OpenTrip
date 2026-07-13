@@ -13,7 +13,10 @@ const change: TripChange = {
 
 describe("CloudflareTripChangePublisher", () => {
   it("defers publication and targets the trip Durable Object", async () => {
-    const fetch = vi.fn(async (_request: Request) => new Response(null));
+    const fetch = vi.fn(async (request: Request) => {
+      void request;
+      return new Response(null);
+    });
     const getByName = vi.fn(() => ({ fetch }));
     const tasks: Promise<unknown>[] = [];
     const publisher = new CloudflareTripChangePublisher(

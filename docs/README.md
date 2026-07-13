@@ -66,6 +66,8 @@ Start here for multi-client development:
 apps/
   web/   React + Vite frontend (FSD)
   api/   Hono backend (DDD + Hexagonal)
+packages/
+  agent-ui-catalog/  shared json-render catalog and spec safety boundary
 deploy/
   cloudflare/  Pages + Workers + Hyperdrive
   docker/      Compose (postgres + api + web)

@@ -48,6 +48,7 @@ export function AgentComposer({
   const [attachments, setAttachments] = useState<PendingFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentsRef = useRef(attachments);
 
   const mention = useMentionInput({
     trip,
@@ -58,9 +59,11 @@ export function AgentComposer({
   });
 
   useEffect(() => {
-    return () => revokePreviews(attachments);
-    // Only revoke on unmount; per-remove handles individual revokes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  useEffect(() => {
+    return () => revokePreviews(attachmentsRef.current);
   }, []);
 
   useEffect(() => {

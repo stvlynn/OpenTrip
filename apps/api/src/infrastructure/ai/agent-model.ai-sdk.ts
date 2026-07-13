@@ -1,10 +1,14 @@
 import {
+  consumeStream,
   convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   generateId,
   generateObject,
   generateText,
   stepCountIs,
   streamText,
+  toUIMessageStream,
   tool,
   type Experimental_DownloadFunction,
   type LanguageModel,
@@ -12,6 +16,11 @@ import {
   type ToolSet,
   type UIMessage,
 } from "ai";
+import {
+  agentUiModelContext,
+  agentUiPrompt,
+  pipeJsonRender,
+} from "@opentrip/agent-ui-catalog";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -324,11 +333,20 @@ async function toModelMessages(
   const messages: ModelMessage[] = [];
   for (const message of history) {
     const text = textOf(message.parts);
+    const generatedUi = agentUiModelContext(message.parts);
     const files = await fileContentParts(message.parts, fileStorage, tripId);
 
     if (message.role === "assistant") {
-      if (!text.trim()) continue;
-      messages.push({ role: "assistant", content: text });
+      const content = [
+        text.trim(),
+        generatedUi
+          ? `[Previously generated interface]\n${generatedUi}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      if (!content) continue;
+      messages.push({ role: "assistant", content });
       continue;
     }
 
@@ -478,7 +496,7 @@ export class AiSdkAgentModel implements AgentModel {
   }
 
   private chatSystem(trip: TripSnapshot): string {
-    return `${chatSystemPrompt()}\n\nCurrent trip snapshot:\n${tripContext(trip)}`;
+    return `${chatSystemPrompt()}\n\n${agentUiPrompt}\n\nCurrent trip snapshot:\n${tripContext(trip)}`;
   }
 
   private ambientSystem(trip: TripSnapshot): string {
@@ -543,19 +561,38 @@ export class AiSdkAgentModel implements AgentModel {
       stopWhen: stepCountIs(this.config.maxToolSteps),
     });
 
-    // Keep generating (and firing UI-stream onFinish) even if the client aborts.
-    result.consumeStream();
-
-    return result.toUIMessageStreamResponse({
+    const stream = createUIMessageStream({
       originalMessages,
-      generateMessageId: generateId,
-      sendReasoning: true,
-      onFinish: async ({ responseMessage }) => {
+      generateId,
+      execute: ({ writer }) => {
+        writer.merge(
+          pipeJsonRender(
+            toUIMessageStream({
+              stream: result.stream,
+              tools,
+              originalMessages,
+              generateMessageId: generateId,
+              sendReasoning: true,
+            }),
+          ),
+        );
+      },
+      // Persist after json-render transforms SpecStream text into data-spec
+      // parts; an inner stream callback would only see the raw fenced JSONL.
+      onEnd: async ({ responseMessage }) => {
         await request.onFinish(
           responseMessage.parts as AgentMessagePart[],
           responseMessage.id,
         );
       },
+    });
+
+    return createUIMessageStreamResponse({
+      stream,
+      // Drain an independent SSE branch so transformation and persistence
+      // finish even when the HTTP client disconnects mid-response.
+      consumeSseStream: ({ stream: sseStream }) =>
+        consumeStream({ stream: sseStream }),
     });
   }
 

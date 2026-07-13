@@ -142,6 +142,33 @@ There is no product API for deleting a stop or expense yet. Invites and votes
 stay human-only. Stop comments are human-authored except for agent replies that
 land in the same thread after an explicit `@agent` mention.
 
+### Generative UI (json-render)
+
+Explicit streaming chat can combine prose, reasoning, tools, and a compact
+native interface. The AI adapter appends the shared json-render catalog prompt
+in inline mode, converts AI SDK 7 `streamText().stream` with
+`toUIMessageStream`, and passes the result through `pipeJsonRender`. Non-text
+tool/approval/reasoning chunks pass through unchanged; SpecStream JSONL patches
+become persisted `data-spec` UI message parts.
+
+The framework-neutral catalog lives in `packages/agent-ui-catalog` and is
+shared by API and web. It owns json-render's Zod 4 boundary while the API keeps
+its existing Zod 3 request schemas. The initial catalog is deliberately bounded
+to trip plan cards, text, badges, alerts, day/stop summaries, comparisons,
+budget estimates, and action buttons.
+
+Generated actions cannot call arbitrary URLs or APIs. Only a user press on an
+`ActionButton` may send an agent follow-up or focus an existing day/stop. A
+request to write a plan still enters the normal generated trip tool, AI SDK
+approval, `applyTripOp`, aggregate, and repository path. Automatic watchers,
+action chaining, unknown components/actions, dynamic repeats, oversized specs,
+and invalid props are rejected by the shared runtime sanitizer.
+
+All UI parts are stored with the normal message parts. Valid prior specs are
+serialized into a bounded assistant-history context so later requests can
+refer to the generated options. A UI-only assistant reply counts as content and
+is persisted; invalid UI falls back to accompanying text.
+
 ## Approving a suggestion
 
 Proactive suggestions use the same approval DTO as AI SDK tools:

@@ -18,7 +18,7 @@ export interface UseAnimatedIconOptions {
 }
 
 export interface UseAnimatedIconResult {
-  ref: RefObject<AnimatedIconHandle>;
+  ref: RefObject<AnimatedIconHandle | null>;
   start: () => void;
   stop: () => void;
   /** Spread onto the icon when the trigger is hover-based; empty otherwise. */

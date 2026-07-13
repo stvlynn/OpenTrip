@@ -212,7 +212,7 @@ export function loadConfig(env: RawEnv, connectionString?: string): AppConfig {
         env.DATABASE_PROVIDER,
         databaseUrl,
     );
-    const databaseSsl = resolveDatabaseSsl(env.DATABASE_SSL, databaseProvider);
+    const databaseSsl = resolveDatabaseSsl(env.DATABASE_SSL);
 
     const betterAuthSecret = env.BETTER_AUTH_SECRET;
     if (!betterAuthSecret || betterAuthSecret.length < 32) {
@@ -468,7 +468,6 @@ function resolveDatabaseProvider(
  */
 function resolveDatabaseSsl(
     raw: string | undefined,
-    provider: DatabaseProvider,
 ): DatabaseSslMode {
     const v = raw?.trim().toLowerCase();
     // Default off for both engines so Workers can reach hosts that do not speak SSL.

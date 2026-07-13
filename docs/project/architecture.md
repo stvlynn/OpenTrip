@@ -32,6 +32,10 @@ flowchart TD
 - **apps/api** — Hono app (DDD + Hexagonal). `interfaces/http` routes call
   `application` use cases, which operate on `domain` aggregates through
   repository ports implemented in `infrastructure`.
+- **packages/agent-ui-catalog** — framework-neutral json-render catalog,
+  prompt, streaming-part compiler, and runtime safety boundary shared by the
+  AI adapter and planner renderer. Its Zod 4 dependency is isolated from the
+  API's Zod 3 HTTP schemas.
 
 ## Request flow
 

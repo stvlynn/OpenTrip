@@ -29,6 +29,8 @@ export function AgentChat({
   enabled = true,
   onApproveSuggestion,
   onDenySuggestion,
+  onFocusDay,
+  onFocusStop,
 }: {
   tripId: string;
   trip: Trip;
@@ -38,6 +40,8 @@ export function AgentChat({
   enabled?: boolean;
   onApproveSuggestion: (suggestion: AgentSuggestion) => void;
   onDenySuggestion: (suggestion: AgentSuggestion) => void;
+  onFocusDay: (dayNumber: number) => void;
+  onFocusStop: (stopId: string) => void;
 }) {
   const { t } = useTranslation("agent");
   const queryClient = useQueryClient();
@@ -188,6 +192,9 @@ export function AgentChat({
               onToolDeny={(id) =>
                 void addToolApprovalResponse({ id, approved: false })
               }
+              onGeneratedFollowUp={(message) => send(message, [])}
+              onGeneratedFocusDay={onFocusDay}
+              onGeneratedFocusStop={onFocusStop}
               onReply={(target) => setQuote(target)}
             />
           ))

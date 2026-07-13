@@ -42,6 +42,17 @@
   "context": {
     "commentingOnStop": "Commenting on {{stop}}"
   },
+  "generated": {
+    "day": "Day {{day}}",
+    "recommended": "Recommended",
+    "pros": "Pros",
+    "cons": "Trade-offs",
+    "estimate": "Estimated budget",
+    "total": "Estimated total",
+    "invalid": "This generated view could not be displayed safely.",
+    "staleDay": "That day is no longer in this trip.",
+    "staleStop": "That stop is no longer in this trip."
+  },
   "tool": {
     "proposed": "Proposed: {{tool}}",
     "running": "Running {{tool}}…",

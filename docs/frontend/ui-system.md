@@ -60,6 +60,14 @@ technology while icon-only controls retain localized labels.
 Variants/sizes come from props, not ad-hoc overrides. Icon-only buttons require
 `aria-label`; form controls set an explicit `type`.
 
+Agent replies may include json-render `data-spec` parts. The planner-private
+registry under `pages/travel-planner/ui/agent` maps the shared catalog to these
+cossUI primitives and semantic tokens; it does not install or wrap the shadcn
+registry. Live and persisted messages use the same renderer. Runtime catalog
+validation and an error boundary isolate invalid generated content from the
+chat timeline. Static fallback, status, and comparison copy stays in the agent
+locale resources; model-provided plan content remains message data.
+
 Stop notes expand into the planner main pane (replacing map/schedule/budget)
 via a Milkdown Crepe WYSIWYG editor (Crepe TopBar as fixed chrome, block slash
 menu). Images upload through `POST /api/trips/:id/media` into the shared

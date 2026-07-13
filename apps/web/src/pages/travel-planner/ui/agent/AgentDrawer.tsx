@@ -16,6 +16,8 @@ export function AgentDrawer({
   applyingId,
   onApproveSuggestion,
   onDenySuggestion,
+  onFocusDay,
+  onFocusStop,
   onClose,
 }: {
   open: boolean;
@@ -25,6 +27,8 @@ export function AgentDrawer({
   applyingId: string | null;
   onApproveSuggestion: (suggestion: AgentSuggestion) => void;
   onDenySuggestion: (suggestion: AgentSuggestion) => void;
+  onFocusDay: (dayNumber: number) => void;
+  onFocusStop: (stopId: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation("agent");
@@ -61,6 +65,8 @@ export function AgentDrawer({
           applyingId={applyingId}
           onApproveSuggestion={onApproveSuggestion}
           onDenySuggestion={onDenySuggestion}
+          onFocusDay={onFocusDay}
+          onFocusStop={onFocusStop}
         />
       </div>
     </aside>

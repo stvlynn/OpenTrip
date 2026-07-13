@@ -10,7 +10,10 @@ function request(origin = "https://opentrip.im", upgrade = "websocket") {
 }
 
 function fixture(options?: { session?: boolean; member?: boolean }) {
-  const fetch = vi.fn(async (_request: Request) => new Response("forwarded"));
+  const fetch = vi.fn(async (request: Request) => {
+    void request;
+    return new Response("forwarded");
+  });
   const env = {
     REALTIME_GRANT_SECRET: secret,
     TRIP_REALTIME: {

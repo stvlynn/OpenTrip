@@ -21,6 +21,7 @@ import {
 import { AgentToolPreview } from "./AgentToolPreview";
 import { AgentReasoning } from "./AgentReasoning";
 import { AgentAvatar } from "./AgentAvatar";
+import { AgentGeneratedUi } from "./AgentGeneratedUi";
 import { toolDisplayName } from "./toolDisplayName";
 
 /** AI SDK UI recommends Streamdown for incomplete streaming Markdown. */
@@ -219,6 +220,9 @@ export function AgentMessageItem({
   onDenySuggestion,
   onToolApprove,
   onToolDeny,
+  onGeneratedFollowUp,
+  onGeneratedFocusDay,
+  onGeneratedFocusStop,
   onReply,
 }: {
   message: AgentDisplayMessage;
@@ -230,6 +234,9 @@ export function AgentMessageItem({
   onDenySuggestion?: (suggestion: AgentSuggestion) => void;
   onToolApprove?: (approvalId: string) => void;
   onToolDeny?: (approvalId: string) => void;
+  onGeneratedFollowUp: (message: string) => Promise<void>;
+  onGeneratedFocusDay: (dayNumber: number) => void;
+  onGeneratedFocusStop: (stopId: string) => void;
   onReply?: (target: QuoteTarget) => void;
 }) {
   const { t, i18n } = useTranslation("agent");
@@ -402,6 +409,16 @@ export function AgentMessageItem({
                 />
               ) : null}
             </div>
+          ) : null}
+
+          {isAgent && message.parts?.length ? (
+            <AgentGeneratedUi
+              parts={message.parts}
+              streaming={message.streaming === true}
+              onSendFollowUp={onGeneratedFollowUp}
+              onFocusDay={onGeneratedFocusDay}
+              onFocusStop={onGeneratedFocusStop}
+            />
           ) : null}
 
           {toolParts.map((part) => {

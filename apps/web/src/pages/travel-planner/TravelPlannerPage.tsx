@@ -498,6 +498,31 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
     setNoteEditingStopId((current) => (current && current !== id ? null : current));
   };
 
+  const focusGeneratedDay = (dayNumber: number) => {
+    if (!trip.days.some((candidate) => candidate.number === dayNumber)) {
+      toastManager.add({ title: ta("generated.staleDay"), type: "error" });
+      return;
+    }
+    setDay(dayNumber);
+    setSelectedStopId(null);
+    setNoteEditingStopId(null);
+    setTab("schedule");
+    setAgentPanel(true);
+  };
+
+  const focusGeneratedStop = (stopId: string) => {
+    const stop = trip.stops.find((candidate) => candidate.id === stopId);
+    if (!stop) {
+      toastManager.add({ title: ta("generated.staleStop"), type: "error" });
+      return;
+    }
+    setDay(stop.day);
+    setNoteEditingStopId(null);
+    setTab("map");
+    selectStop(stop.id);
+    setAgentPanel(true);
+  };
+
   const noteEditingStop = noteEditingStopId
     ? trip.stops.find((s) => s.id === noteEditingStopId)
     : undefined;
@@ -697,6 +722,8 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
             applyingId={applyingSuggestionId}
             onApproveSuggestion={handleApproveSuggestion}
             onDenySuggestion={handleDenySuggestion}
+            onFocusDay={focusGeneratedDay}
+            onFocusStop={focusGeneratedStop}
             onClose={() => setAgentPanel(true)}
           />
         ) : null}
@@ -780,6 +807,8 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
               applyingId={applyingSuggestionId}
               onApproveSuggestion={handleApproveSuggestion}
               onDenySuggestion={handleDenySuggestion}
+              onFocusDay={focusGeneratedDay}
+              onFocusStop={focusGeneratedStop}
               onClose={() => setAgentPanel(true)}
             />
           ) : null}

@@ -7,6 +7,7 @@ import type {
   OperationEvent,
   PendingPatch,
 } from "../../domain/agent";
+import { isAgentUiPart } from "@opentrip/agent-ui-catalog";
 import type { Trip, TripRepository } from "../../domain/trip";
 import type { TripChangePublisher } from "../../domain/realtime";
 import { AGENT_COMMENT_AUTHOR } from "../../domain/trip";
@@ -77,7 +78,7 @@ function textFromAgentParts(parts: AgentMessage["parts"]): string {
 }
 
 /** True when a streamed assistant UIMessage has anything worth persisting. */
-function assistantPartsHaveContent(parts: AgentMessage["parts"]): boolean {
+export function assistantPartsHaveContent(parts: AgentMessage["parts"]): boolean {
   return parts.some((p) => {
     if (typeof p !== "object" || p === null) return false;
     const type = (p as { type?: unknown }).type;
@@ -87,6 +88,7 @@ function assistantPartsHaveContent(parts: AgentMessage["parts"]): boolean {
     }
     if (typeof type === "string" && type.startsWith("tool-")) return true;
     if (type === "file") return true;
+    if (isAgentUiPart(p as { type: string; data?: unknown })) return true;
     return false;
   });
 }

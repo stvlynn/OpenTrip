@@ -20,6 +20,8 @@ export function MobileAgentSheet({
   applyingId,
   onApproveSuggestion,
   onDenySuggestion,
+  onFocusDay,
+  onFocusStop,
   onClose,
 }: {
   open: boolean;
@@ -29,6 +31,8 @@ export function MobileAgentSheet({
   applyingId: string | null;
   onApproveSuggestion: (suggestion: AgentSuggestion) => void;
   onDenySuggestion: (suggestion: AgentSuggestion) => void;
+  onFocusDay: (dayNumber: number) => void;
+  onFocusStop: (stopId: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation("agent");
@@ -58,6 +62,8 @@ export function MobileAgentSheet({
           applyingId={applyingId}
           onApproveSuggestion={onApproveSuggestion}
           onDenySuggestion={onDenySuggestion}
+          onFocusDay={onFocusDay}
+          onFocusStop={onFocusStop}
         />
       </DrawerContent>
     </Drawer>

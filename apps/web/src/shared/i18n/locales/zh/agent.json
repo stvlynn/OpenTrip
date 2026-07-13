@@ -41,6 +41,17 @@
   "context": {
     "commentingOnStop": "评论地点 {{stop}}"
   },
+  "generated": {
+    "day": "第 {{day}} 天",
+    "recommended": "推荐",
+    "pros": "优点",
+    "cons": "取舍",
+    "estimate": "预算估算",
+    "total": "预计合计",
+    "invalid": "无法安全显示这段生成内容。",
+    "staleDay": "该日期已不在当前行程中。",
+    "staleStop": "该地点已不在当前行程中。"
+  },
   "tool": {
     "proposed": "提议：{{tool}}",
     "running": "正在执行 {{tool}}…",
