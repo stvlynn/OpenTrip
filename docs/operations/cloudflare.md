@@ -47,6 +47,7 @@ local/manual defaults only.
 | `RESEND_API_KEY` | email OTP | Required when var `EMAIL_PROVIDER=resend` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional | Google sign-in |
 | `AI_API_KEY` | optional | Trip agent |
+| `MAPILLARY_ACCESS_TOKEN` | optional | Required when street view uses Mapillary |
 | `OPENWEATHERMAP_API_KEY` | optional | Weather proxy |
 | `GOOGLE_MAPS_API_KEY` | optional | When `GEO_PROVIDER=google` |
 | `UNSPLASH_ACCESS_KEY` | optional | Trip cover on create; omit → SVG placeholder |
@@ -224,6 +225,12 @@ To enable the trip agent (see [../backend/agent.md](../backend/agent.md)), set
 `AI_API_KEY` as a secret and `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, and the
 threshold vars as Actions variables. Without `AI_MODEL` + `AI_API_KEY` the
 agent routes respond 404 and the frontend hides the entry point.
+
+To enable street view, set `MAPILLARY_ACCESS_TOKEN` as a secret and
+`STREET_VIEW_PROVIDER=mapillary` as an Actions variable. Keep
+`AI_IMAGE_INPUT_ENABLED=false` unless the configured model/provider has been
+verified with AI SDK multimodal tool output. See
+[../backend/street-view.md](../backend/street-view.md).
 
 Geo agent tools default to OSM (`GEO_PROVIDER=osm`). To use Google Places +
 Routes instead, set `GEO_PROVIDER=google` and `GOOGLE_MAPS_API_KEY`. See

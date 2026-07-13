@@ -143,6 +143,19 @@
       "hoursAgo": "{{count}}h ago"
     }
   },
+  "streetView": {
+    "open": "Open street view",
+    "searching": "Finding street view…",
+    "empty": "No nearby street view was found",
+    "searchError": "Could not find street view",
+    "dialog": {
+      "title": "Street view",
+      "description": "Explore the selected place in 360°.",
+      "close": "Close street view",
+      "error": "The interactive street view could not be loaded.",
+      "retry": "Retry"
+    }
+  },
   "budget": {
     "total": "Trip total",
     "perPerson": "Avg / person",

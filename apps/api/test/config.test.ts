@@ -194,3 +194,42 @@ describe("loadConfig captcha", () => {
     ).toThrow("CAPTCHA_PROVIDER must be one of cloudflare-turnstile");
   });
 });
+
+describe("loadConfig street view", () => {
+  it("keeps street view disabled unless a provider is selected", () => {
+    const config = loadConfig({
+      ...BASE_ENV,
+      STORAGE_BACKEND: "fs",
+      STORAGE_ROOT: "/data",
+    });
+    expect(config.streetView).toBeNull();
+  });
+
+  it("requires a Mapillary token and reads the explicit image capability", () => {
+    const config = loadConfig({
+      ...BASE_ENV,
+      STORAGE_BACKEND: "fs",
+      STORAGE_ROOT: "/data",
+      STREET_VIEW_PROVIDER: "mapillary",
+      MAPILLARY_ACCESS_TOKEN: "test-token",
+      AI_MODEL: "vision-model",
+      AI_API_KEY: "ai-key",
+      AI_IMAGE_INPUT_ENABLED: "true",
+    });
+    expect(config.streetView).toEqual({
+      provider: "mapillary",
+      mapillaryAccessToken: "test-token",
+      timeoutMs: 12_000,
+    });
+    expect(config.ai?.imageInputEnabled).toBe(true);
+
+    expect(() =>
+      loadConfig({
+        ...BASE_ENV,
+        STORAGE_BACKEND: "fs",
+        STORAGE_ROOT: "/data",
+        STREET_VIEW_PROVIDER: "mapillary",
+      }),
+    ).toThrow("MAPILLARY_ACCESS_TOKEN is required");
+  });
+});

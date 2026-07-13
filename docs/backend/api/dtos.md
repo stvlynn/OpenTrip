@@ -299,11 +299,27 @@ Discriminated by `kind` (must match trip ops the aggregate supports):
 | `reorder_days` | `order: number[]` |
 | `insert_stop` | `draft` (same as insert stop body) |
 | `update_stop` | `stopId`, `changes` |
+| `append_stop_note` | `stopId`, `markdown` |
 | `move_stop` | `move: { stopId, day, index }` |
 | `add_expense` | `draft` (expense body) |
 | `update_expense` | `expenseId`, `changes` |
 
 Applying a patch always goes through domain trip methods after human approval.
+
+### `StreetViewImageDto`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Opaque image id |
+| `coordinate` | `{ lat, lng }` | Capture coordinate |
+| `distanceMeters` | number, optional | Rounded distance from search origin |
+| `capturedAt` | ISO string, optional | Capture time |
+| `headingDegrees` | number, optional | Camera heading |
+| `supports360` | boolean | Interactive panorama availability |
+| `previewUrl` | string | Same-origin, trip-scoped preview route |
+| `attribution` | `{ label, url? }` | Trusted provider attribution |
+
+Provider thumbnail URLs and access tokens are never part of this DTO.
 
 ### `ReservationDto`
 

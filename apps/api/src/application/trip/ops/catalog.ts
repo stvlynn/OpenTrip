@@ -5,6 +5,8 @@ import type { TripChangePublisher } from "../../../domain/realtime";
 import {
   addDayPatchSchema,
   addDayToolSchema,
+  appendStopNotePatchSchema,
+  appendStopNoteToolSchema,
   addExpensePatchSchema,
   deleteDayPatchSchema,
   deleteDayToolSchema,
@@ -205,6 +207,26 @@ export const TRIP_OPS = [
       const stop = trip.moveStop(patch.move);
       await tripRepo.save(trip);
       return `Moved stop "${stop.name}" to day ${stop.day} index ${patch.move.index}`;
+    },
+  }),
+  def({
+    kind: "append_stop_note",
+    toolName: "appendStopNote",
+    description:
+      "Append Markdown to an existing itinerary stop note without replacing its current content. Requires member approval.",
+    needsApproval: true,
+    allowProactive: false,
+    inputSchema: appendStopNoteToolSchema,
+    patchSchema: appendStopNotePatchSchema,
+    toPatch: (input) => ({
+      kind: "append_stop_note",
+      stopId: input.stopId,
+      markdown: input.markdown,
+    }),
+    apply: async ({ trip, tripRepo }, patch) => {
+      const stop = trip.appendStopNote(patch.stopId, patch.markdown);
+      await tripRepo.save(trip);
+      return `Appended note to stop "${stop.name}" (${stop.id})`;
     },
   }),
   def({

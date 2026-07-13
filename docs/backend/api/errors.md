@@ -14,6 +14,7 @@
 | Precondition required | 428 | `revision_required` |
 | Avatar / media size | 413 | `avatar_too_large`, `media_too_large` |
 | Weather/FX/geo | 502–504 / 503 | see weather/fx/geo docs |
+| Street view | 400 / 404 / 413 / 502–504 | invalid image/query, missing image, bounded preview, or upstream failure |
 | Unhandled | 500 | `internal_error` |
 
 Example:

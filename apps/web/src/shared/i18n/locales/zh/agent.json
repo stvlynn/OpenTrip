@@ -50,7 +50,15 @@
     "total": "预计合计",
     "invalid": "无法安全显示这段生成内容。",
     "staleDay": "该日期已不在当前行程中。",
-    "staleStop": "该地点已不在当前行程中。"
+    "staleStop": "该地点已不在当前行程中。",
+    "streetView": {
+      "previewAlt": "街景预览",
+      "previewUnavailable": "静态预览暂不可用",
+      "loading": "正在加载街景…",
+      "placeFallback": "街景",
+      "captureUnknown": "拍摄时间未知",
+      "open": "展开街景"
+    }
   },
   "tool": {
     "proposed": "提议：{{tool}}",
@@ -66,7 +74,10 @@
       "routeCompute": "计算路线",
       "routeMatrix": "行程矩阵",
       "reviewLookup": "查看评价",
-      "readTripMedia": "读取行程文件"
+      "readTripMedia": "读取行程文件",
+      "streetViewSearch": "查找街景",
+      "streetViewInspect": "查看街景图片",
+      "appendStopNote": "追加地点备注"
     }
   },
   "preview": {

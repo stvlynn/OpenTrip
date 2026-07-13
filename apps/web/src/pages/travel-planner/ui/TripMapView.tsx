@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { PlaceResult } from "@/shared/api";
+import { ScanLine } from "lucide-react";
+import { searchStreetViews, type PlaceResult } from "@/shared/api";
 import type { Trip } from "@/entities/trip";
 import { dayColor } from "@/entities/trip";
 import { interactive } from "@/shared/lib";
@@ -19,6 +20,8 @@ import {
 } from "@/shared/ui/context-menu";
 import { useDestinationMapCenter } from "../model/useDestinationMapCenter";
 import { MapSearch } from "./MapSearch";
+import { toastManager } from "@/shared/ui/toast";
+import { useStreetViewViewer } from "./street-view/StreetViewViewerProvider";
 
 export function TripMapView({
   trip,
@@ -50,6 +53,11 @@ export function TripMapView({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const destinationCenter = useDestinationMapCenter(trip);
+  const { enabled: streetViewEnabled, openStreetView } = useStreetViewViewer();
+  const streetViewAbort = useRef<AbortController | null>(null);
+  const [streetViewLoading, setStreetViewLoading] = useState(false);
+
+  useEffect(() => () => streetViewAbort.current?.abort(), []);
 
   const bias = useMemo(() => {
     const first = trip.stops[0];
@@ -87,6 +95,36 @@ export function TripMapView({
     void navigator.clipboard?.writeText(
       `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`,
     );
+  };
+
+  const openStreetViewAtContext = async () => {
+    const coordinate = lastCoord.current;
+    if (!coordinate || streetViewLoading) return;
+    streetViewAbort.current?.abort();
+    const controller = new AbortController();
+    streetViewAbort.current = controller;
+    setStreetViewLoading(true);
+    try {
+      const images = await searchStreetViews(
+        trip.id,
+        { ...coordinate, radiusMeters: 100, limit: 5 },
+        controller.signal,
+      );
+      const image = images.find((candidate) => candidate.supports360) ?? images[0];
+      if (!image) {
+        toastManager.add({ title: t("streetView.empty"), type: "info" });
+        return;
+      }
+      openStreetView(image.id);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toastManager.add({ title: t("streetView.searchError"), type: "error" });
+    } finally {
+      if (streetViewAbort.current === controller) {
+        streetViewAbort.current = null;
+        setStreetViewLoading(false);
+      }
+    }
   };
 
   const stops = useMemo<MapStop[]>(
@@ -148,6 +186,9 @@ export function TripMapView({
           picking={picking}
           onPick={onPick}
           onContext={(lng, lat) => {
+            streetViewAbort.current?.abort();
+            streetViewAbort.current = null;
+            setStreetViewLoading(false);
             lastCoord.current = { lng, lat };
           }}
           searchResult={searchResult}
@@ -190,6 +231,21 @@ export function TripMapView({
         ) : null}
       </ContextMenuTrigger>
       <ContextMenuPopup>
+        {streetViewEnabled ? (
+          <>
+            <ContextMenuItem
+              closeOnClick
+              disabled={streetViewLoading}
+              onClick={() => void openStreetViewAtContext()}
+            >
+              <ScanLine aria-hidden="true" />
+              {streetViewLoading
+                ? t("streetView.searching")
+                : t("streetView.open")}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        ) : null}
         <ContextMenuItem
           closeOnClick
           disabled={picking}

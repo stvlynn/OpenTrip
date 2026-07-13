@@ -115,6 +115,11 @@ export const updateStopToolSchema = z.object({
   changes: updateStopChangesSchema,
 });
 
+export const appendStopNoteToolSchema = z.object({
+  stopId: z.string().min(1),
+  markdown: z.string().trim().min(1).max(20_000),
+});
+
 export const expenseDraftSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
@@ -167,6 +172,12 @@ export const updateStopPatchSchema = z.object({
   changes: updateStopChangesSchema,
 });
 
+export const appendStopNotePatchSchema = z.object({
+  kind: z.literal("append_stop_note"),
+  stopId: z.string().min(1),
+  markdown: z.string().trim().min(1).max(20_000),
+});
+
 export const moveStopPatchSchema = z.object({
   kind: z.literal("move_stop"),
   move: z.object({
@@ -187,7 +198,21 @@ export const updateExpensePatchSchema = z.object({
   changes: expenseDraftSchema,
 });
 
-/** Discriminated union for proactive intervention + runtime validation. */
+/** Proactive interventions exclude operations that require an explicit ask. */
+export const proactivePendingPatchSchema = z.discriminatedUnion("kind", [
+  renameTripPatchSchema,
+  addDayPatchSchema,
+  deleteDayPatchSchema,
+  updateDayPatchSchema,
+  reorderDaysPatchSchema,
+  insertStopPatchSchema,
+  updateStopPatchSchema,
+  moveStopPatchSchema,
+  addExpensePatchSchema,
+  updateExpensePatchSchema,
+]);
+
+/** Full persisted/approval patch union. */
 export const pendingPatchSchema = z.discriminatedUnion("kind", [
   renameTripPatchSchema,
   addDayPatchSchema,
@@ -196,6 +221,7 @@ export const pendingPatchSchema = z.discriminatedUnion("kind", [
   reorderDaysPatchSchema,
   insertStopPatchSchema,
   updateStopPatchSchema,
+  appendStopNotePatchSchema,
   moveStopPatchSchema,
   addExpensePatchSchema,
   updateExpensePatchSchema,

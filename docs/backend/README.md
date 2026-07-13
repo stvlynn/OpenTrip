@@ -65,5 +65,6 @@ wrapper only.
 - [fx.md](fx.md) — internal FX rates service for settle-up display conversion.
 - [geo.md](geo.md) — internal geo service (OSM/Google), cache, and agent read tools.
 - [lodging.md](lodging.md) — Airbnb lodging search (openbnb-style), agent read tools.
+- [street-view.md](street-view.md) — provider-neutral imagery search, previews, viewer, and agent tools.
 - [database.md](database.md) — schema, migrations, seed.
 - [auth.md](auth.md) — Better Auth integration.

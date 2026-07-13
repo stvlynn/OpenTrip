@@ -64,6 +64,7 @@ describe("trip ops catalog", () => {
       "reorder_days",
       "insert_stop",
       "update_stop",
+      "append_stop_note",
       "move_stop",
       "add_expense",
       "update_expense",
@@ -132,6 +133,21 @@ describe("trip ops catalog", () => {
     expect(trip.toSnapshot().title).toBe("New Title");
   });
 
+  it("append_stop_note preserves the complete existing note", async () => {
+    const trip = freshTrip();
+    const stop = trip.toSnapshot().stops[0]!;
+    trip.updateStop(stop.id, { note: "Existing private detail" });
+    const result = await applyTripOp(ctx(trip), {
+      kind: "append_stop_note",
+      stopId: stop.id,
+      markdown: "![Street view](/api/trips/t1/street-view/images/i1/preview)",
+    });
+    expect(result.ok).toBe(true);
+    expect(trip.toSnapshot().stops[0]!.note).toBe(
+      "Existing private detail\n\n![Street view](/api/trips/t1/street-view/images/i1/preview)",
+    );
+  });
+
   it("publishes an invalidation after an approved agent write", async () => {
     const trip = freshTrip();
     const changes: Parameters<TripChangePublisher["publish"]>[0][] = [];
@@ -185,6 +201,8 @@ function sampleInput(kind: PendingPatch["kind"]): unknown {
       return { stopId: "s1", changes: { name: "Y" } };
     case "move_stop":
       return { stopId: "s1", day: 1, index: 0 };
+    case "append_stop_note":
+      return { stopId: "s1", markdown: "Street view reference" };
     case "add_expense":
       return {
         description: "Taxi",

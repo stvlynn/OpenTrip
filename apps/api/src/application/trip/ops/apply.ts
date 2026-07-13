@@ -68,6 +68,7 @@ function scopesFor(kind: PendingPatch["kind"]): TripChangeScope[] {
       return ["days", "stops"];
     case "insert_stop":
     case "update_stop":
+    case "append_stop_note":
     case "move_stop":
       return ["stops"];
     case "add_expense":

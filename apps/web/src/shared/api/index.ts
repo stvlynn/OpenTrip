@@ -70,6 +70,14 @@ export { fetchWeather, type WeatherData } from "./weather";
 export { fetchFxRates, type FxRatesData } from "./fx";
 export { uploadTripMedia, TRIP_MEDIA_ACCEPT } from "./media";
 export {
+  searchStreetViews,
+  fetchStreetViewImage,
+  fetchStreetViewViewerConfig,
+  streetViewPreviewSrc,
+  type StreetViewImage,
+  type StreetViewViewerConfig,
+} from "./street-view";
+export {
   fetchReservations,
   createReservation,
   updateReservation,

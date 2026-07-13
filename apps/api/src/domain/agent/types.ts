@@ -61,6 +61,7 @@ export type PendingPatch =
   | { kind: "reorder_days"; order: number[] }
   | { kind: "insert_stop"; draft: InsertStopDraft }
   | { kind: "update_stop"; stopId: string; changes: UpdateStopDraft }
+  | { kind: "append_stop_note"; stopId: string; markdown: string }
   | { kind: "move_stop"; move: MoveStopDraft }
   | { kind: "add_expense"; draft: AddExpenseDraft }
   | { kind: "update_expense"; expenseId: string; changes: AddExpenseDraft };

@@ -11,6 +11,7 @@ import {
 } from "../../application";
 import { AvatarError } from "../../application/avatar";
 import { TripMediaError } from "../../application/media";
+import { StreetViewError } from "../../application/street-view";
 import { fail } from "./response";
 
 /** Translate thrown errors into the error envelope. Registered via app.onError. */
@@ -76,6 +77,23 @@ export function handleError(err: Error, c: Context) {
         : err.code === "geo_timeout"
           ? 504
           : 502;
+    return fail(c, err.code, err.message, status);
+  }
+  if (err instanceof StreetViewError) {
+    const status =
+      err.code === "street_view_not_configured"
+        ? 503
+        : err.code === "street_view_image_not_found"
+          ? 404
+          : err.code === "street_view_timeout"
+            ? 504
+            : err.code === "street_view_preview_too_large"
+              ? 413
+              : err.code === "street_view_invalid_image" ||
+                  err.code === "street_view_invalid_query" ||
+                  err.code === "street_view_unsupported_preview"
+                ? 400
+                : 502;
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof NotFoundError) {

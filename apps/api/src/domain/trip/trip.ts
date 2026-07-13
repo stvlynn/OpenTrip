@@ -647,6 +647,22 @@ export class Trip {
     return stop;
   }
 
+  /** Append note content without relying on a potentially truncated read copy. */
+  appendStopNote(stopId: string, markdown: string): StopSnapshot {
+    const stop = this.requireStop(stopId);
+    const addition = markdown.trim();
+    if (!addition) {
+      throw new DomainError("empty_stop_note", "Note content is required");
+    }
+    const note = stop.note.length > 0 ? `${stop.note}\n\n${addition}` : addition;
+    if (note.length > 20_000) {
+      throw new DomainError("stop_note_too_long", "Stop note cannot exceed 20,000 characters");
+    }
+    stop.note = note;
+    this.markChanged();
+    return stop;
+  }
+
   /** Move an existing stop to a position within any itinerary day. */
   moveStop(draft: MoveStopDraft): StopSnapshot {
     this.requireDay(draft.day);

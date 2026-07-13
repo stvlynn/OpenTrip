@@ -68,6 +68,12 @@ validation and an error boundary isolate invalid generated content from the
 chat timeline. Static fallback, status, and comparison copy stays in the agent
 locale resources; model-provided plan content remains message data.
 
+`StreetViewCard` accepts only a bounded opaque image id and optional place
+label. It hydrates static preview, capture time, and attribution from the
+authenticated trip API. Its action opens the same page-scoped MapillaryJS
+dialog used by the map context menu; model-provided URLs and credentials are
+never accepted.
+
 Stop notes expand into the planner main pane (replacing map/schedule/budget)
 via a Milkdown Crepe WYSIWYG editor (Crepe TopBar as fixed chrome, block slash
 menu). Images upload through `POST /api/trips/:id/media` into the shared

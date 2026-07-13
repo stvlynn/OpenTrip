@@ -19,8 +19,8 @@
 #   Vars:    CAPTCHA_PROVIDER, EMAIL_PROVIDER, EMAIL_FROM, API_BASE_URL,
 #            TRUSTED_ORIGINS
 #
-# Optional: AI_API_KEY, OPENWEATHERMAP_API_KEY, GOOGLE_MAPS_API_KEY,
-#           UNSPLASH_ACCESS_KEY + matching vars.
+# Optional: AI_API_KEY, MAPILLARY_ACCESS_TOKEN, OPENWEATHERMAP_API_KEY,
+#           GOOGLE_MAPS_API_KEY, UNSPLASH_ACCESS_KEY + matching vars.
 
 name: Deploy Cloudflare
 
@@ -172,6 +172,9 @@ jobs:
           AI_BASE_URL: ${{ vars.AI_BASE_URL }}
           AI_PROACTIVE_THRESHOLD: ${{ vars.AI_PROACTIVE_THRESHOLD }}
           AI_MAX_TOOL_STEPS: ${{ vars.AI_MAX_TOOL_STEPS }}
+          AI_IMAGE_INPUT_ENABLED: ${{ vars.AI_IMAGE_INPUT_ENABLED }}
+          STREET_VIEW_PROVIDER: ${{ vars.STREET_VIEW_PROVIDER }}
+          STREET_VIEW_TIMEOUT_MS: ${{ vars.STREET_VIEW_TIMEOUT_MS }}
           GEO_PROVIDER: ${{ vars.GEO_PROVIDER }}
           GEO_OSM_USER_AGENT: ${{ vars.GEO_OSM_USER_AGENT }}
           GEO_OSM_NOMINATIM_URL: ${{ vars.GEO_OSM_NOMINATIM_URL }}
@@ -194,6 +197,7 @@ jobs:
           S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
           OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}

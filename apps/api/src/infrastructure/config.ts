@@ -30,6 +30,14 @@ export interface AiConfig {
     proactiveThreshold: number;
     /** Upper bound on tool-call steps per chat generation. */
     maxToolSteps: number;
+    /** Explicit capability gate for multimodal tool output. */
+    imageInputEnabled: boolean;
+}
+
+export interface StreetViewConfig {
+    provider: "mapillary";
+    mapillaryAccessToken: string;
+    timeoutMs: number;
 }
 
 export type GeoProviderName = "osm" | "google";
@@ -90,6 +98,8 @@ export interface AppConfig {
     lodging: LodgingConfig;
     /** Trip agent model configuration. Null disables the agent entirely. */
     ai: AiConfig | null;
+    /** Street-view provider configuration. Null disables the capability. */
+    streetView: StreetViewConfig | null;
     /** Unsplash access key for trip cover search. Undefined disables covers. */
     unsplashAccessKey: string | undefined;
 }
@@ -163,6 +173,10 @@ export interface RawEnv {
     AI_API_KEY?: string;
     AI_PROACTIVE_THRESHOLD?: string;
     AI_MAX_TOOL_STEPS?: string;
+    AI_IMAGE_INPUT_ENABLED?: string;
+    STREET_VIEW_PROVIDER?: string;
+    MAPILLARY_ACCESS_TOKEN?: string;
+    STREET_VIEW_TIMEOUT_MS?: string;
     LODGING_IGNORE_ROBOTS_TXT?: string;
     LODGING_DISABLE_GEOCODING?: string;
     LODGING_TIMEOUT_MS?: string;
@@ -245,6 +259,7 @@ export function loadConfig(env: RawEnv, connectionString?: string): AppConfig {
         geo: parseGeoConfig(env),
         lodging: parseLodgingConfig(env),
         ai: parseAiConfig(env),
+        streetView: parseStreetViewConfig(env),
         unsplashAccessKey: env.UNSPLASH_ACCESS_KEY?.trim() || undefined,
     };
 }
@@ -379,6 +394,31 @@ function parseAiConfig(env: RawEnv): AiConfig | null {
             0.7,
         ),
         maxToolSteps: parseNumber(env.AI_MAX_TOOL_STEPS, "AI_MAX_TOOL_STEPS", 16),
+        imageInputEnabled: parseBoolean(
+            env.AI_IMAGE_INPUT_ENABLED,
+            "AI_IMAGE_INPUT_ENABLED",
+        ),
+    };
+}
+
+function parseStreetViewConfig(env: RawEnv): StreetViewConfig | null {
+    const provider = env.STREET_VIEW_PROVIDER?.trim().toLowerCase();
+    if (!provider) return null;
+    if (provider !== "mapillary") {
+        throw new Error('STREET_VIEW_PROVIDER must be "mapillary"');
+    }
+    const mapillaryAccessToken = requireEnv(
+        env.MAPILLARY_ACCESS_TOKEN,
+        "MAPILLARY_ACCESS_TOKEN",
+    );
+    return {
+        provider,
+        mapillaryAccessToken,
+        timeoutMs: parseNumber(
+            env.STREET_VIEW_TIMEOUT_MS,
+            "STREET_VIEW_TIMEOUT_MS",
+            12_000,
+        ),
     };
 }
 

@@ -9,6 +9,9 @@ const TOOL_NAME_KEYS = {
   routeMatrix: "tool.names.routeMatrix",
   reviewLookup: "tool.names.reviewLookup",
   readTripMedia: "tool.names.readTripMedia",
+  streetViewSearch: "tool.names.streetViewSearch",
+  streetViewInspect: "tool.names.streetViewInspect",
+  appendStopNote: "tool.names.appendStopNote",
 } as const;
 
 type KnownToolName = keyof typeof TOOL_NAME_KEYS;

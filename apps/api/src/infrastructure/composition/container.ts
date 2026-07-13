@@ -8,6 +8,7 @@ import {
   LodgingService,
   AgentService,
   TripMediaService,
+  StreetViewService,
   ReservationService,
 } from "../../application";
 import { AvatarService } from "../../application/avatar";
@@ -34,6 +35,7 @@ import { AiSdkAgentModel } from "../ai/agent-model.ai-sdk";
 import { UnsplashCoverProvider } from "../cover/unsplash-cover-provider";
 import type { AppConfig } from "../config";
 import type { TripChangePublisher } from "../../domain/realtime";
+import { MapillaryStreetViewProvider } from "../street-view/mapillary/mapillary-provider";
 
 export interface CreateContainerOptions {
   /**
@@ -79,6 +81,7 @@ export interface Container {
   fxService: FxService;
   geoService: GeoService;
   lodgingService: LodgingService;
+  streetViewService: StreetViewService | null;
   fileStorage: FileStorage;
   avatarService: AvatarService;
   tripMediaService: TripMediaService;
@@ -175,6 +178,14 @@ export function createContainer(
   const lodgingService = new LodgingService(
     new AirbnbLodgingProvider(config.lodging),
   );
+  const streetViewService = config.streetView
+    ? new StreetViewService(
+        new MapillaryStreetViewProvider(
+          config.streetView.mapillaryAccessToken,
+          config.streetView.timeoutMs,
+        ),
+      )
+    : null;
   const agentService = config.ai
     ? new AgentService(
         tripRepository,
@@ -185,6 +196,7 @@ export function createContainer(
           geoService,
           lodgingService,
           fileStorage,
+          streetViewService,
         ),
         {
           proactiveThreshold: config.ai.proactiveThreshold,
@@ -221,6 +233,7 @@ export function createContainer(
     fxService,
     geoService,
     lodgingService,
+    streetViewService,
     fileStorage,
     avatarService,
     tripMediaService,

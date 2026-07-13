@@ -117,4 +117,37 @@ describe("agent UI spec parts", () => {
     });
     expect(partial?.elements.card?.children).toEqual([]);
   });
+
+  it("accepts bounded street-view cards and open actions", () => {
+    const spec = {
+      root: "stack",
+      elements: {
+        stack: { type: "Stack", props: {}, children: ["view", "open"] },
+        view: {
+          type: "StreetViewCard",
+          props: { imageId: "123456", placeLabel: "Temple gate" },
+          children: [],
+        },
+        open: {
+          type: "ActionButton",
+          props: { label: "Open street view" },
+          children: [],
+          on: { press: { action: "openStreetView", params: { imageId: "123456" } } },
+        },
+      },
+    };
+    expect(safeAgentUiSpec(spec)?.elements.view?.type).toBe("StreetViewCard");
+    const sanitized = safeAgentUiSpec({
+        ...spec,
+        elements: {
+          ...spec.elements,
+          open: {
+            ...spec.elements.open,
+            on: { press: { action: "openStreetView", params: { imageId: "../token" } } },
+          },
+        },
+      });
+    expect(sanitized?.elements.open).toBeUndefined();
+    expect(sanitized?.elements.stack?.children).toEqual(["view"]);
+  });
 });

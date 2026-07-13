@@ -13,7 +13,7 @@ import type { TripChangePublisher } from "../../domain/realtime";
 import { AGENT_COMMENT_AUTHOR } from "../../domain/trip";
 import { ForbiddenError } from "../use-cases";
 import { toTripDto, type TripDto } from "../dto";
-import { applyTripOp } from "../trip/ops";
+import { applyTripOp, getTripOp } from "../trip/ops";
 import {
   toAgentMessageDto,
   toAgentSuggestionDto,
@@ -571,7 +571,8 @@ export class AgentService {
 
       const notify =
         decision.confidence >= this.options.proactiveThreshold &&
-        decision.pendingPatch !== null;
+        decision.pendingPatch !== null &&
+        getTripOp(decision.pendingPatch.kind)?.allowProactive === true;
 
       if (!notify) {
         // Quiet context: visible in the session timeline, but no toast.

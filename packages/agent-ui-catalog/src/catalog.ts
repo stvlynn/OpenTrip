@@ -101,6 +101,14 @@ export const agentUiCatalog = defineCatalog(schema, {
       }),
       description: "A clearly labelled estimate or recorded-spend summary. Never present estimates as recorded expenses.",
     },
+    StreetViewCard: {
+      props: z.object({
+        imageId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/),
+        placeLabel: shortText.nullish(),
+      }),
+      description:
+        "A trusted street-view preview card. Use only an opaque image id returned by a street-view tool; metadata is hydrated by the application.",
+    },
     ActionButton: {
       props: z.object({
         label: shortText,
@@ -122,6 +130,10 @@ export const agentUiCatalog = defineCatalog(schema, {
       params: z.object({ stopId: z.string().trim().min(1).max(120) }),
       description: "Focus an existing stop from the current trip snapshot without changing trip data.",
     },
+    openStreetView: {
+      params: z.object({ imageId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/) }),
+      description: "Open the shared interactive street-view dialog for a trusted image id.",
+    },
   },
 });
 
@@ -133,7 +145,8 @@ export const agentUiPrompt = agentUiCatalog.prompt({
     "Use day numbers and stop ids only when they occur in the current trip snapshot or trusted tool results.",
     "Keep generated interfaces compact enough for a narrow chat panel and avoid duplicating the same information in prose and UI.",
     "When presenting estimated costs, label them as estimates and do not imply that they are recorded expenses.",
-    "For this compact catalog, do not use state, dynamic props, repeat, watch, or built-in state actions. Create explicit elements and bind only ActionButton on.press to sendAgentFollowUp, focusDay, or focusStop.",
+    "Use StreetViewCard only with image ids from streetViewSearch or streetViewInspect. Put place names in placeLabel; the application hydrates preview, capture time, and attribution.",
+    "For this compact catalog, do not use state, dynamic props, repeat, watch, or built-in state actions. Create explicit elements and bind only ActionButton on.press to sendAgentFollowUp, focusDay, focusStop, or openStreetView.",
   ],
 });
 

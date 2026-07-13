@@ -21,6 +21,7 @@ export {
   moveStopBodySchema,
   moveStopToolSchema,
   pendingPatchSchema,
+  proactivePendingPatchSchema,
   renameTripSchema,
   reorderDaysSchema,
   stopCategorySchema,

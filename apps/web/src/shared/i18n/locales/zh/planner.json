@@ -142,6 +142,19 @@
       "hoursAgo": "{{count}} 小时前"
     }
   },
+  "streetView": {
+    "open": "展开街景",
+    "searching": "正在查找街景…",
+    "empty": "附近没有可用街景",
+    "searchError": "街景查找失败",
+    "dialog": {
+      "title": "街景",
+      "description": "以 360° 视角探索所选地点。",
+      "close": "关闭街景",
+      "error": "无法加载交互式街景。",
+      "retry": "重试"
+    }
+  },
   "budget": {
     "total": "行程总计",
     "perPerson": "人均",

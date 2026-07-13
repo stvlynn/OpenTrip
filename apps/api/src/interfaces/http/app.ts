@@ -187,6 +187,13 @@ const agentApprovalSchema = z.object({
 });
 
 const agentEventsQuerySchema = z.coerce.number().int().min(0).default(0);
+const streetViewSearchQuerySchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+  radiusMeters: z.coerce.number().int().min(1).max(1_000).optional(),
+  limit: z.coerce.number().int().min(1).max(10).optional(),
+});
+const streetViewImageIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,160}$/);
 
 export function createApp(container: Container) {
   const {
@@ -202,6 +209,7 @@ export function createApp(container: Container) {
     fxService,
     agentService,
     reservationService,
+    streetViewService,
   } = container;
 
   /** Schedule work past the response: waitUntil on Workers, floating on Node.
@@ -425,6 +433,51 @@ export function createApp(container: Container) {
   guard.get("/trips/:id", async (c) =>
     ok(c, await tripService.getTrip(c.req.param("id"), c.get("user")!.id)),
   );
+
+  guard.get("/trips/:tripId/street-view/images", async (c) => {
+    if (!streetViewService) {
+      return fail(c, "street_view_not_configured", "Street view is not configured", 404);
+    }
+    const tripId = c.req.param("tripId");
+    await tripService.assertReadable(tripId, c.get("user")!.id);
+    const query = streetViewSearchQuerySchema.parse(c.req.query());
+    return ok(c, await streetViewService.searchNearby({ tripId, ...query }));
+  });
+
+  guard.get("/trips/:tripId/street-view/images/:imageId", async (c) => {
+    if (!streetViewService) {
+      return fail(c, "street_view_not_configured", "Street view is not configured", 404);
+    }
+    const tripId = c.req.param("tripId");
+    await tripService.assertReadable(tripId, c.get("user")!.id);
+    const imageId = streetViewImageIdSchema.parse(c.req.param("imageId"));
+    return ok(c, await streetViewService.getImage(tripId, imageId));
+  });
+
+  guard.get("/trips/:tripId/street-view/images/:imageId/preview", async (c) => {
+    if (!streetViewService) {
+      return fail(c, "street_view_not_configured", "Street view is not configured", 404);
+    }
+    const tripId = c.req.param("tripId");
+    await tripService.assertReadable(tripId, c.get("user")!.id);
+    const imageId = streetViewImageIdSchema.parse(c.req.param("imageId"));
+    const preview = await streetViewService.readPreview(imageId);
+    return new Response(preview.bytes, {
+      headers: {
+        "Content-Type": preview.mediaType,
+        "Cache-Control": "private, max-age=900",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  });
+
+  guard.get("/trips/:tripId/street-view/viewer-config", async (c) => {
+    if (!streetViewService) {
+      return fail(c, "street_view_not_configured", "Street view is not configured", 404);
+    }
+    await tripService.assertReadable(c.req.param("tripId"), c.get("user")!.id);
+    return ok(c, streetViewService.getViewerConfig());
+  });
 
   guard.patch("/trips/:id", async (c) => {
     const body = patchTripSchema.parse(await c.req.json());

@@ -1,5 +1,6 @@
-import { Component, useMemo, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useState, type ErrorInfo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import {
   JSONUIProvider,
   Renderer,
@@ -18,6 +19,7 @@ import {
   CircleAlert,
   Info,
   MapPin,
+  ScanLine,
   Sparkles,
 } from "lucide-react";
 import type { UIMessage } from "ai";
@@ -30,6 +32,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
+import { fetchStreetViewImage, streetViewPreviewSrc } from "@/shared/api";
+import { useStreetViewViewer } from "../street-view/StreetViewViewerProvider";
 
 interface AgentGeneratedUiProps {
   parts: UIMessage["parts"];
@@ -72,6 +76,68 @@ class GeneratedUiBoundary extends Component<
   }
 }
 
+function GeneratedStreetViewCard({ imageId, placeLabel }: { imageId: string; placeLabel?: string | null }) {
+  const { t, i18n } = useTranslation("agent");
+  const { tripId, enabled, openStreetView } = useStreetViewViewer();
+  const [previewFailed, setPreviewFailed] = useState(false);
+  useEffect(() => setPreviewFailed(false), [imageId]);
+  const query = useQuery({
+    queryKey: ["street-view", tripId, "image", imageId],
+    queryFn: () => fetchStreetViewImage(tripId, imageId),
+    staleTime: 15 * 60 * 1000,
+  });
+  const captured = query.data?.capturedAt
+    ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(
+        new Date(query.data.capturedAt),
+      )
+    : null;
+  const locationLabel =
+    placeLabel ??
+    (query.data
+      ? `${query.data.coordinate.lat.toFixed(5)}, ${query.data.coordinate.lng.toFixed(5)}`
+      : t("generated.streetView.placeFallback"));
+
+  return (
+    <Card className="w-full overflow-hidden rounded-xl">
+      <div className="aspect-[16/9] w-full bg-muted">
+        {query.data && !previewFailed ? (
+          <img
+            src={streetViewPreviewSrc(query.data.previewUrl)}
+            alt={placeLabel ?? t("generated.streetView.previewAlt")}
+            className="size-full object-cover"
+            onError={() => setPreviewFailed(true)}
+          />
+        ) : (
+          <div className="grid size-full place-items-center text-xs text-muted-foreground">
+            {query.isError || previewFailed
+              ? t("generated.streetView.previewUnavailable")
+              : t("generated.streetView.loading")}
+          </div>
+        )}
+      </div>
+      <CardContent className="flex items-center justify-between gap-3 p-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{locationLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            {captured ?? t("generated.streetView.captureUnknown")}
+            {query.data ? ` · ${query.data.attribution.label}` : ""}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!enabled}
+          onClick={() => openStreetView(imageId)}
+        >
+          <ScanLine aria-hidden="true" className="size-3.5" />
+          {t("generated.streetView.open")}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AgentGeneratedUi({
   parts,
   streaming,
@@ -80,6 +146,7 @@ export function AgentGeneratedUi({
   onFocusStop,
 }: AgentGeneratedUiProps) {
   const { t, i18n } = useTranslation("agent");
+  const { openStreetView } = useStreetViewViewer();
   const { spec, hasSpec } = useJsonRenderMessage(parts as unknown as DataPart[]);
   const safeSpec = useMemo(() => (spec ? safeAgentUiSpec(spec) : null), [spec]);
 
@@ -297,6 +364,9 @@ export function AgentGeneratedUi({
             </section>
           );
         },
+        StreetViewCard: ({ props }) => (
+          <GeneratedStreetViewCard imageId={props.imageId} placeLabel={props.placeLabel} />
+        ),
         ActionButton: ({ props, emit }) => (
           <Button
             type="button"
@@ -319,6 +389,9 @@ export function AgentGeneratedUi({
         focusStop: async (params) => {
           if (params) onFocusStop(params.stopId);
         },
+        openStreetView: async (params) => {
+          if (params) openStreetView(params.imageId);
+        },
       },
     });
 
@@ -333,7 +406,7 @@ export function AgentGeneratedUi({
         () => localState,
       ),
     };
-  }, [i18n.language, onFocusDay, onFocusStop, onSendFollowUp, t]);
+  }, [i18n.language, onFocusDay, onFocusStop, onSendFollowUp, openStreetView, t]);
 
   if (!hasSpec) return null;
   if (!safeSpec) {

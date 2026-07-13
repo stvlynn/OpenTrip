@@ -20,7 +20,7 @@ This change includes:
 
 - a provider-neutral street-view port, service, and DTOs;
 - a Mapillary server adapter and isolated MapillaryJS browser adapter;
-- read-only AI SDK tools for search and detail;
+- read-only AI SDK tools for search and visual inspection;
 - a trusted json-render street-view card and open-viewer action;
 - a shared 360-degree dialog used by agent replies and the map;
 - a map context-menu action that finds the nearest image;
@@ -48,6 +48,12 @@ location-search Graph API reference. Exact server request fields remain inside
 the Mapillary adapter and must be verified against the current official Graph
 API reference while implementing that adapter. This does not change the
 application contract defined below.
+
+Context7 also resolved AI SDK to `/vercel/ai`. Its current tool contract allows
+an asynchronous `toModelOutput` transform whose content may combine text and a
+binary image file. Street-view inspection uses that boundary: persisted tool
+results remain compact JSON, while a single bounded preview is fetched by the
+server and supplied to capable vision models only for the current model turn.
 
 ## User experience
 
@@ -129,7 +135,7 @@ infrastructure/street-view/mapillary
 
 - `StreetViewProvider`, the driven port;
 - `StreetViewImage` and `StreetViewImageId`;
-- search and detail queries expressed with coordinates, radius, and limit; and
+- search and image queries expressed with coordinates, radius, and limit; and
 - provider-neutral failure categories where a typed domain error is needed.
 
 `StreetViewImageId` is an opaque string to every caller. The first adapter may
@@ -189,7 +195,7 @@ GET /api/trips/:tripId/street-view/images/:imageId/preview
 GET /api/trips/:tripId/street-view/viewer-config
 ```
 
-Every route requires an authenticated trip member. Search and detail use the
+Every route requires an authenticated trip member. Search and image metadata use the
 normal JSON envelope. The preview route proxies provider bytes, supplies a
 correct content type, and sets bounded private cache headers. Viewer config is
 returned only to authenticated members and contains the minimum information
@@ -212,12 +218,13 @@ interface StreetViewImageDto {
 
 ## Agent tools
 
-The explicit and ambient read-tool sets include the same two read-only tools
-when street view is configured:
+The explicit and ambient read-tool sets include search whenever street view is
+configured. Visual inspection is additionally gated by the explicit
+`AI_IMAGE_INPUT_ENABLED=true` capability flag:
 
 ```text
 streetViewSearch({ lat, lng, radiusMeters?, limit? })
-streetViewDetail({ imageId })
+streetViewInspect({ imageId })
 ```
 
 The descriptions instruct the model to resolve place names through
@@ -225,6 +232,15 @@ The descriptions instruct the model to resolve place names through
 nearest suitable 360-degree result. Both tools are automatic read tools and do
 not require approval. Empty search results return an empty list rather than an
 error-shaped result.
+
+`streetViewSearch` returns JSON metadata only. `streetViewInspect.execute`
+returns the same compact, platform-neutral JSON used by persistence and the UI;
+its asynchronous `toModelOutput` adds metadata text plus one JPEG, PNG, or WebP
+file fetched through the trusted provider adapter. The image is limited to 2
+MiB, requested at approximately 1024 pixels, and guarded by the provider
+timeout. Provider URLs, tokens, and base64 are never included in the execute
+result. If image input is disabled, the inspect tool is not registered; search,
+cards, notes, and the interactive viewer continue to work.
 
 `appendStopNote({ stopId, markdown })` is added to the trip operation registry.
 It is generic, always requires user approval, is not eligible for proactive
@@ -295,6 +311,8 @@ URLs, state, repeats, watchers, and action chaining remain rejected.
 ### AI SDK and trip operations
 
 - register read tools only when the capability is configured;
+- send one bounded preview through `toModelOutput` only when image input is
+  explicitly enabled;
 - verify read schemas and automatic execution;
 - verify `appendStopNote` requires approval and cannot be proactive;
 - prove that the write preserves the full previous note; and

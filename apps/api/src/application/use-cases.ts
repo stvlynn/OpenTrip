@@ -108,6 +108,11 @@ export class TripService {
     await this.loadEditable(tripId, userId);
   }
 
+  /** Assert trip membership without returning or mutating trip data. */
+  async assertReadable(tripId: string, userId: string): Promise<void> {
+    await this.loadReadable(tripId, userId);
+  }
+
   listTrips(userId: string): Promise<TripSummary[]> {
     return this.repo.findSummaries(userId);
   }

@@ -51,7 +51,10 @@ as a bottom detail sheet rather than in the sidebar. See
 `TripMap` reports right-click / long-press coordinates via `onContext(lng, lat)`.
 `TripMapView` wraps the canvas in the coss `ContextMenu` primitive (Base UI) and
 offers pointer-anchored actions: **Add a stop here** (opens the schedule composer
-pre-filled at that point, reverse-geocoded for a name) and **Copy coordinates**.
+pre-filled at that point, reverse-geocoded for a name), **Open street view**
+(when configured), and **Copy coordinates**. Street-view selection cancels an
+older pending search, prefers a nearby 360° result, and treats no imagery as an
+informational empty state.
 
 ## Geolocation
 

@@ -43,6 +43,7 @@ Start here for multi-client development:
 - [backend/fx.md](backend/fx.md) — FX rates proxy for settle-up conversion
 - [backend/geo.md](backend/geo.md) — geo places/routes (OSM/Google), agent tools
 - [backend/lodging.md](backend/lodging.md) — Airbnb lodging search, agent tools
+- [backend/street-view.md](backend/street-view.md) — provider-neutral street-view search, cards, viewer, and agent tools
 
 ### Operations and quality
 

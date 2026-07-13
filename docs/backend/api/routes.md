@@ -27,6 +27,15 @@ API origin. **Auth**: `public` | `session` | `session + member` | `session + edi
 | GET | `/api/trips/:id` | session + member | Full trip DTO |
 | PATCH | `/api/trips/:id` | session + edit | Rename trip, or `{ clearAgentSeedPending: true }` |
 
+### Street view
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/trips/:tripId/street-view/images` | session + member | Search nearby normalized imagery |
+| GET | `/api/trips/:tripId/street-view/images/:imageId` | session + member | Trusted image metadata |
+| GET | `/api/trips/:tripId/street-view/images/:imageId/preview` | session + member | Proxied static preview bytes |
+| GET | `/api/trips/:tripId/street-view/viewer-config` | session + member | Minimum interactive viewer configuration |
+
 ### Itinerary days
 
 | Method | Path | Auth | Purpose |

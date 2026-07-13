@@ -51,7 +51,15 @@
     "total": "Estimated total",
     "invalid": "This generated view could not be displayed safely.",
     "staleDay": "That day is no longer in this trip.",
-    "staleStop": "That stop is no longer in this trip."
+    "staleStop": "That stop is no longer in this trip.",
+    "streetView": {
+      "previewAlt": "Street-view preview",
+      "previewUnavailable": "Preview unavailable",
+      "loading": "Loading street view…",
+      "placeFallback": "Street view",
+      "captureUnknown": "Capture time unknown",
+      "open": "Open street view"
+    }
   },
   "tool": {
     "proposed": "Proposed: {{tool}}",
@@ -67,7 +75,10 @@
       "routeCompute": "Compute route",
       "routeMatrix": "Route matrix",
       "reviewLookup": "Look up reviews",
-      "readTripMedia": "Read trip file"
+      "readTripMedia": "Read trip file",
+      "streetViewSearch": "Search street view",
+      "streetViewInspect": "Inspect street view",
+      "appendStopNote": "Append stop note"
     }
   },
   "preview": {

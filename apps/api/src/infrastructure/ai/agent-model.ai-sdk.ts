@@ -41,6 +41,7 @@ import type { TripSnapshot } from "../../domain/trip";
 import type { WeatherService } from "../../application/weather/weather-service";
 import type { GeoService } from "../../application/geo/geo-service";
 import type { LodgingService } from "../../application/lodging/lodging-service";
+import type { StreetViewService } from "../../application/street-view";
 import type { FileStorage } from "../../application/storage";
 import {
   isTripMediaStoragePath,
@@ -50,7 +51,7 @@ import {
 import { isAgentFilePart } from "../../application/agent/file-parts";
 import {
   listWriteOps,
-  pendingPatchSchema,
+  proactivePendingPatchSchema,
   writeToolNames,
 } from "../../application/trip/ops";
 import type { AiConfig } from "../config";
@@ -192,7 +193,7 @@ const interventionSchema = z.object({
   confidence: z.number().min(0).max(1),
   reason: z.string(),
   suggestion: z.string(),
-  pendingPatch: pendingPatchSchema.nullable(),
+  pendingPatch: proactivePendingPatchSchema.nullable(),
   expiresInMinutes: z.number().int().positive().nullable(),
 });
 
@@ -459,6 +460,7 @@ export class AiSdkAgentModel implements AgentModel {
     private geoService: GeoService,
     private lodgingService: LodgingService,
     private fileStorage: FileStorage,
+    private streetViewService: StreetViewService | null,
   ) {
     this.model = createAgentLanguageModel(config);
   }
@@ -484,6 +486,13 @@ export class AiSdkAgentModel implements AgentModel {
       ...buildGeoReadTools(this.geoService),
       ...buildLodgingReadTools(this.lodgingService),
       ...buildTripMediaReadTools(this.fileStorage, tripId),
+      ...(this.streetViewService
+        ? buildStreetViewReadTools(
+            this.streetViewService,
+            tripId,
+            this.config.imageInputEnabled,
+          )
+        : {}),
     };
   }
 
@@ -496,11 +505,23 @@ export class AiSdkAgentModel implements AgentModel {
   }
 
   private chatSystem(trip: TripSnapshot): string {
-    return `${chatSystemPrompt()}\n\n${agentUiPrompt}\n\nCurrent trip snapshot:\n${tripContext(trip)}`;
+    return `${chatSystemPrompt()}\n\n${this.streetViewInstructions()}\n\n${agentUiPrompt}\n\nCurrent trip snapshot:\n${tripContext(trip)}`;
   }
 
   private ambientSystem(trip: TripSnapshot): string {
-    return `${ambientSystemPrompt()}\n\nCurrent trip snapshot:\n${tripContext(trip)}`;
+    return `${ambientSystemPrompt()}\n\n${this.streetViewInstructions()}\n\nCurrent trip snapshot:\n${tripContext(trip)}`;
+  }
+
+  private streetViewInstructions(): string {
+    if (!this.streetViewService) return "Street-view imagery is not configured.";
+    return [
+      "Street-view tools are provider-neutral. Resolve a place to real coordinates with placeSearch/placeDetail before streetViewSearch.",
+      "Use StreetViewCard with an imageId returned by a street-view tool; never invent an image id, preview URL, capture time, or attribution.",
+      this.config.imageInputEnabled
+        ? "Use streetViewInspect when you need to visually examine one search result. It supplies one trusted image to vision."
+        : "Visual image inspection is disabled; use streetViewSearch metadata only.",
+      "When a member explicitly asks to save a reference, call appendStopNote with the stop id and trusted same-origin preview/metadata from the tool result.",
+    ].join("\n");
   }
 
   private actorNameResolver(trip: TripSnapshot) {
@@ -779,6 +800,61 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         lang: z.string().optional(),
       }),
       execute: async (input) => geoService.reviewLookup(input),
+    }),
+  };
+}
+
+/** Provider-neutral street-view tools. Inspect adds one trusted binary image. */
+export function buildStreetViewReadTools(
+  streetViewService: StreetViewService,
+  tripId: string,
+  imageInputEnabled: boolean,
+): ToolSet {
+  const search = {
+    streetViewSearch: tool({
+      description:
+        "Find street-level imagery near real coordinates. Resolve place names with placeSearch/placeDetail first. Prefer a nearby result with supports360=true when opening an interactive view.",
+      inputSchema: z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180),
+        radiusMeters: z.number().int().min(1).max(1_000).optional(),
+        limit: z.number().int().min(1).max(10).optional(),
+      }),
+      execute: async (input) => streetViewService.searchNearby({ tripId, ...input }),
+    }),
+  };
+  if (!imageInputEnabled) return search;
+
+  return {
+    ...search,
+    streetViewInspect: tool({
+      description:
+        "Visually inspect exactly one street-view result by opaque imageId. Use only ids returned by streetViewSearch.",
+      inputSchema: z.object({
+        imageId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/),
+      }),
+      execute: async ({ imageId }) => streetViewService.getImage(tripId, imageId),
+      toModelOutput: async ({ output }) => {
+        const metadata = JSON.stringify(output);
+        try {
+          const preview = await streetViewService.readPreview(output.id);
+          return {
+            type: "content" as const,
+            value: [
+              { type: "text" as const, text: metadata },
+              {
+                type: "file" as const,
+                mediaType: preview.mediaType,
+                data: { type: "data" as const, data: preview.bytes },
+                filename: `street-view-${output.id}`,
+              },
+            ],
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Preview unavailable";
+          return { type: "text" as const, value: `${metadata}\nPreview unavailable: ${message}` };
+        }
+      },
     }),
   };
 }

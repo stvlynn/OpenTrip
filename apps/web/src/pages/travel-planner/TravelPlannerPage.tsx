@@ -52,6 +52,7 @@ import { ScheduleBoard, type ComposeDraft } from "./ui/ScheduleBoard";
 import { BudgetBoard } from "./ui/BudgetBoard";
 import { FloatingMembers } from "./ui/FloatingMembers";
 import { ReservationsBoard } from "./ui/ReservationsBoard";
+import { StreetViewViewerProvider } from "./ui/street-view/StreetViewViewerProvider";
 
 type Tab = "map" | "schedule" | "reservations" | "budget";
 
@@ -677,7 +678,8 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
 
   if (isMobile) {
     return (
-      <div className="flex h-dvh flex-col bg-background">
+      <StreetViewViewerProvider tripId={trip.id}>
+        <div className="flex h-dvh flex-col bg-background">
         <MobilePlannerHeader
           title={trip.title}
           subtitle={headerSubtitle}
@@ -737,12 +739,14 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
             onDeny={handleDenySuggestion}
           />
         ) : null}
-      </div>
+        </div>
+      </StreetViewViewerProvider>
     );
   }
 
   return (
-    <div className="flex h-dvh bg-sidebar">
+    <StreetViewViewerProvider tripId={trip.id}>
+      <div className="flex h-dvh bg-sidebar">
       <Splitter
         orientation="horizontal"
         value={sidebarWidth}
@@ -832,7 +836,8 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
           onDeny={handleDenySuggestion}
         />
       ) : null}
-    </div>
+      </div>
+    </StreetViewViewerProvider>
   );
 }
 

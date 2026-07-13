@@ -59,6 +59,7 @@ Production config lives in **GitHub Actions secrets/variables**, not in git.
 ### Optional secrets
 
 `AI_API_KEY`, `OPENWEATHERMAP_API_KEY`, `GOOGLE_MAPS_API_KEY`,
+`MAPILLARY_ACCESS_TOKEN` (when `STREET_VIEW_PROVIDER=mapillary`),
 `UNSPLASH_ACCESS_KEY` (trip cover on create; without it cards keep the SVG
 placeholder).
 

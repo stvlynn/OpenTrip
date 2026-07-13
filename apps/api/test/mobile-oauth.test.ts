@@ -46,6 +46,7 @@ function baseConfig(googleOAuth: AppConfig["googleOAuth"]): AppConfig {
       geocodeUserAgent: "OpenTrip-test",
     },
     ai: null,
+    streetView: null,
     unsplashAccessKey: undefined,
   };
 }
@@ -92,6 +93,7 @@ function createTestApp(options: {
     fxService: {} as Container["fxService"],
     geoService: {} as Container["geoService"],
     lodgingService: {} as Container["lodgingService"],
+    streetViewService: null,
     fileStorage: {} as Container["fileStorage"],
     avatarService: {} as Container["avatarService"],
     tripMediaService: {} as Container["tripMediaService"],
