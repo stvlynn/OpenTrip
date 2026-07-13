@@ -186,6 +186,25 @@
                 "saveFailed": "保存默认货币失败。"
             }
         },
+        "permissions": {
+            "label": "设备权限",
+            "allow": "允许",
+            "granted": "已允许",
+            "denied": "已拒绝 — 请在浏览器设置中开启",
+            "unsupported": "当前浏览器不支持",
+            "install": {
+                "label": "安装应用",
+                "installed": "已安装",
+                "action": "安装",
+                "iosHint": "通过浏览器分享菜单添加"
+            },
+            "notifications": {
+                "label": "消息通知"
+            },
+            "location": {
+                "label": "精确定位"
+            }
+        },
         "about": {
             "title": "关于",
             "version": "版本 {{version}}",

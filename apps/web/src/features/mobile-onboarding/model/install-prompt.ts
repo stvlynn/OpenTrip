@@ -12,14 +12,21 @@ export interface BeforeInstallPromptEvent extends Event {
 }
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
+const listeners = new Set<() => void>();
+
+function notifyListeners(): void {
+    for (const listener of listeners) listener();
+}
 
 if (typeof window !== "undefined") {
     window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
         deferredPrompt = event as BeforeInstallPromptEvent;
+        notifyListeners();
     });
     window.addEventListener("appinstalled", () => {
         deferredPrompt = null;
+        notifyListeners();
     });
 }
 
@@ -30,4 +37,13 @@ export function getInstallPrompt(): BeforeInstallPromptEvent | null {
 /** The event is single-use; drop it once `prompt()` has been called. */
 export function clearInstallPrompt(): void {
     deferredPrompt = null;
+    notifyListeners();
+}
+
+/** Notifies when the deferred prompt appears, is consumed, or installs. */
+export function subscribeInstallPrompt(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => {
+        listeners.delete(listener);
+    };
 }

@@ -186,6 +186,25 @@
                 "saveFailed": "Failed to save default currency."
             }
         },
+        "permissions": {
+            "label": "Device permissions",
+            "allow": "Allow",
+            "granted": "Allowed",
+            "denied": "Blocked — enable in browser settings",
+            "unsupported": "Not supported by this browser",
+            "install": {
+                "label": "Install app",
+                "installed": "Installed",
+                "action": "Install",
+                "iosHint": "Add via the browser share menu"
+            },
+            "notifications": {
+                "label": "Notifications"
+            },
+            "location": {
+                "label": "Precise location"
+            }
+        },
         "about": {
             "title": "About",
             "version": "Version {{version}}",

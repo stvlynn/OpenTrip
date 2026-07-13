@@ -93,6 +93,14 @@ The sheet opens after a short delay (`ONBOARDING_OPEN_DELAY_MS`) to give
 `beforeinstallprompt` time to fire. Dismissing the sheet marks the
 remaining steps as dismissed — the flow never re-nags.
 
+A declined prompt is not a dead end: the same slice exports
+`PermissionSettings`, a mobile-only "Device permissions" section rendered
+in the settings preferences pane. It shows the live state of all three
+asks (via the Permissions API `change` events and the deferred install
+prompt) and re-offers the action where the browser still allows it; a
+`denied` permission surfaces a pointer to the browser settings instead,
+since the page cannot re-prompt.
+
 ## Toast → system notification bridge
 
 `installSystemNotificationBridge()` (`@/shared/ui/toast`, called once from
