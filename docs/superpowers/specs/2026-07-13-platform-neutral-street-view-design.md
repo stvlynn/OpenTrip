@@ -219,8 +219,7 @@ interface StreetViewImageDto {
 ## Agent tools
 
 The explicit and ambient read-tool sets include search whenever street view is
-configured. Visual inspection is additionally gated by the explicit
-`AI_IMAGE_INPUT_ENABLED=true` capability flag:
+configured. Visual inspection is available only for ordinary static imagery:
 
 ```text
 streetViewSearch({ lat, lng, radiusMeters?, limit? })
@@ -229,18 +228,31 @@ streetViewInspect({ imageId })
 
 The descriptions instruct the model to resolve place names through
 `placeSearch` or `placeDetail` first, use real coordinates, and prefer the
-nearest suitable 360-degree result. Both tools are automatic read tools and do
-not require approval. Empty search results return an empty list rather than an
-error-shaped result.
+nearest suitable 360-degree result for the interactive viewer. Both tools are
+automatic read tools and do not require approval. Search returns an explicit
+`found` or `empty` outcome, the number of panoramas, and normalized images so
+the model cannot confuse an empty result or a static-only result with a tool
+failure.
 
 `streetViewSearch` returns JSON metadata only. `streetViewInspect.execute`
-returns the same compact, platform-neutral JSON used by persistence and the UI;
-its asynchronous `toModelOutput` adds metadata text plus one JPEG, PNG, or WebP
-file fetched through the trusted provider adapter. The image is limited to 2
-MiB, requested at approximately 1024 pixels, and guarded by the provider
-timeout. Provider URLs, tokens, and base64 are never included in the execute
-result. If image input is disabled, the inspect tool is not registered; search,
-cards, notes, and the interactive viewer continue to work.
+returns the same compact, platform-neutral JSON used by persistence and the UI.
+Before its asynchronous `toModelOutput` reads bytes, the application verifies
+that the image is not a panorama. For an ordinary static image it adds metadata
+text plus one JPEG, PNG, or WebP file fetched through the trusted provider
+adapter. For a panorama it throws
+`street_view_panorama_inspection_forbidden`; panorama bytes are never supplied
+to the model. Static images are limited to 2 MiB, requested at approximately
+1024 pixels, and guarded by the provider timeout. Provider URLs, tokens, and
+base64 are never included in the execute result.
+
+The Mapillary adapter performs separate bounded panorama and general candidate
+queries, merges them by opaque image id, and tolerates one successful lane when
+the other fails. The application filters the rectangular provider result back
+to the requested circular radius, ranks panoramas before ordinary images, then
+uses distance, capture time, and id as deterministic tie breakers before
+applying the caller's limit. This keeps provider-specific search behavior out
+of the application contract while preventing an upstream limit from hiding a
+nearby panorama.
 
 `appendStopNote({ stopId, markdown })` is added to the trip operation registry.
 It is generic, always requires user approval, is not eligible for proactive
@@ -276,6 +288,11 @@ URLs, state, repeats, watchers, and action chaining remain rejected.
 - Provider authentication, authorization, rate limiting, timeout, and upstream
   failures map to stable platform-neutral errors. Raw provider bodies are not
   returned to the model or browser.
+- A search exception is the only tool-failure state. Static-only and empty
+  searches are successful outcomes and must not be described as provider
+  outages or global coverage gaps.
+- Panorama preview bytes are available to the browser card/viewer surface but
+  are never supplied to the model through `streetViewInspect`.
 - Preview failures render a placeholder without suppressing trusted metadata or
   the open action.
 - Viewer failures render a retry state and always dispose partial viewer state.
@@ -294,14 +311,18 @@ URLs, state, repeats, watchers, and action chaining remain rejected.
 
 - validate coordinates, radius, and result limits;
 - normalize and order results by distance;
+- filter rectangular provider candidates to the requested circular radius;
+- prefer panoramas and apply deterministic distance/time/id tie breakers;
 - produce platform-neutral DTOs and same-origin preview URLs;
-- return empty searches normally; and
+- return explicit found/static-only/empty search semantics; and
 - append notes without overwriting existing content or exceeding the aggregate
   note limit.
 
 ### Mapillary adapter
 
 - assert request construction and requested fields;
+- request bounded panorama and general candidate lanes and merge by id;
+- tolerate one failed candidate lane but fail when both lanes fail;
 - map geometry, capture time, heading, panorama support, preview, and
   attribution;
 - cover empty/malformed responses;
@@ -311,8 +332,8 @@ URLs, state, repeats, watchers, and action chaining remain rejected.
 ### AI SDK and trip operations
 
 - register read tools only when the capability is configured;
-- send one bounded preview through `toModelOutput` only when image input is
-  explicitly enabled;
+- send one bounded ordinary static preview through `toModelOutput`;
+- reject panorama inspection before reading preview bytes;
 - verify read schemas and automatic execution;
 - verify `appendStopNote` requires approval and cannot be proactive;
 - prove that the write preserves the full previous note; and

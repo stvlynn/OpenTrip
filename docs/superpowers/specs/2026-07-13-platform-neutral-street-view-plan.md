@@ -4,9 +4,9 @@
    and a Mapillary Graph API adapter selected by runtime configuration.
 2. Add authenticated trip-scoped search, detail, preview, and viewer-config HTTP
    endpoints without exposing provider data through agent-facing contracts.
-3. Register `streetViewSearch` and capability-gated `streetViewInspect` AI SDK
-   tools. Keep execute results as JSON and use async `toModelOutput` for one
-   bounded trusted preview image.
+3. Register `streetViewSearch` and `streetViewInspect` AI SDK tools. Return
+   explicit search outcomes, use async `toModelOutput` for one bounded ordinary
+   static image, and reject panorama bytes before preview reads.
 4. Add the approval-gated `appendStopNote` trip operation and aggregate method,
    preserving the complete existing note.
 5. Extend the json-render catalog, sanitizer, and renderer with a trusted
@@ -15,4 +15,5 @@
    then connect both generated replies and the map context menu.
 7. Update configuration examples and architecture/user-facing documentation;
    add focused unit, HTTP, and UI tests; run type checks and relevant test suites.
-
+8. Query bounded panorama and general candidate lanes in the provider, merge by
+   id, then filter, rank, and truncate deterministically in the application.
