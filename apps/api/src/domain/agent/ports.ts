@@ -42,6 +42,13 @@ export interface AgentClientUIMessage {
   parts: AgentMessagePart[];
 }
 
+export interface AgentObservabilityContext {
+  requestId?: string;
+  turnId: string;
+  trigger: "chat" | "ambient" | "addressed_check" | "operation";
+  runtime?: "cloudflare" | "node";
+}
+
 /** Result returned by write tools after the user approves them.
  * `trip` is the post-apply client DTO (write-echo) so the SPA can
  * `setQueryData` without refetching through Hyperdrive. */
@@ -52,6 +59,7 @@ export type AgentToolApplyResult =
 export interface AgentChatRequest {
   trip: TripSnapshot;
   history: AgentMessage[];
+  observability: AgentObservabilityContext;
   /**
    * Full UI messages from the current client turn. Required for AI SDK tool
    * approval continuation (`approval-responded` parts → tool execution).
@@ -75,6 +83,7 @@ export interface AgentEvaluationRequest {
   event: OperationEvent;
   /** Recent session context so repeated notifications stay suppressed. */
   history: AgentMessage[];
+  observability: AgentObservabilityContext;
 }
 
 /** Decide whether a plain member message is addressing the agent. */
@@ -83,6 +92,7 @@ export interface AgentAddressedRequest {
   history: AgentMessage[];
   /** Latest member message text (already persisted). */
   messageText: string;
+  observability: AgentObservabilityContext;
 }
 
 /** Model port. Implemented in infrastructure with the Vercel AI SDK; the
@@ -92,7 +102,7 @@ export interface AgentModel {
   streamChat(request: AgentChatRequest): Promise<Response>;
   /** Generate a non-streaming reply (ambient / mention replies). Read-only tools only. */
   generateReply(
-    request: Pick<AgentChatRequest, "trip" | "history">,
+    request: Pick<AgentChatRequest, "trip" | "history" | "observability">,
   ): Promise<AgentMessagePart[]>;
   /**
    * Judge whether a plain member message is addressing the agent. Prefer true

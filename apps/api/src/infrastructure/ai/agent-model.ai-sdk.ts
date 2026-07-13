@@ -33,6 +33,7 @@ import type {
   AgentMessage,
   AgentMessagePart,
   AgentModel,
+  AgentObservabilityContext,
   AgentToolApplyResult,
   InterventionDecision,
   PendingPatch,
@@ -55,8 +56,21 @@ import {
   writeToolNames,
 } from "../../application/trip/ops";
 import type { AiConfig } from "../config";
+import { logger, startSpan as startObservabilitySpan } from "../observability";
 
 const NOTE_CONTEXT_MAX = 2_000;
+
+function providerCall<T>(
+  provider: string,
+  operation: string,
+  call: () => Promise<T>,
+): Promise<T> {
+  return startObservabilitySpan(
+    `opentrip.provider.${provider}.${operation}`,
+    { provider, providerOperation: operation },
+    async () => call(),
+  );
+}
 
 /** MiniMax Anthropic-compatible API prefix.
  * `@ai-sdk/anthropic` appends `/messages`, so this must include `/v1`
@@ -450,6 +464,17 @@ function buildWriteTools(
   );
 }
 
+export function buildAgentTelemetryOptions(
+  functionId: string,
+  recordContent: boolean,
+) {
+  return {
+    functionId,
+    recordInputs: recordContent,
+    recordOutputs: recordContent,
+  };
+}
+
 /** Vercel AI SDK adapter behind the AgentModel port. */
 export class AiSdkAgentModel implements AgentModel {
   private model: LanguageModel;
@@ -514,7 +539,7 @@ export class AiSdkAgentModel implements AgentModel {
       "Street-view tools are provider-neutral. Resolve a place to real coordinates with placeSearch/placeDetail before streetViewSearch.",
       "Use StreetViewCard with an imageId returned by a street-view tool; never invent an image id, preview URL, capture time, or attribution.",
       "A streetViewSearch outcome of found is a successful call, even when panoramaAvailable is false. An empty outcome only means this search area had no returned images. Never describe either outcome as a tool failure, provider outage, or global coverage gap.",
-      "Retry streetViewSearch at most once for the same member request, with a larger radius no greater than 1000 metres. If completeness is partial, state only that the search result may be incomplete.",
+      "Start streetViewSearch without radiusMeters so it uses the 100 metre default. Retry at most once, and only after an empty or partial successful result, with a larger radius no greater than 1000 metres. Do not retry a thrown error with guessed coordinates or claim that the error proves a coverage gap. If completeness is partial, state only that the search result may be incomplete.",
       "Use streetViewInspect only for a result with supports360=false when visual examination is useful. Panorama content is for the member's interactive viewer and must never be inspected by the model.",
       "When a member explicitly asks to save a reference, call appendStopNote with the stop id and trusted same-origin preview/metadata from the tool result.",
     ].join("\n");
@@ -526,6 +551,38 @@ export class AiSdkAgentModel implements AgentModel {
       const member = trip.members.find((m) => m.userId === userId);
       return member?.name ?? "member";
     };
+  }
+
+  private telemetry(functionId: string) {
+    return buildAgentTelemetryOptions(
+      functionId,
+      this.config.telemetryRecordContent,
+    );
+  }
+
+  private runtimeContext(
+    tripId: string,
+    observability: AgentObservabilityContext,
+  ) {
+    return {
+      requestId: observability.requestId ?? "",
+      tripId,
+      agentSessionId: tripId,
+      turnId: observability.turnId,
+      trigger: observability.trigger,
+      runtime: observability.runtime ?? "unknown",
+    };
+  }
+
+  private includedRuntimeContext() {
+    return {
+      requestId: true,
+      tripId: true,
+      agentSessionId: true,
+      turnId: true,
+      trigger: true,
+      runtime: true,
+    } as const;
   }
 
   private async resolveModelMessages(
@@ -576,6 +633,11 @@ export class AiSdkAgentModel implements AgentModel {
         request.trip.id,
       ),
       stopWhen: stepCountIs(this.config.maxToolSteps),
+      runtimeContext: this.runtimeContext(request.trip.id, request.observability),
+      telemetry: {
+        ...this.telemetry("agent.chat"),
+        includeRuntimeContext: this.includedRuntimeContext(),
+      },
     });
 
     const stream = createUIMessageStream({
@@ -614,7 +676,7 @@ export class AiSdkAgentModel implements AgentModel {
   }
 
   async generateReply(
-    request: Pick<AgentChatRequest, "trip" | "history">,
+    request: Pick<AgentChatRequest, "trip" | "history" | "observability">,
   ): Promise<AgentMessagePart[]> {
     // Ambient replies stay read-only: no write tools, no approval loop.
     // Use ambientSystem so the model is not told it has editor write tools.
@@ -634,6 +696,11 @@ export class AiSdkAgentModel implements AgentModel {
         request.trip.id,
       ),
       stopWhen: stepCountIs(this.config.maxToolSteps),
+      runtimeContext: this.runtimeContext(request.trip.id, request.observability),
+      telemetry: {
+        ...this.telemetry("agent.ambient_reply"),
+        includeRuntimeContext: this.includedRuntimeContext(),
+      },
     });
     return [{ type: "text", text: result.text }];
   }
@@ -658,6 +725,7 @@ export class AiSdkAgentModel implements AgentModel {
         `Recent session context:\n${recentContext || "(none)"}`,
         `Latest member message:\n${request.messageText}`,
       ].join("\n\n"),
+      telemetry: this.telemetry("agent.addressed_classifier"),
     });
 
     return object.addressed;
@@ -690,6 +758,7 @@ export class AiSdkAgentModel implements AgentModel {
           details: request.event.details,
         })}`,
       ].join("\n\n"),
+      telemetry: this.telemetry("agent.operation_evaluation"),
     });
 
     return object as InterventionDecision;
@@ -718,7 +787,9 @@ export function buildWeatherReadTools(weatherService: WeatherService): ToolSet {
         time: z.string().optional(),
       }),
       execute: async ({ lat, lng, date, time }) => {
-        const weather = await weatherService.getWeather(lat, lng, date, time);
+        const weather = await providerCall("weather", "get", () =>
+          weatherService.getWeather(lat, lng, date, time),
+        );
         return weather ?? { unavailable: true };
       },
     }),
@@ -737,7 +808,8 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         lang: z.string().optional(),
         near: coordinateSchema.optional(),
       }),
-      execute: async (input) => geoService.placeSearch(input),
+      execute: async (input) =>
+        providerCall("geo", "place_search", () => geoService.placeSearch(input)),
     }),
     placeNearby: tool({
       description:
@@ -750,7 +822,8 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         limit: z.number().int().min(1).max(30).optional(),
         lang: z.string().optional(),
       }),
-      execute: async (input) => geoService.placeNearby(input),
+      execute: async (input) =>
+        providerCall("geo", "place_nearby", () => geoService.placeNearby(input)),
     }),
     placeDetail: tool({
       description:
@@ -760,7 +833,9 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         lang: z.string().optional(),
       }),
       execute: async (input) => {
-        const place = await geoService.placeDetail(input);
+        const place = await providerCall("geo", "place_detail", () =>
+          geoService.placeDetail(input),
+        );
         return place ?? { unavailable: true };
       },
     }),
@@ -773,7 +848,9 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         includeGeometry: z.boolean().optional(),
       }),
       execute: async (input) => {
-        const route = await geoService.routeCompute(input);
+        const route = await providerCall("geo", "route_compute", () =>
+          geoService.routeCompute(input),
+        );
         return route ?? { unavailable: true };
       },
     }),
@@ -785,7 +862,8 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         destinations: z.array(coordinateSchema).min(1).max(10),
         mode: travelModeSchema,
       }),
-      execute: async (input) => geoService.routeMatrix(input),
+      execute: async (input) =>
+        providerCall("geo", "route_matrix", () => geoService.routeMatrix(input)),
     }),
     reviewLookup: tool({
       description:
@@ -795,7 +873,8 @@ export function buildGeoReadTools(geoService: GeoService): ToolSet {
         limit: z.number().int().min(1).max(20).optional(),
         lang: z.string().optional(),
       }),
-      execute: async (input) => geoService.reviewLookup(input),
+      execute: async (input) =>
+        providerCall("geo", "review_lookup", () => geoService.reviewLookup(input)),
     }),
   };
 }
@@ -808,7 +887,7 @@ export function buildStreetViewReadTools(
   return {
     streetViewSearch: tool({
       description:
-        "Find street-level imagery near real coordinates. A found or empty outcome is a successful tool call; only a thrown error is a failure. Prefer supports360=true only for the member's interactive viewer.",
+        "Find street-level imagery near real coordinates. Omit radiusMeters first to use 100 metres; retry once with a larger radius only after an empty or partial result. A found or empty outcome is a successful call; only a thrown error is a failure. Prefer supports360=true only for the member's interactive viewer.",
       inputSchema: z.object({
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
@@ -818,9 +897,10 @@ export function buildStreetViewReadTools(
       execute: async (input) => {
         const startedAt = Date.now();
         try {
-          const result = await streetViewService.searchNearby({ tripId, ...input });
-          console.info("Street-view search completed", {
-            event: "street_view.search_completed",
+          const result = await providerCall("street_view", "search", () =>
+            streetViewService.searchNearby({ tripId, ...input }),
+          );
+          logger.info("street_view.search_completed", {
             tripId,
             radiusMeters: input.radiusMeters ?? 100,
             requestedLimit: input.limit ?? 5,
@@ -833,8 +913,7 @@ export function buildStreetViewReadTools(
           });
           return result;
         } catch (error) {
-          console.error("Street-view search failed", {
-            event: "street_view.search_failed",
+          logger.error("street_view.search_failed", {
             tripId,
             radiusMeters: input.radiusMeters ?? 100,
             requestedLimit: input.limit ?? 5,
@@ -852,7 +931,10 @@ export function buildStreetViewReadTools(
       inputSchema: z.object({
         imageId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/),
       }),
-      execute: async ({ imageId }) => streetViewService.getInspectableImage(tripId, imageId),
+      execute: async ({ imageId }) =>
+        providerCall("street_view", "inspect", () =>
+          streetViewService.getInspectableImage(tripId, imageId),
+        ),
       toModelOutput: async ({ output }) => {
         const metadata = JSON.stringify(output);
         if (output.supports360) {
@@ -862,7 +944,9 @@ export function buildStreetViewReadTools(
           );
         }
         try {
-          const preview = await streetViewService.readPreview(output.id);
+          const preview = await providerCall("street_view", "read_preview", () =>
+            streetViewService.readPreview(output.id),
+          );
           return {
             type: "content" as const,
             value: [
@@ -932,7 +1016,8 @@ export function buildLodgingReadTools(
           .describe("Pagination cursor from a prior search"),
         propertyType: lodgingPropertyTypeSchema.optional(),
       }),
-      execute: async (input) => lodgingService.search(input),
+      execute: async (input) =>
+        providerCall("lodging", "search", () => lodgingService.search(input)),
     }),
     airbnbListingDetails: tool({
       description:
@@ -949,7 +1034,10 @@ export function buildLodgingReadTools(
           .optional(),
         ...lodgingGuestsSchema,
       }),
-      execute: async (input) => lodgingService.listingDetails(input),
+      execute: async (input) =>
+        providerCall("lodging", "listing_details", () =>
+          lodgingService.listingDetails(input),
+        ),
     }),
   };
 }
@@ -983,7 +1071,11 @@ export function buildTripMediaReadTools(
               "URL is not a managed media file for this trip. Use a /api/uploads/trips/... URL from this trip.",
           };
         }
-        const file = await fileStorage.read(path);
+        const file = await startObservabilitySpan(
+          "opentrip.agent.attachment_resolution",
+          { tripId, storagePath: path },
+          async () => fileStorage.read(path),
+        );
         if (!file) {
           return { error: "File not found" };
         }

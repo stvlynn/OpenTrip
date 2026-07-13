@@ -176,6 +176,13 @@ port. It owns Graph API URLs, authorization, field selection, response parsing,
 distance calculation inputs, thumbnail retrieval, timeouts, and conversion of
 provider failures into application errors.
 
+Nearby search is density-safe. The adapter divides larger bounds into bounded
+cells and recursively subdivides only when Mapillary explicitly reports that a
+cell requests too much data. Panorama and general-image lanes share a deadline
+and request budget; successful cells are merged and deduplicated. Incomplete
+regional coverage returns `partial`, while unrelated upstream errors are not
+misclassified as density or absence of imagery.
+
 The composition root selects the adapter from `STREET_VIEW_PROVIDER`. The
 initial accepted value is `mapillary`; an unset value disables the capability.
 `MAPILLARY_ACCESS_TOKEN` is required when that provider is selected.

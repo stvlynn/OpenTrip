@@ -177,6 +177,10 @@ observability, custom domain `api.opentrip.im`, and **fallback** non-secret
 vars. Production values come from GitHub Actions variables via
 `deploy-api.mjs`.
 
+Workers Logs are retained at 100%, platform traces at 10%, and Sentry samples
+trip-agent routes at 100%. Configure the Sentry Actions values and use the
+shared request/turn identifiers described in [observability.md](observability.md).
+
 The Worker has two independent Durable Object namespaces:
 
 | Binding | Class | Purpose |

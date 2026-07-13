@@ -214,6 +214,12 @@ dismiss). `POST …/apply` and `…/dismiss` remain as aliases.
   (evaluations, ambient replies, stream persistence) uses
   `executionCtx.waitUntil` on Workers and a floating promise on Node.
 
+Agent calls emit AI SDK 7 OpenTelemetry spans beneath application-owned
+`opentrip.agent.*` spans. The initiating user UI message id is reused as the
+turn id across tool-approval continuations. Structured logs and the debugging
+runbook are documented in
+[../operations/observability.md](../operations/observability.md).
+
 ## Configuration
 
 Set in the root `.env` (see [.env.example](../../.env.example)); the agent is

@@ -42,6 +42,7 @@ const SECRET_KEYS = [
   "CAPTCHA_SECRET_KEY",
   "RESEND_API_KEY",
   "UNSPLASH_ACCESS_KEY",
+  "SENTRY_DSN",
 ];
 
 function parseArgs(argv) {

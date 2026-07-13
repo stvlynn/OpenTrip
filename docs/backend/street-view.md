@@ -12,8 +12,8 @@ driven adapter under `infrastructure/street-view/mapillary`.
   provider bbox to the requested circle, ranks panoramas deterministically,
   and emits trip-scoped same-origin preview URLs.
 - the Mapillary adapter owns bounded panorama/general candidate queries,
-  deduplication, Graph API parsing, timeouts, and the 2 MiB JPEG/PNG/WebP
-  preview boundary.
+  adaptive spatial subdivision, deduplication, Graph API parsing, timeouts,
+  and the 2 MiB JPEG/PNG/WebP preview boundary.
 - HTTP routes assert trip membership before returning any data.
 - the web keeps MapillaryJS behind the page-private viewer and calls
   `viewer.remove()` on image changes and unmount.
@@ -32,12 +32,37 @@ at ten. Search responses contain `outcome`, `completeness`, candidate/result
 counts, panorama availability, and normalized `images`. Preview responses are
 private-cacheable for 15 minutes.
 
+## Dense-area search
+
+Mapillary may reject a large, imagery-dense bounding box with a provider error
+asking the caller to reduce the requested data. The adapter prevents this from
+becoming a false coverage result:
+
+- search bounds are initially divided into cells no wider than 500 m;
+- only the recognized Mapillary data-volume response recursively subdivides a
+  cell into four smaller cells;
+- panorama and general-image lanes use bounded concurrency, a shared 48-request
+  budget, a maximum subdivision depth, and the configured search deadline;
+- successful cells are merged and deduplicated before the application applies
+  the requested circular radius and ranking policy;
+- any skipped or failed cell makes the result `partial`; the adapter throws only
+  when neither lane completed a single cell successfully.
+
+Ordinary provider 5xx responses are never treated as density signals. Search
+logs contain region, split, completeness, and duration counts but never access
+tokens or provider image URLs.
+
 ## Agent tools and image input
 
 `streetViewSearch` returns compact platform-neutral JSON with explicit
 `found`/`empty` and `complete`/`partial` semantics. A successful static-only or
 empty result is never a tool failure and does not establish a global provider
 coverage gap.
+
+The agent omits `radiusMeters` on its first attempt to use the 100 m default. It
+may retry once with a larger radius only after a successful `empty` or `partial`
+result. A thrown provider error must not trigger guessed-coordinate retries and
+must not be presented as proof of missing coverage.
 
 `streetViewInspect` reads one trusted ordinary static preview through async AI
 SDK `toModelOutput`. The application rejects `supports360=true` images before

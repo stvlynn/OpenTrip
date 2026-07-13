@@ -13,9 +13,30 @@ import { AvatarError } from "../../application/avatar";
 import { TripMediaError } from "../../application/media";
 import { StreetViewError } from "../../application/street-view";
 import { fail } from "./response";
+import { captureException, logger } from "../../infrastructure/observability";
+import type { RuntimeName } from "../../application/observability";
+
+function reportServerError(
+  err: Error,
+  c: Context,
+  runtime: RuntimeName,
+  status: number,
+): void {
+  if (status < 500) return;
+  const requestId = c.get("requestId") as string | undefined;
+  logger.error("http.request_failed", {
+    runtime,
+    requestId,
+    errorCode: "code" in err ? String(err.code) : undefined,
+    errorType: err.name,
+    status,
+    error: err,
+  });
+  captureException(err, { runtime, requestId, errorType: err.name, status });
+}
 
 /** Translate thrown errors into the error envelope. Registered via app.onError. */
-export function handleError(err: Error, c: Context) {
+export function handleError(err: Error, c: Context, runtime: RuntimeName = "node") {
   if (err instanceof ZodError) {
     return fail(c, "validation_error", err.issues[0]?.message ?? "Invalid input", 400);
   }
@@ -52,6 +73,7 @@ export function handleError(err: Error, c: Context) {
         : err.code === "avatar_unsupported_mime"
           ? 400
           : 500;
+    reportServerError(err, c, runtime, status);
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof TripMediaError) {
@@ -61,13 +83,16 @@ export function handleError(err: Error, c: Context) {
         : err.code === "media_unsupported_mime"
           ? 400
           : 500;
+    reportServerError(err, c, runtime, status);
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof WeatherError) {
     const status = err.code === "weather_not_configured" ? 503 : 502;
+    reportServerError(err, c, runtime, status);
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof FxError) {
+    reportServerError(err, c, runtime, 502);
     return fail(c, err.code, err.message, 502);
   }
   if (err instanceof GeoError) {
@@ -77,6 +102,7 @@ export function handleError(err: Error, c: Context) {
         : err.code === "geo_timeout"
           ? 504
           : 502;
+    reportServerError(err, c, runtime, status);
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof StreetViewError) {
@@ -95,11 +121,19 @@ export function handleError(err: Error, c: Context) {
                   err.code === "street_view_unsupported_preview"
                 ? 400
                 : 502;
+    reportServerError(err, c, runtime, status);
     return fail(c, err.code, err.message, status);
   }
   if (err instanceof NotFoundError) {
     return fail(c, err.code, err.message, 404);
   }
-  console.error("Unhandled error:", err);
+  const requestId = c.get("requestId") as string | undefined;
+  logger.error("http.unhandled_error", {
+    runtime,
+    requestId,
+    errorType: err.name,
+    error: err,
+  });
+  captureException(err, { runtime, requestId, errorType: err.name });
   return fail(c, "internal_error", "Something went wrong", 500);
 }

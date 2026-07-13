@@ -16,7 +16,7 @@
  *   CLOUDFLARE_API_TOKEN=… HYPERDRIVE_ID=… \
  *     HYPERDRIVE_CACHE_DISABLED_ID=… node deploy/cloudflare/scripts/deploy-api.mjs
  */
-import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync, rmSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -49,6 +49,9 @@ const WORKER_VAR_KEYS = [
   "AI_BASE_URL",
   "AI_PROACTIVE_THRESHOLD",
   "AI_MAX_TOOL_STEPS",
+  "AI_TELEMETRY_RECORD_CONTENT",
+  "SENTRY_ENVIRONMENT",
+  "SENTRY_RELEASE",
   "STREET_VIEW_PROVIDER",
   "STREET_VIEW_TIMEOUT_MS",
   "GEO_PROVIDER",
@@ -177,6 +180,60 @@ const result = spawnSync(
   ["--yes", "wrangler@4", "deploy", "--config", generatedConfigPath],
   { cwd: root, stdio: "inherit", env: process.env },
 );
+let finalStatus = result.status ?? 1;
+
+if (
+  result.status === 0 &&
+  process.env.SENTRY_AUTH_TOKEN?.trim() &&
+  process.env.SENTRY_ORG?.trim() &&
+  process.env.SENTRY_PROJECT?.trim() &&
+  process.env.SENTRY_RELEASE?.trim()
+) {
+  const sourceMapDir = resolve(cloudflareDir, ".sentry-worker");
+  const dryRun = spawnSync(
+    "npx",
+    [
+      "--yes",
+      "wrangler@4",
+      "deploy",
+      "--dry-run",
+      "--outdir",
+      sourceMapDir,
+      "--config",
+      generatedConfigPath,
+    ],
+    { cwd: root, stdio: "inherit", env: process.env },
+  );
+  if (dryRun.status === 0) {
+    const upload = spawnSync(
+      "pnpm",
+      [
+        "--filter",
+        "@opentrip/api",
+        "exec",
+        "sentry-cli",
+        "sourcemaps",
+        "upload",
+        "--org",
+        process.env.SENTRY_ORG.trim(),
+        "--project",
+        process.env.SENTRY_PROJECT.trim(),
+        "--release",
+        process.env.SENTRY_RELEASE.trim(),
+        sourceMapDir,
+      ],
+      { cwd: root, stdio: "inherit", env: process.env },
+    );
+    if (upload.status !== 0) {
+      console.error("Sentry source-map upload failed.");
+      finalStatus = upload.status ?? 1;
+    }
+  } else {
+    console.error("Worker source-map dry run failed.");
+    finalStatus = dryRun.status ?? 1;
+  }
+  rmSync(sourceMapDir, { recursive: true, force: true });
+}
 
 try {
   unlinkSync(generatedConfigPath);
@@ -184,4 +241,4 @@ try {
   /* ignore */
 }
 
-process.exit(result.status ?? 1);
+process.exit(finalStatus);

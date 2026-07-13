@@ -94,3 +94,5 @@ Better Auth and S3 credential values are set with `wrangler secret`.
   `wrangler tail` for live logs.
 - Docker: `docker compose logs -f api`; Postgres backup via `pg_dump` (see
   [docker.md](docker.md)).
+- Agent/API trace correlation, Sentry queries, structured-log fields, and
+  symptom runbooks: [observability.md](observability.md).

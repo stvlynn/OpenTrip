@@ -12,6 +12,15 @@ import {
   TripRealtimeObject,
   type DurableObjectNamespaceLike,
 } from "./infrastructure/realtime";
+import * as Sentry from "@sentry/cloudflare";
+import {
+  captureException,
+  logger,
+  registerAiTelemetry,
+  sanitizeSpan,
+  setErrorReporter,
+  setRuntimeName,
+} from "./infrastructure/observability";
 
 interface WorkerEnv extends RawEnv {
   /** Optional Hyperdrive binding (query cache enabled). Prefer when available. */
@@ -80,7 +89,15 @@ function buildApp(env: WorkerEnv, ctx: WorkerExecutionContext) {
       authIpAddressHeaders: ["cf-connecting-ip"],
     },
   );
-  return { app: createApp(container), container };
+  return {
+    app: createApp(container, {
+      runtime: "cloudflare",
+      setRequestContext: ({ requestId }) => {
+        Sentry.setTag("request.id", requestId);
+      },
+    }),
+    container,
+  };
 }
 
 export async function handleRealtimeUpgrade(
@@ -166,7 +183,7 @@ function emergencyCorsResponse(
   );
 }
 
-export default {
+const worker = {
   async fetch(
     request: Request,
     env: WorkerEnv,
@@ -176,9 +193,10 @@ export default {
       env.HYPERDRIVE?.connectionString?.trim() &&
       !env.HYPERDRIVE_CACHE_DISABLED?.connectionString?.trim()
     ) {
-      console.error(
-        "HYPERDRIVE_CACHE_DISABLED is required when cached Hyperdrive is configured",
-      );
+      logger.error("worker.hyperdrive_fresh_binding_missing", {
+        runtime: "cloudflare",
+        message: "HYPERDRIVE_CACHE_DISABLED is required",
+      });
       return emergencyCorsResponse(
         request,
         env,
@@ -187,7 +205,7 @@ export default {
       );
     }
     if (!env.AUTH_RATE_LIMIT) {
-      console.error("AUTH_RATE_LIMIT Durable Object binding is required");
+      logger.error("worker.auth_rate_limit_binding_missing", { runtime: "cloudflare" });
       return emergencyCorsResponse(
         request,
         env,
@@ -205,7 +223,8 @@ export default {
       if (realtime) return realtime;
       return await app.fetch(request);
     } catch (err) {
-      console.error("Worker fetch failed:", err);
+      logger.error("worker.fetch_failed", { runtime: "cloudflare", error: err });
+      captureException(err, { runtime: "cloudflare" });
       return emergencyCorsResponse(
         request,
         env,
@@ -218,11 +237,54 @@ export default {
       // SqlAgentSessionRepository.appendMessage.
       ctx.waitUntil(
         container.disposeAfterDeferred().catch((err) => {
-          console.error("Failed to dispose DB pools:", err);
+          logger.error("worker.pool_dispose_failed", {
+            runtime: "cloudflare",
+            error: err,
+          });
+          captureException(err, { runtime: "cloudflare" });
         }),
       );
     }
   },
 };
+
+setRuntimeName("cloudflare");
+registerAiTelemetry();
+
+export default Sentry.withSentry(
+  (env: WorkerEnv) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.SENTRY_ENVIRONMENT || "production",
+    release: env.SENTRY_RELEASE,
+    enableLogs: true,
+    tracesSampler: ({ name }) => {
+      if (name.includes("/health")) return 0;
+      if (/\/api\/trips\/[^/]+\/agent\//.test(name)) return 1;
+      return 0.1;
+    },
+    beforeSendSpan: (span) => sanitizeSpan(span),
+    beforeSend: (event) => {
+      if (event.request) {
+        delete event.request.headers;
+        delete event.request.cookies;
+        delete event.request.data;
+        if (event.request.url) event.request.url = event.request.url.split("?")[0];
+      }
+      return event;
+    },
+  }),
+  {
+    ...worker,
+    async fetch(request: Request, env: WorkerEnv, ctx: WorkerExecutionContext) {
+      setErrorReporter((error, fields) => {
+        Sentry.withScope((scope) => {
+          if (fields) scope.setContext("opentrip", fields);
+          Sentry.captureException(error);
+        });
+      });
+      return worker.fetch(request, env, ctx);
+    },
+  },
+);
 
 export { AuthRateLimitObject, TripRealtimeObject };

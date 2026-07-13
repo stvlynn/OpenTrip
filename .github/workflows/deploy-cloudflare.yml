@@ -172,6 +172,12 @@ jobs:
           AI_BASE_URL: ${{ vars.AI_BASE_URL }}
           AI_PROACTIVE_THRESHOLD: ${{ vars.AI_PROACTIVE_THRESHOLD }}
           AI_MAX_TOOL_STEPS: ${{ vars.AI_MAX_TOOL_STEPS }}
+          AI_TELEMETRY_RECORD_CONTENT: ${{ vars.AI_TELEMETRY_RECORD_CONTENT }}
+          SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           STREET_VIEW_PROVIDER: ${{ vars.STREET_VIEW_PROVIDER }}
           STREET_VIEW_TIMEOUT_MS: ${{ vars.STREET_VIEW_TIMEOUT_MS }}
           GEO_PROVIDER: ${{ vars.GEO_PROVIDER }}
@@ -204,4 +210,5 @@ jobs:
           CAPTCHA_SECRET_KEY: ${{ secrets.CAPTCHA_SECRET_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: node deploy/cloudflare/scripts/sync-secrets.mjs --from-env

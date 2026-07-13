@@ -20,6 +20,7 @@ export type {
   AgentClientUIMessage,
   AgentEvaluationRequest,
   AgentModel,
+  AgentObservabilityContext,
   AgentSessionRepository,
   AgentToolApplyResult,
 } from "./ports";

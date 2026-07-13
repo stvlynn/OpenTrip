@@ -20,14 +20,28 @@ import { BetterAuthCurrentUserProfile } from "../../infrastructure/auth/current-
 import type { Container } from "../../infrastructure/composition/container";
 import { handleError } from "./errors";
 import { ok, fail } from "./response";
+import {
+  captureException,
+  getTraceIds,
+  logger,
+  setActiveSpanAttributes,
+} from "../../infrastructure/observability";
+import type { RuntimeName } from "../../application/observability";
 
 type Session = Container["auth"]["$Infer"]["Session"];
 
-interface Env {
+export interface AppEnv {
   Variables: {
     user: Session["user"] | null;
     session: Session["session"] | null;
+    requestId: string;
   };
+}
+
+interface CreateAppOptions {
+  runtime: RuntimeName;
+  instrument?: (app: Hono<AppEnv>) => void;
+  setRequestContext?: (fields: { requestId: string }) => void;
 }
 
 /** Trip-scoped mutation schemas come from the trip ops registry. */
@@ -195,7 +209,10 @@ const streetViewSearchQuerySchema = z.object({
 });
 const streetViewImageIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,160}$/);
 
-export function createApp(container: Container) {
+export function createApp(
+  container: Container,
+  options: CreateAppOptions = { runtime: "node" },
+) {
   const {
     auth,
     tripService,
@@ -215,9 +232,19 @@ export function createApp(container: Container) {
   /** Schedule work past the response: waitUntil on Workers, floating on Node.
    * Also track on the container so Workers disposeAfterDeferred waits for it
    * before pool.end(). */
-  const deferOf = (c: Context<Env>): Defer => (task) => {
+  const deferOf = (c: Context<AppEnv>): Defer => (task) => {
     const guarded = task.catch((err) =>
-      console.error("Deferred agent task failed:", err),
+      {
+        logger.error("agent.deferred_task_failed", {
+          runtime: options.runtime,
+          requestId: c.get("requestId"),
+          error: err,
+        });
+        captureException(err, {
+          runtime: options.runtime,
+          requestId: c.get("requestId"),
+        });
+      },
     );
     container.trackDeferred(guarded);
     try {
@@ -230,7 +257,7 @@ export function createApp(container: Container) {
   /** Record a whitelisted write operation in the agent session without
    * blocking or failing the originating request. */
   const notifyAgent = (
-    c: Context<Env>,
+    c: Context<AppEnv>,
     event: Omit<OperationEvent, "actorUserId" | "actorName">,
   ) => {
     if (!agentService) return;
@@ -241,6 +268,7 @@ export function createApp(container: Container) {
       agentService.recordOperation(
         { ...event, actorUserId: user.id, actorName: user.name || user.email },
         defer,
+        { requestId: c.get("requestId"), runtime: options.runtime },
       ),
     );
   };
@@ -251,7 +279,43 @@ export function createApp(container: Container) {
     email: u.email,
     image: u.image ?? null,
   });
-  const app = new Hono<Env>();
+  const app = new Hono<AppEnv>();
+  options.instrument?.(app);
+
+  app.use("*", async (c, next) => {
+    const incoming = c.req.header("x-request-id")?.trim();
+    const requestId =
+      incoming && /^[A-Za-z0-9._:-]{8,128}$/.test(incoming)
+        ? incoming
+        : crypto.randomUUID();
+    const startedAt = Date.now();
+    c.set("requestId", requestId);
+    setActiveSpanAttributes({ requestId, runtime: options.runtime });
+    options.setRequestContext?.({ requestId });
+    try {
+      await next();
+    } finally {
+      c.header("x-request-id", requestId);
+      logger.info("http.request.completed", {
+        runtime: options.runtime,
+        requestId,
+        method: c.req.method,
+        route: c.req.routePath || c.req.path,
+        status: c.res.status,
+        durationMs: Date.now() - startedAt,
+        ...getTraceIds(),
+      });
+      if (c.res.status >= 400 && c.res.status < 500) {
+        logger.warn("http.request.rejected", {
+          runtime: options.runtime,
+          requestId,
+          method: c.req.method,
+          route: c.req.routePath || c.req.path,
+          status: c.res.status,
+        });
+      }
+    }
+  });
 
   app.use(
     "*",
@@ -385,7 +449,7 @@ export function createApp(container: Container) {
   });
 
   // Everything below requires a session.
-  const guard = new Hono<Env>();
+  const guard = new Hono<AppEnv>();
   guard.use("*", async (c, next) => {
     if (!c.get("session")) return fail(c, "unauthenticated", "Sign in required", 401);
     await next();
@@ -654,6 +718,7 @@ export function createApp(container: Container) {
           `(commenting on stop "${stopName}") ${text}`,
           stopId,
           defer,
+          { requestId: c.get("requestId"), runtime: options.runtime },
         ),
       );
     }
@@ -864,7 +929,7 @@ export function createApp(container: Container) {
   guard.get("/agent/status", (c) => ok(c, { enabled: agentService !== null }));
 
   // Trip agent session routes. All 404 when AI is not configured.
-  const agent = new Hono<Env>();
+  const agent = new Hono<AppEnv>();
   agent.use("*", async (c, next) => {
     if (!agentService) return fail(c, "agent_disabled", "Agent is not enabled", 404);
     await next();
@@ -884,7 +949,14 @@ export function createApp(container: Container) {
       await agentService!.postMessage(
         c.req.param("tripId")!,
         c.get("user")!.id,
-        { text: body.text, files: body.files },
+        {
+          text: body.text,
+          files: body.files,
+          observability: {
+            requestId: c.get("requestId"),
+            runtime: options.runtime,
+          },
+        },
         deferOf(c),
       ),
     );
@@ -942,6 +1014,8 @@ export function createApp(container: Container) {
         clientMessageId,
         clientMessages,
         approvalContinue: hasApprovalResponse,
+        requestId: c.get("requestId"),
+        runtime: options.runtime,
       },
       deferOf(c),
     );
@@ -1018,7 +1092,9 @@ export function createApp(container: Container) {
 
   app.route("/api", guard);
 
-  app.onError(handleError);
+  app.onError((error, context) =>
+    handleError(error, context, options.runtime),
+  );
   return app;
 }
 

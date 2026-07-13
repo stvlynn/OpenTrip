@@ -4,6 +4,11 @@ Compose stack: `postgres` + `api` (Node Hono) + `web` (static build). Files in
 [deploy/docker](../../deploy/docker/README.md). Reference:
 [../reference/deployment-sources.md](../reference/deployment-sources.md).
 
+API logs are newline-delimited JSON and use the same request, trace, and agent
+correlation fields as Cloudflare. Optional Sentry tracing is enabled with
+`SENTRY_DSN`; see [observability.md](observability.md) for configuration and
+query commands.
+
 ## 1. Configure
 
 ```bash

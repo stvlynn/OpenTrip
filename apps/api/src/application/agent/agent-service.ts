@@ -3,6 +3,7 @@ import type {
   AgentClientUIMessage,
   AgentMessage,
   AgentModel,
+  AgentObservabilityContext,
   AgentSessionRepository,
   OperationEvent,
   PendingPatch,
@@ -29,6 +30,11 @@ import {
 import { buildUserMessageParts, containsAgentMention, mentionedUserIdsFromParts } from "./mentions";
 import { looksLikeAgentThreadFollowUp } from "./addressed";
 import { createSequentialTripPatchApplier } from "./sequential-trip-patch-applier";
+import {
+  noopObservability,
+  type Observability,
+  type RuntimeName,
+} from "../observability";
 
 export { containsAgentMention } from "./mentions";
 export { looksLikeAgentThreadFollowUp } from "./addressed";
@@ -63,6 +69,34 @@ const SUGGESTION_UPDATE_WINDOW_MS = 10 * 60 * 1000;
 
 function newId(prefix: string): string {
   return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+interface AgentExecutionContext {
+  requestId?: string;
+  runtime?: RuntimeName;
+  turnId?: string;
+}
+
+function modelObservability(
+  trigger: AgentObservabilityContext["trigger"],
+  context: AgentExecutionContext = {},
+): AgentObservabilityContext {
+  return {
+    requestId: context.requestId,
+    runtime: context.runtime,
+    turnId: context.turnId ?? newId("turn_"),
+    trigger,
+  };
+}
+
+export function initiatingAgentTurnId(
+  clientMessages: AgentClientUIMessage[] | undefined,
+  fallback?: string,
+): string {
+  const userId = [...(clientMessages ?? [])]
+    .reverse()
+    .find((message) => message.role === "user")?.id;
+  return userId?.trim() || fallback?.trim() || newId("turn_");
 }
 
 /** Flatten text parts from an ambient reply for stop-comment persistence. */
@@ -102,14 +136,25 @@ export class AgentService {
     private model: AgentModel,
     private options: AgentServiceOptions,
     private tripChangePublisher: TripChangePublisher | null = null,
+    private observability: Observability = noopObservability,
   ) {}
 
   private async load(tripId: string): Promise<Trip> {
-    const trip = await this.tripRepo.findById(tripId);
-    if (!trip) {
-      throw new NotFoundError("trip_not_found", `Trip ${tripId} not found`);
-    }
-    return trip;
+    return this.observability.startSpan("opentrip.agent.load_trip", { tripId }, async () => {
+      const trip = await this.tripRepo.findById(tripId);
+      if (!trip) {
+        throw new NotFoundError("trip_not_found", `Trip ${tripId} not found`);
+      }
+      return trip;
+    });
+  }
+
+  private listContextMessages(tripId: string): Promise<AgentMessage[]> {
+    return this.observability.startSpan(
+      "opentrip.agent.load_history",
+      { tripId, historyLimit: CHAT_CONTEXT_LIMIT },
+      () => this.sessionRepo.listMessages(tripId, { limit: CHAT_CONTEXT_LIMIT }),
+    );
   }
 
   /** Members (including viewers) may read and talk; non-members get 404. */
@@ -178,7 +223,11 @@ export class AgentService {
   async postMessage(
     tripId: string,
     userId: string,
-    input: { text?: string; files?: AgentFilePart[] },
+    input: {
+      text?: string;
+      files?: AgentFilePart[];
+      observability?: AgentExecutionContext;
+    },
     defer: Defer,
   ): Promise<{ addressed: boolean; message: AgentMessageDto }> {
     const trip = await this.loadReadable(tripId, userId);
@@ -206,11 +255,23 @@ export class AgentService {
     // Explicit @agent always replies; otherwise ask the model whether this
     // message is addressing the agent. Member-to-member chatter stays quiet.
     if (explicitMention) {
-      defer(this.generateAmbientReply(tripId));
+      defer(
+        this.generateAmbientReply(
+          tripId,
+          undefined,
+          modelObservability("ambient", input.observability),
+        ),
+      );
       return { addressed: true, message: messageDto };
     }
 
-    defer(this.maybeReplyIfAddressed(tripId, addressedHint));
+    defer(
+      this.maybeReplyIfAddressed(
+        tripId,
+        addressedHint,
+        modelObservability("addressed_check", input.observability),
+      ),
+    );
     return { addressed: false, message: messageDto };
   }
 
@@ -232,6 +293,8 @@ export class AgentService {
       clientMessageId?: string;
       clientMessages?: AgentClientUIMessage[];
       approvalContinue?: boolean;
+      requestId?: string;
+      runtime?: RuntimeName;
     },
     /** Keep the Workers SQL pool open until stream persistence finishes. */
     defer: Defer = () => {},
@@ -239,6 +302,12 @@ export class AgentService {
     const trip = await this.loadReadable(tripId, userId);
     const canEdit = trip.permissionsFor(userId).canEdit;
     const approvalContinue = input.approvalContinue === true;
+    const turnId = initiatingAgentTurnId(input.clientMessages, input.clientMessageId);
+    const observability = modelObservability("chat", {
+      requestId: input.requestId,
+      runtime: input.runtime,
+      turnId,
+    });
 
     if (!approvalContinue) {
       const trimmed = (input.text ?? "").trim();
@@ -263,9 +332,7 @@ export class AgentService {
       });
     }
 
-    const history = await this.sessionRepo.listMessages(tripId, {
-      limit: CHAT_CONTEXT_LIMIT,
-    });
+    const history = await this.listContextMessages(tripId);
 
     // One in-memory Trip for this request — never findById between patches
     // (Hyperdrive SELECT cache would echo stale sibling days/stops).
@@ -285,52 +352,95 @@ export class AgentService {
     });
     defer(persistHold);
 
+    const chatSpan = this.observability.startTrace("opentrip.agent.chat", {
+      requestId: observability.requestId,
+      tripId,
+      agentSessionId: tripId,
+      turnId,
+      trigger: "chat",
+      runtime: observability.runtime,
+    });
     try {
-      return await this.model.streamChat({
-        trip: trip.toSnapshot(),
-        history,
-        clientMessages: input.clientMessages,
-        canEdit,
-        applyPatch: applyPatchSequentially,
-        onFinish: async (parts, messageId) => {
-          try {
-            // Do not persist mid-turn tool-approval pauses — the client keeps the
-            // live UIMessage until addToolApprovalResponse continues the stream.
-            // Persisting approval-requested parts would leave a dead card in the
-            // shared history that other clients cannot resume.
-            const awaitingApproval = parts.some((p) => {
-              if (typeof p !== "object" || p === null) return false;
-              return (p as { state?: unknown }).state === "approval-requested";
-            });
-            if (awaitingApproval) return;
+      const response = await chatSpan.run(() =>
+        this.model.streamChat({
+          trip: trip.toSnapshot(),
+          history,
+          clientMessages: input.clientMessages,
+          canEdit,
+          observability,
+          applyPatch: applyPatchSequentially,
+          onFinish: async (parts, messageId) => {
+            try {
+              // Do not persist mid-turn tool-approval pauses — the client keeps the
+              // live UIMessage until addToolApprovalResponse continues the stream.
+              // Persisting approval-requested parts would leave a dead card in the
+              // shared history that other clients cannot resume.
+              const awaitingApproval = parts.some((p) => {
+                if (typeof p !== "object" || p === null) return false;
+                return (p as { state?: unknown }).state === "approval-requested";
+              });
+              if (awaitingApproval) return;
 
-            // Stream errors (e.g. wrong MiniMax base URL → 404) still fire
-            // onFinish with an empty UIMessage. Do not leave a blank bubble.
-            if (!assistantPartsHaveContent(parts)) return;
+              // Stream errors (e.g. wrong MiniMax base URL → 404) still fire
+              // onFinish with an empty UIMessage. Do not leave a blank bubble.
+              if (!assistantPartsHaveContent(parts)) return;
 
-            await this.appendMessage(trip, {
-              // Reuse the streamed UIMessage id so the client can drop the live
-              // bubble once history refetches (same key as useChat).
-              id: messageId,
-              role: "assistant",
-              parts,
-              actorUserId: null,
-              source: "chat",
-            });
-          } finally {
-            releasePersistHold();
-          }
+              await this.appendMessage(trip, {
+                // Reuse the streamed UIMessage id so the client can drop the live
+                // bubble once history refetches (same key as useChat).
+                id: messageId,
+                role: "assistant",
+                parts,
+                actorUserId: null,
+                source: "chat",
+              });
+              this.observability.logger.info("agent.stream.complete", {
+                runtime: observability.runtime,
+                requestId: observability.requestId,
+                tripId,
+                turnId,
+                messageId,
+              });
+            } finally {
+              releasePersistHold();
+              chatSpan.end();
+            }
+          },
+        }),
+      );
+      if (!response.body) return response;
+      const reader = response.body.getReader();
+      const body = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          const next = await reader.read();
+          if (next.done) controller.close();
+          else controller.enqueue(next.value);
         },
+        async cancel(reason) {
+          chatSpan.setAttribute("opentrip.agent.client_disconnected", true);
+          await reader.cancel(reason);
+        },
+      });
+      return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
       });
     } catch (err) {
       releasePersistHold();
+      chatSpan.recordError(err);
+      chatSpan.end();
       throw err;
     }
   }
 
   /** Record a whitelisted write operation in the session and schedule the
    * AI-judged intervention decision. */
-  async recordOperation(event: OperationEvent, defer: Defer): Promise<void> {
+  async recordOperation(
+    event: OperationEvent,
+    defer: Defer,
+    context: AgentExecutionContext = {},
+  ): Promise<void> {
     const trip = await this.load(event.tripId);
     await this.appendMessage(trip, {
       role: "system",
@@ -338,7 +448,13 @@ export class AgentService {
       actorUserId: event.actorUserId,
       source: "operation",
     });
-    defer(this.evaluateOperation(trip, event));
+    defer(
+      this.evaluateOperation(
+        trip,
+        event,
+        modelObservability("operation", context),
+      ),
+    );
   }
 
   /**
@@ -353,6 +469,7 @@ export class AgentService {
     text: string,
     stopId: string,
     defer: Defer,
+    context: AgentExecutionContext = {},
   ): Promise<void> {
     const trip = await this.load(tripId);
     const parts = buildUserMessageParts(text, trip, userId);
@@ -367,7 +484,13 @@ export class AgentService {
       source: "stop_comment",
     });
     if (wantsAgent) {
-      defer(this.generateAmbientReply(tripId, { stopId }));
+      defer(
+        this.generateAmbientReply(
+          tripId,
+          { stopId },
+          modelObservability("ambient", context),
+        ),
+      );
     }
   }
 
@@ -391,11 +514,21 @@ export class AgentService {
     userId: string,
     approval: { id: string; approved: boolean; reason?: string },
   ): Promise<TripDto | { dismissed: true }> {
-    if (!approval.approved) {
-      await this.dismissSuggestion(tripId, approval.id, userId);
-      return { dismissed: true };
-    }
-    return this.applySuggestion(tripId, approval.id, userId, approval.reason);
+    return this.observability.startSpan(
+      "opentrip.agent.suggestion_response",
+      {
+        tripId,
+        suggestionId: approval.id,
+        approved: approval.approved,
+      },
+      async () => {
+        if (!approval.approved) {
+          await this.dismissSuggestion(tripId, approval.id, userId);
+          return { dismissed: true };
+        }
+        return this.applySuggestion(tripId, approval.id, userId, approval.reason);
+      },
+    );
   }
 
   async applySuggestion(
@@ -488,140 +621,255 @@ export class AgentService {
     },
   ): Promise<AgentMessage> {
     const { id, ...rest } = message;
-    return this.sessionRepo.appendMessage({
-      id: id && id.length > 0 ? id : newId("am"),
-      tripId: trip.id,
-      tripVersion: trip.toSnapshot().version,
-      ...rest,
-    });
+    const messageId = id && id.length > 0 ? id : newId("am");
+    return this.observability.startSpan(
+      "opentrip.agent.persist_message",
+      { tripId: trip.id, messageId, source: rest.source },
+      async () => {
+        const persisted = await this.sessionRepo.appendMessage({
+          id: messageId,
+          tripId: trip.id,
+          tripVersion: trip.toSnapshot().version,
+          ...rest,
+        });
+        this.observability.logger.info("agent.persist_message", {
+          tripId: trip.id,
+          messageId: persisted.id,
+          source: persisted.source,
+          tripVersion: persisted.tripVersion,
+        });
+        return persisted;
+      },
+    );
   }
 
   private async maybeReplyIfAddressed(
     tripId: string,
     messageText: string,
+    observability: AgentObservabilityContext,
   ): Promise<void> {
-    try {
-      const trip = await this.load(tripId);
-      const history = await this.sessionRepo.listMessages(tripId, {
-        limit: CHAT_CONTEXT_LIMIT,
-      });
-      // Deterministic: short confirmations / follow-ups right after an agent
-      // turn continue the thread without requiring @agent.
-      const addressed =
-        looksLikeAgentThreadFollowUp(history, messageText) ||
-        (await this.model.isAddressed({
-          trip: trip.toSnapshot(),
-          history,
-          messageText,
-        }));
-      if (!addressed) return;
-      await this.generateAmbientReply(tripId);
-    } catch (err) {
-      console.error("Agent addressed-message check failed:", err);
-    }
+    const span = this.observability.startTrace("opentrip.agent.addressed_check", {
+      tripId,
+      turnId: observability.turnId,
+      requestId: observability.requestId,
+      trigger: observability.trigger,
+      runtime: observability.runtime,
+    });
+    await span.run(async () => {
+      try {
+        const trip = await this.load(tripId);
+        const history = await this.listContextMessages(tripId);
+        // Deterministic: short confirmations / follow-ups right after an agent
+        // turn continue the thread without requiring @agent.
+        const addressed =
+          looksLikeAgentThreadFollowUp(history, messageText) ||
+          (await this.model.isAddressed({
+            trip: trip.toSnapshot(),
+            history,
+            messageText,
+            observability,
+          }));
+        if (!addressed) return;
+        await this.generateAmbientReply(tripId, undefined, {
+          ...observability,
+          trigger: "ambient",
+        });
+      } catch (err) {
+        span.recordError(err);
+        this.observability.logger.error("agent.addressed_check_failed", {
+          tripId,
+          turnId: observability.turnId,
+          requestId: observability.requestId,
+          runtime: observability.runtime,
+          error: err,
+        });
+        this.observability.captureException(err, {
+          tripId,
+          turnId: observability.turnId,
+          runtime: observability.runtime,
+        });
+      } finally {
+        span.end();
+      }
+    });
   }
 
   private async generateAmbientReply(
     tripId: string,
     options?: { stopId?: string },
+    observability: AgentObservabilityContext = modelObservability("ambient"),
   ): Promise<void> {
-    try {
-      const trip = await this.load(tripId);
-      const history = await this.sessionRepo.listMessages(tripId, {
-        limit: CHAT_CONTEXT_LIMIT,
-      });
-      const parts = await this.model.generateReply({
-        trip: trip.toSnapshot(),
-        history,
-      });
-      const stopId = options?.stopId?.trim();
-      await this.appendMessage(trip, {
-        role: "assistant",
-        parts,
-        actorUserId: null,
-        source: stopId ? "stop_comment" : "threshold",
-      });
-      if (stopId) {
-        const text = textFromAgentParts(parts);
-        if (text) {
-          // Reload so we do not overwrite concurrent trip edits with a stale
-          // aggregate while the model was generating.
-          const fresh = await this.load(tripId);
-          fresh.addComment(stopId, AGENT_COMMENT_AUTHOR, text);
-          await this.tripRepo.save(fresh);
+    const span = this.observability.startTrace("opentrip.agent.ambient_reply", {
+      tripId,
+      turnId: observability.turnId,
+      requestId: observability.requestId,
+      trigger: observability.trigger,
+      runtime: observability.runtime,
+    });
+    await span.run(async () => {
+      try {
+        const trip = await this.load(tripId);
+        const history = await this.listContextMessages(tripId);
+        const parts = await this.model.generateReply({
+          trip: trip.toSnapshot(),
+          history,
+          observability,
+        });
+        const stopId = options?.stopId?.trim();
+        await this.appendMessage(trip, {
+          role: "assistant",
+          parts,
+          actorUserId: null,
+          source: stopId ? "stop_comment" : "threshold",
+        });
+        if (stopId) {
+          const text = textFromAgentParts(parts);
+          if (text) {
+            // Reload so we do not overwrite concurrent trip edits with a stale
+            // aggregate while the model was generating.
+            const fresh = await this.load(tripId);
+            fresh.addComment(stopId, AGENT_COMMENT_AUTHOR, text);
+            await this.tripRepo.save(fresh);
+          }
         }
+      } catch (err) {
+        span.recordError(err);
+        this.observability.logger.error("agent.ambient_reply_failed", {
+          tripId,
+          turnId: observability.turnId,
+          requestId: observability.requestId,
+          runtime: observability.runtime,
+          error: err,
+        });
+        this.observability.captureException(err, {
+          tripId,
+          turnId: observability.turnId,
+          runtime: observability.runtime,
+        });
+      } finally {
+        span.end();
       }
-    } catch (err) {
-      console.error("Agent ambient reply failed:", err);
-    }
+    });
   }
 
-  private async evaluateOperation(trip: Trip, event: OperationEvent): Promise<void> {
-    try {
-      const history = await this.sessionRepo.listMessages(event.tripId, {
-        limit: CHAT_CONTEXT_LIMIT,
-      });
-      const decision = await this.model.evaluateOperation({
-        trip: trip.toSnapshot(),
-        event,
-        history,
-      });
-
-      if (!decision.shouldNotify) return;
-
-      const notify =
-        decision.confidence >= this.options.proactiveThreshold &&
-        decision.pendingPatch !== null &&
-        getTripOp(decision.pendingPatch.kind)?.allowProactive === true;
-
-      if (!notify) {
-        // Quiet context: visible in the session timeline, but no toast.
-        await this.appendMessage(trip, {
-          role: "system",
-          parts: [{ type: "text", text: `Observation: ${decision.reason}` }],
-          actorUserId: null,
-          source: "operation",
+  private async evaluateOperation(
+    trip: Trip,
+    event: OperationEvent,
+    observability: AgentObservabilityContext,
+  ): Promise<void> {
+    const span = this.observability.startTrace("opentrip.agent.operation_evaluation", {
+      tripId: event.tripId,
+      turnId: observability.turnId,
+      requestId: observability.requestId,
+      trigger: observability.trigger,
+      operationKind: event.operation,
+      runtime: observability.runtime,
+    });
+    await span.run(async () => {
+      try {
+        const history = await this.listContextMessages(event.tripId);
+        const decision = await this.model.evaluateOperation({
+          trip: trip.toSnapshot(),
+          event,
+          history,
+          observability,
         });
-        return;
-      }
 
-      const message = await this.appendMessage(trip, {
-        role: "assistant",
-        parts: [
-          { type: "text", text: `${decision.reason}\n\n${decision.suggestion}` },
-        ],
-        actorUserId: null,
-        source: "threshold",
-      });
-      await this.sessionRepo.createSuggestion({
-        id: newId("as"),
-        tripId: event.tripId,
-        messageId: message.id,
-        severity: decision.severity,
-        confidence: decision.confidence,
-        reason: decision.reason,
-        suggestionText: decision.suggestion,
-        patch: decision.pendingPatch!,
-        tripVersion: trip.toSnapshot().version,
-        expiresAt: decision.expiresInMinutes
-          ? new Date(Date.now() + decision.expiresInMinutes * 60 * 1000).toISOString()
-          : null,
-      });
-    } catch (err) {
-      console.error("Agent operation evaluation failed:", err);
-    }
+        if (!decision.shouldNotify) return;
+
+        const notify =
+          decision.confidence >= this.options.proactiveThreshold &&
+          decision.pendingPatch !== null &&
+          getTripOp(decision.pendingPatch.kind)?.allowProactive === true;
+
+        if (!notify) {
+          // Quiet context: visible in the session timeline, but no toast.
+          await this.appendMessage(trip, {
+            role: "system",
+            parts: [{ type: "text", text: `Observation: ${decision.reason}` }],
+            actorUserId: null,
+            source: "operation",
+          });
+          return;
+        }
+
+        const message = await this.appendMessage(trip, {
+          role: "assistant",
+          parts: [
+            { type: "text", text: `${decision.reason}\n\n${decision.suggestion}` },
+          ],
+          actorUserId: null,
+          source: "threshold",
+        });
+        const suggestionId = newId("as");
+        await this.sessionRepo.createSuggestion({
+          id: suggestionId,
+          tripId: event.tripId,
+          messageId: message.id,
+          severity: decision.severity,
+          confidence: decision.confidence,
+          reason: decision.reason,
+          suggestionText: decision.suggestion,
+          patch: decision.pendingPatch!,
+          tripVersion: trip.toSnapshot().version,
+          expiresAt: decision.expiresInMinutes
+            ? new Date(
+                Date.now() + decision.expiresInMinutes * 60 * 1000,
+              ).toISOString()
+            : null,
+        });
+        this.observability.logger.info("agent.suggestion.created", {
+          tripId: event.tripId,
+          turnId: observability.turnId,
+          messageId: message.id,
+          suggestionId,
+          tripVersion: trip.toSnapshot().version,
+          runtime: observability.runtime,
+        });
+      } catch (err) {
+        span.recordError(err);
+        this.observability.logger.error("agent.operation_evaluation_failed", {
+          tripId: event.tripId,
+          turnId: observability.turnId,
+          requestId: observability.requestId,
+          runtime: observability.runtime,
+          error: err,
+        });
+        this.observability.captureException(err, {
+          tripId: event.tripId,
+          turnId: observability.turnId,
+          runtime: observability.runtime,
+        });
+      } finally {
+        span.end();
+      }
+    });
   }
 
   /** Run the pending patch via the trip ops catalog (domain + repository). */
   private applyPatch(trip: Trip, patch: PendingPatch, actorUserId: string) {
-    return applyTripOp(
+    const versionBefore = trip.toSnapshot().version;
+    return this.observability.startSpan(
+      "opentrip.trip.operation.apply",
       {
-        trip,
-        actorUserId,
-        tripRepo: this.tripRepo,
-        tripChangePublisher: this.tripChangePublisher,
+        tripId: trip.id,
+        operationKind: patch.kind,
+        tripVersionBefore: versionBefore,
       },
-      patch,
+      async (span) => {
+        const result = await applyTripOp(
+          {
+            trip,
+            actorUserId,
+            tripRepo: this.tripRepo,
+            tripChangePublisher: this.tripChangePublisher,
+          },
+          patch,
+        );
+        span.setAttribute("opentrip.trip.version_after", trip.toSnapshot().version);
+        span.setAttribute("opentrip.operation.ok", result.ok);
+        return result;
+      },
     );
   }
 }

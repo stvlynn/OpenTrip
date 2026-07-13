@@ -13,8 +13,17 @@
   // Account comes from CLOUDFLARE_ACCOUNT_ID (Actions secret / local env).
   // Do not commit a production account_id here.
   "workers_dev": true,
+  "upload_source_maps": true,
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1
+    }
   },
   "durable_objects": {
     "bindings": [

@@ -46,6 +46,11 @@ function baseConfig(googleOAuth: AppConfig["googleOAuth"]): AppConfig {
       geocodeUserAgent: "OpenTrip-test",
     },
     ai: null,
+    observability: {
+      sentryDsn: undefined,
+      environment: "test",
+      release: undefined,
+    },
     streetView: null,
     unsplashAccessKey: undefined,
   };
@@ -107,6 +112,17 @@ function createTestApp(options: {
 }
 
 describe("mobile OAuth start", () => {
+  it("returns a stable request id on every API response", async () => {
+    const { app } = createTestApp({ googleOAuth: null });
+    const generated = await app.request("/api/health");
+    expect(generated.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
+
+    const supplied = await app.request("/api/health", {
+      headers: { "x-request-id": "request_client-123" },
+    });
+    expect(supplied.headers.get("x-request-id")).toBe("request_client-123");
+  });
+
   it("redirects to Google and forwards OAuth state cookies", async () => {
     const { app, signInSocial } = createTestApp({
       googleOAuth: { clientId: "id", clientSecret: "secret" },

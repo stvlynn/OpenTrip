@@ -36,6 +36,7 @@ import { UnsplashCoverProvider } from "../cover/unsplash-cover-provider";
 import type { AppConfig } from "../config";
 import type { TripChangePublisher } from "../../domain/realtime";
 import { MapillaryStreetViewProvider } from "../street-view/mapillary/mapillary-provider";
+import { observability } from "../observability";
 
 export interface CreateContainerOptions {
   /**
@@ -202,6 +203,7 @@ export function createContainer(
           proactiveThreshold: config.ai.proactiveThreshold,
         },
         options?.tripChangePublisher ?? null,
+        observability,
       )
     : null;
 

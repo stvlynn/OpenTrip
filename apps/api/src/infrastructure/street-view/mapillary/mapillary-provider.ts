@@ -19,7 +19,30 @@ const IMAGE_FIELDS = [
 ].join(",");
 const MAX_PREVIEW_BYTES = 2 * 1024 * 1024;
 const CANDIDATE_LIMIT = 20;
+const MAX_INITIAL_CELL_EDGE_METERS = 500;
+const MAX_REGION_REQUESTS = 48;
+const LANE_CONCURRENCY = 3;
+const MAX_SPLIT_DEPTH = 4;
 const SUPPORTED_MEDIA = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+type BoundingBox = [number, number, number, number];
+
+interface SearchRegion {
+  bbox: BoundingBox;
+  depth: number;
+}
+
+interface SearchBudget {
+  remainingRequests: number;
+  deadline: number;
+}
+
+interface LaneSearchResult {
+  images: StreetViewImage[];
+  completeness: "complete" | "partial";
+  attemptedRegions: number;
+  splitRegions: number;
+}
 
 interface MapillaryImageJson {
   id?: string;
@@ -39,12 +62,18 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
 
   async searchNearby(query: StreetViewSearchQuery): Promise<StreetViewProviderSearchResult> {
     const bbox = boundingBox(query.lat, query.lng, query.radiusMeters);
+    const regions = initialRegions(bbox, query.radiusMeters);
+    const budget: SearchBudget = {
+      remainingRequests: MAX_REGION_REQUESTS,
+      deadline: Date.now() + this.timeoutMs,
+    };
+    const startedAt = Date.now();
     const [panoramas, general] = await Promise.allSettled([
-      this.searchLane(bbox, "pano"),
-      this.searchLane(bbox),
+      this.searchLane(regions, budget, "pano"),
+      this.searchLane(regions, budget),
     ]);
     const successful = [panoramas, general].filter(
-      (result): result is PromiseFulfilledResult<StreetViewImage[]> =>
+      (result): result is PromiseFulfilledResult<LaneSearchResult> =>
         result.status === "fulfilled",
     );
     if (successful.length === 0) {
@@ -54,16 +83,106 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
     }
     const merged = new Map<string, StreetViewImage>();
     for (const result of successful) {
-      for (const image of result.value) merged.set(image.id, image);
+      for (const image of result.value.images) merged.set(image.id, image);
     }
+    const completeness =
+      successful.length === 2 && successful.every((result) => result.value.completeness === "complete")
+        ? "complete"
+        : "partial";
+    console.info("Mapillary street-view search completed", {
+      event: "street_view.mapillary_search_completed",
+      radiusMeters: query.radiusMeters,
+      initialRegionCount: regions.length,
+      attemptedRegionCount: successful.reduce(
+        (count, result) => count + result.value.attemptedRegions,
+        0,
+      ),
+      splitRegionCount: successful.reduce(
+        (count, result) => count + result.value.splitRegions,
+        0,
+      ),
+      resultCount: merged.size,
+      completeness,
+      durationMs: Date.now() - startedAt,
+    });
     return {
       images: [...merged.values()],
-      completeness: successful.length === 2 ? "complete" : "partial",
+      completeness,
     };
   }
 
   private async searchLane(
-    bbox: [number, number, number, number],
+    initial: SearchRegion[],
+    budget: SearchBudget,
+    imageType?: "pano",
+  ): Promise<LaneSearchResult> {
+    const queue = [...initial];
+    const images = new Map<string, StreetViewImage>();
+    let attemptedRegions = 0;
+    let splitRegions = 0;
+    let successfulRegions = 0;
+    let incomplete = false;
+    let firstError: unknown;
+
+    while (queue.length > 0) {
+      const batch = queue.splice(0, LANE_CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (region) => {
+          const requestTimeoutMs = takeRequestBudget(budget);
+          if (requestTimeoutMs === null) {
+            return { region, outcome: "budget_exhausted" as const };
+          }
+          attemptedRegions += 1;
+          try {
+            return {
+              region,
+              outcome: "success" as const,
+              images: await this.searchRegion(region.bbox, requestTimeoutMs, imageType),
+            };
+          } catch (error) {
+            return { region, outcome: "failure" as const, error };
+          }
+        }),
+      );
+
+      for (const result of results) {
+        if (result.outcome === "success") {
+          successfulRegions += 1;
+          for (const image of result.images) images.set(image.id, image);
+          continue;
+        }
+        if (result.outcome === "budget_exhausted") {
+          incomplete = true;
+          firstError ??= new StreetViewError(
+            Date.now() >= budget.deadline ? "street_view_timeout" : "street_view_upstream_error",
+            Date.now() >= budget.deadline
+              ? "Street-view provider timed out"
+              : "Street-view provider request budget exhausted",
+          );
+          continue;
+        }
+        if (result.error instanceof MapillaryQueryTooLargeError && result.region.depth < MAX_SPLIT_DEPTH) {
+          splitRegions += 1;
+          queue.push(...splitRegion(result.region));
+          continue;
+        }
+        incomplete = true;
+        firstError ??= result.error;
+      }
+    }
+
+    if (successfulRegions === 0 && firstError) throw firstError;
+    return {
+      images: [...images.values()],
+      completeness: incomplete ? "partial" : "complete",
+      attemptedRegions,
+      splitRegions,
+    };
+  }
+
+  private async searchRegion(
+    bbox: BoundingBox,
+    timeoutMs: number,
     imageType?: "pano",
   ): Promise<StreetViewImage[]> {
     const url = new URL(`${GRAPH_URL}/images`);
@@ -72,7 +191,10 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
     url.searchParams.set("bbox", bbox.join(","));
     url.searchParams.set("limit", String(CANDIDATE_LIMIT));
     if (imageType) url.searchParams.set("image_type", imageType);
-    const payload = await this.readJson<{ data?: MapillaryImageJson[] }>(url);
+    const payload = await this.readJson<{ data?: MapillaryImageJson[] }>(url, {
+      recognizeOversizedRegion: true,
+      timeoutMs,
+    });
     const images = (payload.data ?? [])
       .map(toImage)
       .filter((image): image is StreetViewImage => image !== null);
@@ -117,9 +239,17 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
     return { provider: "mapillary", accessToken: this.accessToken };
   }
 
-  private async readJson<T>(url: URL): Promise<T> {
-    const response = await this.fetchWithTimeout(url);
-    if (!response.ok) throw upstreamError(response.status);
+  private async readJson<T>(
+    url: URL,
+    options?: { recognizeOversizedRegion?: boolean; timeoutMs?: number },
+  ): Promise<T> {
+    const response = await this.fetchWithTimeout(url, options?.timeoutMs);
+    if (!response.ok) {
+      if (options?.recognizeOversizedRegion && (await isOversizedRegionResponse(response))) {
+        throw new MapillaryQueryTooLargeError();
+      }
+      throw upstreamError(response.status);
+    }
     try {
       return (await response.json()) as T;
     } catch {
@@ -127,15 +257,22 @@ export class MapillaryStreetViewProvider implements StreetViewProvider {
     }
   }
 
-  private async fetchWithTimeout(input: URL | string): Promise<Response> {
+  private async fetchWithTimeout(input: URL | string, timeoutMs = this.timeoutMs): Promise<Response> {
     try {
-      return await this.fetchImpl(input, { signal: AbortSignal.timeout(this.timeoutMs) });
+      return await this.fetchImpl(input, { signal: AbortSignal.timeout(Math.max(1, timeoutMs)) });
     } catch (error) {
       if (error instanceof DOMException && error.name === "TimeoutError") {
         throw new StreetViewError("street_view_timeout", "Street-view provider timed out");
       }
       throw new StreetViewError("street_view_upstream_error", "Street-view provider request failed");
     }
+  }
+}
+
+class MapillaryQueryTooLargeError extends Error {
+  constructor() {
+    super("Mapillary search region contains too much data");
+    this.name = "MapillaryQueryTooLargeError";
   }
 }
 
@@ -155,10 +292,67 @@ function toImage(value: MapillaryImageJson): StreetViewImage | null {
   };
 }
 
-function boundingBox(lat: number, lng: number, radiusMeters: number): [number, number, number, number] {
+function boundingBox(lat: number, lng: number, radiusMeters: number): BoundingBox {
   const latDelta = radiusMeters / 111_320;
   const lngDelta = radiusMeters / (111_320 * Math.max(0.01, Math.cos((lat * Math.PI) / 180)));
   return [lng - lngDelta, lat - latDelta, lng + lngDelta, lat + latDelta];
+}
+
+function initialRegions(bbox: BoundingBox, radiusMeters: number): SearchRegion[] {
+  const cellsPerAxis = Math.max(1, Math.ceil((radiusMeters * 2) / MAX_INITIAL_CELL_EDGE_METERS));
+  const [west, south, east, north] = bbox;
+  const lngStep = (east - west) / cellsPerAxis;
+  const latStep = (north - south) / cellsPerAxis;
+  const regions: SearchRegion[] = [];
+  for (let latIndex = 0; latIndex < cellsPerAxis; latIndex += 1) {
+    for (let lngIndex = 0; lngIndex < cellsPerAxis; lngIndex += 1) {
+      regions.push({
+        bbox: [
+          west + lngStep * lngIndex,
+          south + latStep * latIndex,
+          west + lngStep * (lngIndex + 1),
+          south + latStep * (latIndex + 1),
+        ],
+        depth: 0,
+      });
+    }
+  }
+  return regions;
+}
+
+function splitRegion(region: SearchRegion): SearchRegion[] {
+  const [west, south, east, north] = region.bbox;
+  const middleLng = (west + east) / 2;
+  const middleLat = (south + north) / 2;
+  const depth = region.depth + 1;
+  return [
+    { bbox: [west, south, middleLng, middleLat], depth },
+    { bbox: [middleLng, south, east, middleLat], depth },
+    { bbox: [west, middleLat, middleLng, north], depth },
+    { bbox: [middleLng, middleLat, east, north], depth },
+  ];
+}
+
+function takeRequestBudget(budget: SearchBudget): number | null {
+  const remainingMs = budget.deadline - Date.now();
+  if (budget.remainingRequests <= 0 || remainingMs <= 0) return null;
+  budget.remainingRequests -= 1;
+  return remainingMs;
+}
+
+async function isOversizedRegionResponse(response: Response): Promise<boolean> {
+  if (response.status !== 500) return false;
+  try {
+    const payload = (await response.clone().json()) as {
+      error?: { code?: number; message?: string };
+    };
+    return (
+      payload.error?.code === 1 &&
+      payload.error.message?.toLowerCase().includes("reduce the amount of data") === true
+    );
+  } catch {
+    return false;
+  }
 }
 
 function upstreamError(status: number): StreetViewError {

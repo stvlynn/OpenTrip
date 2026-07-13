@@ -30,6 +30,15 @@ export interface AiConfig {
     proactiveThreshold: number;
     /** Upper bound on tool-call steps per chat generation. */
     maxToolSteps: number;
+    /** Record full textual model inputs/outputs in the configured telemetry sink. */
+    telemetryRecordContent: boolean;
+}
+
+export interface ObservabilityConfig {
+    /** Sentry is disabled when the DSN is absent. */
+    sentryDsn: string | undefined;
+    environment: string;
+    release: string | undefined;
 }
 
 export interface StreetViewConfig {
@@ -96,6 +105,7 @@ export interface AppConfig {
     lodging: LodgingConfig;
     /** Trip agent model configuration. Null disables the agent entirely. */
     ai: AiConfig | null;
+    observability: ObservabilityConfig;
     /** Street-view provider configuration. Null disables the capability. */
     streetView: StreetViewConfig | null;
     /** Unsplash access key for trip cover search. Undefined disables covers. */
@@ -171,6 +181,10 @@ export interface RawEnv {
     AI_API_KEY?: string;
     AI_PROACTIVE_THRESHOLD?: string;
     AI_MAX_TOOL_STEPS?: string;
+    AI_TELEMETRY_RECORD_CONTENT?: string;
+    SENTRY_DSN?: string;
+    SENTRY_ENVIRONMENT?: string;
+    SENTRY_RELEASE?: string;
     STREET_VIEW_PROVIDER?: string;
     MAPILLARY_ACCESS_TOKEN?: string;
     STREET_VIEW_TIMEOUT_MS?: string;
@@ -256,6 +270,11 @@ export function loadConfig(env: RawEnv, connectionString?: string): AppConfig {
         geo: parseGeoConfig(env),
         lodging: parseLodgingConfig(env),
         ai: parseAiConfig(env),
+        observability: {
+            sentryDsn: env.SENTRY_DSN?.trim() || undefined,
+            environment: env.SENTRY_ENVIRONMENT?.trim() || "development",
+            release: env.SENTRY_RELEASE?.trim() || undefined,
+        },
         streetView: parseStreetViewConfig(env),
         unsplashAccessKey: env.UNSPLASH_ACCESS_KEY?.trim() || undefined,
     };
@@ -391,6 +410,9 @@ function parseAiConfig(env: RawEnv): AiConfig | null {
             0.7,
         ),
         maxToolSteps: parseNumber(env.AI_MAX_TOOL_STEPS, "AI_MAX_TOOL_STEPS", 16),
+        telemetryRecordContent: parseBooleanFlag(
+            env.AI_TELEMETRY_RECORD_CONTENT,
+        ),
     };
 }
 

@@ -29,6 +29,18 @@ function image(
   };
 }
 
+function oversizedRegionResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: 1,
+        message: "Please reduce the amount of data you're asking for, then retry your request",
+      },
+    }),
+    { status: 500, headers: { "content-type": "application/json" } },
+  );
+}
+
 describe("StreetViewService", () => {
   it("filters to the circular radius and ranks panoramas deterministically", async () => {
     const service = new StreetViewService(
@@ -111,6 +123,7 @@ describe("StreetViewService", () => {
 
 describe("MapillaryStreetViewProvider", () => {
   it("merges bounded panorama and general candidate lanes without leaking the token", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const fetchMock = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
       const url = new URL(String(input));
       const isPanoramaLane = url.searchParams.get("image_type") === "pano";
@@ -160,9 +173,68 @@ describe("MapillaryStreetViewProvider", () => {
     expect(requested.some((url) => url.searchParams.get("image_type") === "pano")).toBe(true);
     expect(requested.every((url) => url.searchParams.get("limit") === "20")).toBe(true);
     expect(JSON.stringify(result)).not.toContain("secret-token");
+    expect(info).toHaveBeenCalledWith(
+      "Mapillary street-view search completed",
+      expect.objectContaining({
+        event: "street_view.mapillary_search_completed",
+        initialRegionCount: 1,
+        attemptedRegionCount: 2,
+        splitRegionCount: 0,
+        completeness: "complete",
+      }),
+    );
+    info.mockRestore();
+  });
+
+  it("subdivides only oversized Mapillary regions and deduplicates their results", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const fetchMock = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = new URL(String(input));
+      const bbox = url.searchParams.get("bbox")!.split(",").map(Number);
+      const height = bbox[3]! - bbox[1]!;
+      if (height > 0.002) return oversizedRegionResponse();
+      const isPanoramaLane = url.searchParams.get("image_type") === "pano";
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              id: isPanoramaLane ? "pano" : "static",
+              computed_geometry: { coordinates: [20, 10] },
+              is_pano: isPanoramaLane,
+              thumb_1024_url: `https://images.example/${isPanoramaLane ? "pano" : "static"}.jpg`,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    const adapter = new MapillaryStreetViewProvider(
+      "token",
+      5_000,
+      fetchMock as unknown as typeof fetch,
+    );
+
+    await expect(
+      adapter.searchNearby({ lat: 10, lng: 20, radiusMeters: 400, limit: 5 }),
+    ).resolves.toMatchObject({
+      completeness: "complete",
+      images: [{ id: "pano" }, { id: "static" }],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(40);
+    expect(info).toHaveBeenCalledWith(
+      "Mapillary street-view search completed",
+      expect.objectContaining({
+        initialRegionCount: 4,
+        attemptedRegionCount: 40,
+        splitRegionCount: 8,
+        completeness: "complete",
+      }),
+    );
+    info.mockRestore();
   });
 
   it("returns partial candidates when one lane fails and throws when both fail", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const partlyFailingFetch = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
       const url = new URL(String(input));
       if (url.searchParams.get("image_type") === "pano") return new Response("no", { status: 500 });
@@ -185,6 +257,35 @@ describe("MapillaryStreetViewProvider", () => {
     await expect(
       failed.searchNearby({ lat: 10, lng: 20, radiusMeters: 100, limit: 5 }),
     ).rejects.toBeInstanceOf(StreetViewError);
+    info.mockRestore();
+  });
+
+  it("does not subdivide unrelated upstream errors", async () => {
+    const fetchMock = vi.fn(async () => new Response("no", { status: 500 }));
+    const adapter = new MapillaryStreetViewProvider(
+      "token",
+      5_000,
+      fetchMock as unknown as typeof fetch,
+    );
+
+    await expect(
+      adapter.searchNearby({ lat: 10, lng: 20, radiusMeters: 400, limit: 5 }),
+    ).rejects.toMatchObject({ code: "street_view_upstream_error" });
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+  });
+
+  it("bounds recursive subdivision with a shared request budget", async () => {
+    const fetchMock = vi.fn(async () => oversizedRegionResponse());
+    const adapter = new MapillaryStreetViewProvider(
+      "token",
+      5_000,
+      fetchMock as unknown as typeof fetch,
+    );
+
+    await expect(
+      adapter.searchNearby({ lat: 10, lng: 20, radiusMeters: 1_000, limit: 5 }),
+    ).rejects.toBeInstanceOf(StreetViewError);
+    expect(fetchMock).toHaveBeenCalledTimes(48);
   });
 });
 
@@ -216,16 +317,15 @@ describe("street-view AI tools", () => {
       outcome: "found",
       panoramaAvailable: false,
     });
-    expect(info).toHaveBeenCalledWith(
-      "Street-view search completed",
-      expect.objectContaining({
-        event: "street_view.search_completed",
-        outcome: "found",
-        completeness: "complete",
-        candidateCount: 1,
-        panoramaCount: 0,
-      }),
-    );
+    expect(JSON.parse(String(info.mock.calls[0]?.[0]))).toMatchObject({
+      level: "info",
+      event: "street_view.search_completed",
+      runtime: "node",
+      outcome: "found",
+      completeness: "complete",
+      candidateCount: 1,
+      panoramaCount: 0,
+    });
 
     const inspect = tools.streetViewInspect as unknown as {
       execute: (input: { imageId: string }) => Promise<{ id: string; supports360: boolean }>;

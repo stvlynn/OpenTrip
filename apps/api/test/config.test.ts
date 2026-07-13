@@ -230,3 +230,36 @@ describe("loadConfig street view", () => {
     ).toThrow("MAPILLARY_ACCESS_TOKEN is required");
   });
 });
+
+describe("loadConfig observability", () => {
+  it("keeps Sentry optional and parses the AI content switch", () => {
+    const disabled = loadConfig({
+      ...BASE_ENV,
+      STORAGE_BACKEND: "fs",
+      STORAGE_ROOT: "/data",
+    });
+    expect(disabled.observability).toEqual({
+      sentryDsn: undefined,
+      environment: "development",
+      release: undefined,
+    });
+
+    const enabled = loadConfig({
+      ...BASE_ENV,
+      STORAGE_BACKEND: "fs",
+      STORAGE_ROOT: "/data",
+      AI_MODEL: "test-model",
+      AI_API_KEY: "test-key",
+      AI_TELEMETRY_RECORD_CONTENT: "true",
+      SENTRY_DSN: "https://public@example.ingest.sentry.io/1",
+      SENTRY_ENVIRONMENT: "staging",
+      SENTRY_RELEASE: "abc123",
+    });
+    expect(enabled.ai?.telemetryRecordContent).toBe(true);
+    expect(enabled.observability).toEqual({
+      sentryDsn: "https://public@example.ingest.sentry.io/1",
+      environment: "staging",
+      release: "abc123",
+    });
+  });
+});
