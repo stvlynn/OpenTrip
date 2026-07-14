@@ -68,13 +68,16 @@ current model step. Panorama-only hits and preview failures stay text-only.
 `street_view.search_model_output` logs the attach outcome
 (`attached` / `skipped_empty` / `skipped_panorama_only` / `preview_unavailable`).
 
-The agent omits `radiusMeters` on its first attempt to use the 100 m default. It
-may retry once at the same center with a larger radius only after a successful
-`empty` or `partial` result. A thrown provider error removes both street-view
-tools for the rest of that generation and must not trigger guessed-coordinate
-retries or be presented as proof of missing coverage. After a `found` search the
-model must emit `StreetViewCard` with a returned id in the same reply rather than
-replacing the card with a prose metadata caption.
+The agent runtime always executes the first search at 100 m, even if the model
+supplies a larger radius. It may retry once at the same center with a radius no
+greater than 250 m, and only after a successful `empty` or `partial` result.
+These runtime bounds keep dense-area fan-out inside the provider's shared
+request/deadline budget; prompt wording alone is not treated as enforcement. A
+thrown provider error removes both street-view tools for the rest of that
+generation and must not trigger guessed-coordinate retries or be presented as
+proof of missing coverage. After a `found` search the model must emit
+`StreetViewCard` with a returned id in the same reply rather than replacing the
+card with a prose metadata caption.
 
 `StreetViewCard` and `openStreetView` are grounded capabilities: their image id
 must appear in a successful street-view tool output in the same assistant

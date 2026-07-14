@@ -64,10 +64,16 @@ import {
   writeToolNames,
 } from "../../application/trip/ops";
 import type { AiConfig } from "../config";
-import { logger, startSpan as startObservabilitySpan } from "../observability";
+import {
+  captureException,
+  logger,
+  startSpan as startObservabilitySpan,
+} from "../observability";
 
 const NOTE_CONTEXT_MAX = 2_000;
 const STREET_VIEW_TOOLS = new Set(["streetViewSearch", "streetViewInspect"]);
+const INITIAL_STREET_VIEW_RADIUS_METERS = 100;
+const MAX_AGENT_STREET_VIEW_RETRY_RADIUS_METERS = 250;
 const STREET_VIEW_FAILURE_INSTRUCTION =
   "The one real street-view provider call in this turn failed. Do not call another street-view tool, claim that other coordinates were tried, reuse an older image id, or emit StreetViewCard/openStreetView UI. State only that this call failed and let the member choose whether to try again in a new request.";
 const STREET_VIEW_POLICY_INSTRUCTION =
@@ -93,7 +99,7 @@ export class StreetViewToolPolicy {
   private searchInFlight = false;
   private readonly inspectableIds = new Set<string>();
 
-  validateSearch(input: StreetViewSearchToolInput): void {
+  validateSearch(input: StreetViewSearchToolInput): StreetViewSearchToolInput {
     if (this.blockedReason || this.searchInFlight || this.searchCount >= 2) {
       this.blockedReason ??= "policy";
       throw this.policyError("Street-view search is no longer available in this turn");
@@ -101,16 +107,24 @@ export class StreetViewToolPolicy {
     if (!this.firstSearch) {
       this.searchInFlight = true;
       this.searchCount += 1;
-      return;
+      return { ...input, radiusMeters: INITIAL_STREET_VIEW_RADIUS_METERS };
     }
+    const effectiveInput = {
+      ...input,
+      radiusMeters: Math.min(
+        input.radiusMeters ?? INITIAL_STREET_VIEW_RADIUS_METERS,
+        MAX_AGENT_STREET_VIEW_RETRY_RADIUS_METERS,
+      ),
+    };
     const retryableResult =
       this.firstSearch.outcome === "empty" ||
       this.firstSearch.completeness === "partial";
-    const firstRadius = this.firstSearch.input.radiusMeters ?? 100;
-    const retryRadius = input.radiusMeters ?? 100;
+    const firstRadius =
+      this.firstSearch.input.radiusMeters ?? INITIAL_STREET_VIEW_RADIUS_METERS;
+    const retryRadius = effectiveInput.radiusMeters;
     const sameCenter =
-      Math.abs(input.lat - this.firstSearch.input.lat) <= 1e-5 &&
-      Math.abs(input.lng - this.firstSearch.input.lng) <= 1e-5;
+      Math.abs(effectiveInput.lat - this.firstSearch.input.lat) <= 1e-5 &&
+      Math.abs(effectiveInput.lng - this.firstSearch.input.lng) <= 1e-5;
     if (!retryableResult || !sameCenter || retryRadius <= firstRadius) {
       this.blockedReason = "policy";
       throw this.policyError(
@@ -119,6 +133,7 @@ export class StreetViewToolPolicy {
     }
     this.searchInFlight = true;
     this.searchCount += 1;
+    return effectiveInput;
   }
 
   recordSearchSuccess(
@@ -213,6 +228,43 @@ function safeToolInputFields(
       typeof value.radiusMeters === "number" ? value.radiusMeters : 100,
     requestedLimit: typeof value.limit === "number" ? value.limit : 5,
   };
+}
+
+export function safeAgentErrorFields(error: unknown): Record<string, unknown> {
+  try {
+    if (typeof error === "string") {
+      return { errorType: "string", errorMessage: error };
+    }
+    if (!error || typeof error !== "object") {
+      return { errorType: typeof error };
+    }
+
+    const value = error as Record<string, unknown>;
+    return {
+      errorType:
+        typeof value.name === "string"
+          ? value.name
+          : error instanceof Error
+            ? error.name
+            : "object",
+      ...(typeof value.message === "string"
+        ? { errorMessage: value.message }
+        : {}),
+      ...(typeof value.code === "string" ? { errorCode: value.code } : {}),
+      ...(typeof value.upstreamStatus === "number"
+        ? { upstreamStatus: value.upstreamStatus }
+        : {}),
+      ...(typeof value.retryable === "boolean"
+        ? { retryable: value.retryable }
+        : {}),
+      ...(typeof value.providerOperation === "string"
+        ? { providerOperation: value.providerOperation }
+        : {}),
+      ...(typeof value.attempt === "number" ? { attempt: value.attempt } : {}),
+    };
+  } catch {
+    return { errorType: "uninspectable" };
+  }
 }
 
 /** MiniMax Anthropic-compatible API prefix.
@@ -700,7 +752,7 @@ export class AiSdkAgentModel implements AgentModel {
       "A successful streetViewSearch already supplies trusted captions and at most one static preview to you. When outcome is found, emit StreetViewCard with one returned imageId in the same reply. Do not replace the card with a prose metadata caption.",
       "Never claim street-view imagery was found unless this turn contains a successful street-view tool result. Do not reuse image ids from earlier messages.",
       "A streetViewSearch outcome of found is a successful call, even when panoramaAvailable is false. An empty outcome only means this search area had no returned images. Never describe either outcome as a tool failure, provider outage, or global coverage gap.",
-      "Start streetViewSearch without radiusMeters so it uses the 100 metre default. Retry at most once, and only after an empty or partial successful result, with a larger radius no greater than 1000 metres. Do not retry a thrown error with guessed coordinates or claim that the error proves a coverage gap. If completeness is partial, state only that the search result may be incomplete.",
+      "Start streetViewSearch without radiusMeters. The first search is always executed at 100 metres even if you supply a larger value. Retry at most once, and only after an empty or partial successful result, at the same coordinates with a larger radius no greater than 250 metres. Do not retry a thrown error with guessed coordinates or claim that the error proves a coverage gap. If completeness is partial, state only that the search result may be incomplete.",
       "Use streetViewInspect only for another supports360=false id from this turn's search when a second visual look is useful. Panorama content is for the member's interactive viewer and must never be inspected by the model.",
       "When a member explicitly asks to save a reference, call appendStopNote with the stop id and trusted same-origin preview/metadata from the tool result.",
     ].join("\n");
@@ -778,13 +830,7 @@ export class AiSdkAgentModel implements AgentModel {
             toolName: event.toolCall.toolName,
             durationMs: event.toolExecutionMs,
             outcome: failed ? "error" : "success",
-            ...(error instanceof StreetViewError
-              ? {
-                  errorCode: error.code,
-                  upstreamStatus: error.upstreamStatus,
-                  attempt: error.attempt,
-                }
-              : {}),
+            ...(failed ? safeAgentErrorFields(error) : {}),
             ...safeToolInputFields(event.toolCall.toolName, event.toolCall.input),
           },
         );
@@ -863,6 +909,19 @@ export class AiSdkAgentModel implements AgentModel {
       prepareStep: ({ instructions }) =>
         streetViewPolicy.prepareStep(Object.keys(tools), instructions),
       ...this.lifecycleCallbacks(request.trip.id, request.observability),
+      onError: ({ error }) => {
+        const fields = {
+          runtime: request.observability.runtime,
+          requestId: request.observability.requestId,
+          tripId: request.trip.id,
+          agentSessionId: request.trip.id,
+          turnId: request.observability.turnId,
+          trigger: request.observability.trigger,
+          ...safeAgentErrorFields(error),
+        };
+        logger.error("agent.stream.failed", fields);
+        captureException(error, fields);
+      },
       runtimeContext: this.runtimeContext(request.trip.id, request.observability),
       telemetry: {
         ...this.telemetry("agent.chat"),
@@ -1128,7 +1187,7 @@ export function buildStreetViewReadTools(
   return {
     streetViewSearch: tool({
       description:
-        "Find street-level imagery near real coordinates. Omit radiusMeters first to use 100 metres; retry once with a larger radius only after an empty or partial result. A found or empty outcome is a successful call; only a thrown error is a failure. On found, you receive trusted captions and at most one static preview — emit StreetViewCard with a returned imageId in the same reply. Prefer supports360=true only for the member's interactive viewer.",
+        "Find street-level imagery near real coordinates. Omit radiusMeters first; the first search is always executed at 100 metres. Retry once at the same coordinates with a radius up to 250 metres only after an empty or partial result. A found or empty outcome is a successful call; only a thrown error is a failure. On found, you receive trusted captions and at most one static preview — emit StreetViewCard with a returned imageId in the same reply. Prefer supports360=true only for the member's interactive viewer.",
       inputSchema: z.object({
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
@@ -1136,20 +1195,22 @@ export function buildStreetViewReadTools(
         limit: z.number().int().min(1).max(10).optional(),
       }),
       execute: async (input) => {
-        policy.validateSearch(input);
+        const effectiveInput = policy.validateSearch(input);
         const startedAt = Date.now();
         try {
           const result = await providerCall("street_view", "search", () =>
             streetViewService.searchNearby({
               tripId,
-              ...input,
+              ...effectiveInput,
               observability,
             }),
           );
           logger.info("street_view.search_completed", {
             tripId,
-            radiusMeters: input.radiusMeters ?? 100,
-            requestedLimit: input.limit ?? 5,
+            requestedRadiusMeters:
+              input.radiusMeters ?? INITIAL_STREET_VIEW_RADIUS_METERS,
+            radiusMeters: effectiveInput.radiusMeters,
+            requestedLimit: effectiveInput.limit ?? 5,
             candidateCount: result.candidateCount,
             resultCount: result.images.length,
             panoramaCount: result.panoramaCount,
@@ -1157,14 +1218,16 @@ export function buildStreetViewReadTools(
             completeness: result.completeness,
             durationMs: Date.now() - startedAt,
           });
-          policy.recordSearchSuccess(input, result);
+          policy.recordSearchSuccess(effectiveInput, result);
           return result;
         } catch (error) {
           policy.recordSearchFailure();
           logger.error("street_view.search_failed", {
             tripId,
-            radiusMeters: input.radiusMeters ?? 100,
-            requestedLimit: input.limit ?? 5,
+            requestedRadiusMeters:
+              input.radiusMeters ?? INITIAL_STREET_VIEW_RADIUS_METERS,
+            radiusMeters: effectiveInput.radiusMeters,
+            requestedLimit: effectiveInput.limit ?? 5,
             errorCode:
               error instanceof StreetViewError ? error.code : "street_view_unexpected_error",
             durationMs: Date.now() - startedAt,

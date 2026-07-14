@@ -221,17 +221,23 @@ these events in order:
 1. `agent.model.step_completed`: confirm the model actually emitted a tool call.
 2. `agent.tool.started` and `agent.tool.completed`/`agent.tool.failed`: verify
    the real `toolCallId`, coordinates, radius, and tool result state.
-3. `street_view.provider.request_failed` and
+   Failed tool events include `errorType`, `errorMessage`, and, when supplied by
+   the error, `errorCode`, `upstreamStatus`, `retryable`, `providerOperation`,
+   and `attempt`.
+3. `agent.stream.failed`: distinguish a model/provider stream failure from an
+   individual tool execution failure using the same request, trip, and turn
+   correlation fields.
+4. `street_view.provider.request_failed` and
    `street_view.provider.retry_scheduled`: distinguish 401/403 configuration,
    429, timeout, and provider 5xx; attempts never exceed two.
-4. `street_view.search_completed`: only `outcome=found` ids may ground a card.
-5. `street_view.search_model_output`: confirm whether search `toModelOutput`
+5. `street_view.search_completed`: only `outcome=found` ids may ground a card.
+6. `street_view.search_model_output`: confirm whether search `toModelOutput`
    attached a static preview (`previewAttach=attached`) or skipped
    (`skipped_empty` / `skipped_panorama_only` / `preview_unavailable`).
-6. `street_view.cache.hit`/`miss`: a card immediately following a successful
+7. `street_view.cache.hit`/`miss`: a card immediately following a successful
    search should use the 15-minute metadata cache; preview bytes are cached
    after their first successful read.
-7. `agent.persist_message`: confirm the sanitized assistant message and its
+8. `agent.persist_message`: confirm the sanitized assistant message and its
    fingerprint were written.
 
 If the provider call failed, the generation policy removes both street-view

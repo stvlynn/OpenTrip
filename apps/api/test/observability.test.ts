@@ -5,7 +5,12 @@ import {
   sanitizeSpan,
   sanitizeTelemetryValue,
 } from "../src/infrastructure/observability";
-import { buildAgentTelemetryOptions } from "../src/infrastructure/ai/agent-model.ai-sdk";
+import {
+  buildAgentTelemetryOptions,
+  safeAgentErrorFields,
+} from "../src/infrastructure/ai/agent-model.ai-sdk";
+import { GeoError } from "../src/application/geo/geo-error";
+import { StreetViewError } from "../src/application/street-view";
 import { initiatingAgentTurnId } from "../src/application/agent/agent-service";
 
 afterEach(() => vi.restoreAllMocks());
@@ -69,6 +74,36 @@ describe("observability sanitization", () => {
 });
 
 describe("agent telemetry correlation", () => {
+  it("keeps structured fields for every agent tool error family", () => {
+    expect(
+      safeAgentErrorFields(
+        new StreetViewError("street_view_rate_limited", "Rate limited", {
+          upstreamStatus: 429,
+          retryable: true,
+          providerOperation: "search",
+          attempt: 2,
+        }),
+      ),
+    ).toEqual({
+      errorType: "StreetViewError",
+      errorMessage: "Rate limited",
+      errorCode: "street_view_rate_limited",
+      upstreamStatus: 429,
+      retryable: true,
+      providerOperation: "search",
+      attempt: 2,
+    });
+    expect(safeAgentErrorFields(new GeoError("geo_timeout", "Timed out"))).toEqual({
+      errorType: "GeoError",
+      errorMessage: "Timed out",
+      errorCode: "geo_timeout",
+    });
+    expect(safeAgentErrorFields(new Error("Provider disconnected"))).toEqual({
+      errorType: "Error",
+      errorMessage: "Provider disconnected",
+    });
+  });
+
   it("registers AI telemetry idempotently", () => {
     expect(() => {
       registerAiTelemetry();
