@@ -47,12 +47,18 @@ function AgentMarkdown({
       caret={streaming ? "block" : undefined}
       controls={false}
       components={{
-        a: ({ href, children, ...props }) => {
+        a: ({ href, children, ref, ...props }) => {
           if (href === "streamdown:incomplete-link") {
             return <span className="text-muted-foreground">{children}</span>;
           }
           return (
-            <a {...props} href={href} target="_blank" rel="noreferrer noopener">
+            <a
+              {...props}
+              ref={typeof ref === "string" ? undefined : ref}
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               {children}
             </a>
           );
