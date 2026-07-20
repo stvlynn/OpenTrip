@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { exchangeMiniappWebviewCode } from "@/shared/api";
+import { authClient } from "@/shared/auth";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 
@@ -21,6 +22,12 @@ export function MiniappBootstrap({ onComplete }: { onComplete: () => void }) {
     setFailed(false);
     try {
       await exchangeOnce(initialCode);
+      const session = await authClient.getSession({
+        query: { disableCookieCache: true },
+      });
+      if (session.error || !session.data) {
+        throw new Error("WebView session cookie was not established");
+      }
       onComplete();
     } catch {
       setFailed(true);
