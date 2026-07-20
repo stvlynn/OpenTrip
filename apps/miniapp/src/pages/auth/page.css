@@ -14,16 +14,13 @@
 }
 
 .auth-brand__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 64px;
   height: 64px;
   border-radius: 20px;
-  background: var(--brand);
-  color: #ffffff;
-  font-size: 34px;
-  font-weight: 700;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQyIiBmaWxsPSIjMTczZjM1Ii8+PHBhdGggZD0iTTQ4IDEwNGMyOC01MiA2Mi01NiA5Ni0xNi0xOC03LTMxLTEtNDQgMTgtMTMgMTktMjkgMjUtNTItMloiIGZpbGw9IiNmMmM2NmQiLz48Y2lyY2xlIGN4PSI2MSIgY3k9IjY1IiByPSIxMyIgZmlsbD0iI2Y3ZjVlZiIvPjwvc3ZnPg==");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
 }
 
 .auth-brand__name {
@@ -65,6 +62,12 @@
   margin-top: 8px;
 }
 
+.wechat-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
 .wechat-button {
   display: flex;
   align-items: center;
@@ -93,8 +96,12 @@
 }
 
 .wechat-button__icon {
-  font-size: 21px;
-  font-weight: 750;
+  width: 40px;
+  height: 40px;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTkuMyAzLjVDNC43MiAzLjUgMSA2LjU4IDEgMTAuMzhjMCAyLjEyIDEuMTcgNC4wMyAzIDUuMjlsLS43NCAyLjIyIDIuNjItMS4zYzEuMDguNDMgMi4yMy42NiAzLjQyLjY2LjI4IDAgLjU1LS4wMS44Mi0uMDRhNi4zMyA2LjMzIDAgMCAxLS4zMy0yLjAxYzAtMy42OCAzLjM3LTYuNjcgNy41NS02LjY3aC4yQzE2LjU2IDUuNjMgMTMuMjcgMy41IDkuMyAzLjVabS0yLjc3IDUuN2ExLjA0IDEuMDQgMCAxIDEgMC0yLjA4IDEuMDQgMS4wNCAwIDAgMSAwIDIuMDhabTUuNTQgMGExLjA0IDEuMDQgMCAxIDEgMC0yLjA4IDEuMDQgMS4wNCAwIDAgMSAwIDIuMDhaIi8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTIzIDE1LjJjMC0zLjE0LTMuMDgtNS42OS02Ljg4LTUuNjlzLTYuODggMi41NS02Ljg4IDUuNjkgMy4wOCA1LjY4IDYuODggNS42OGMuOTggMCAxLjkyLS4xNyAyLjc5LS41bDIuMTggMS4wOC0uNjItMS44NEMyMi4wMyAxOC41NiAyMyAxNi45NyAyMyAxNS4yWm0tOS4xNy0xLjA1YS44Ni44NiAwIDEgMSAwLTEuNzIuODYuODYgMCAwIDEgMCAxLjcyWm00LjU4IDBhLjg2Ljg2IDAgMSAxIDAtMS43Mi44Ni44NiAwIDAgMSAwIDEuNzJaIi8+PC9zdmc+");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
 
 .auth-divider {

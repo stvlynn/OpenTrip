@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import {
   bearer,
   captcha,
@@ -7,6 +8,11 @@ import {
   twoFactor,
 } from "better-auth/plugins";
 import { provisionSampleTripForUser } from "../../application/user/provision-sample-trip";
+import {
+  normalizeDisplayName,
+  UserProfileValidationError,
+  type UserProfileProjectionService,
+} from "../../application/user/profile-projection-service";
 import {
   generateUserAvatar,
   resolveInitialAvatar,
@@ -33,6 +39,8 @@ export interface CreateAuthOptions {
   loadSampleTripTemplate?: () => Promise<Trip>;
   /** Globally consistent storage supplied by the Cloudflare Worker runtime. */
   rateLimitStorage?: AuthRateLimitStorage;
+  /** Synchronizes Better Auth profile changes into trip member projections. */
+  profileProjection?: UserProfileProjectionService;
   /** Trusted client-IP headers for the active runtime. */
   ipAddressHeaders?: string[];
 }
@@ -202,6 +210,36 @@ export function createAuth(
                         );
                     },
                 },
+                update: {
+                    before: async (data) => {
+                        if (data.name === undefined) return;
+                        try {
+                            return {
+                                data: {
+                                    ...data,
+                                    name: normalizeDisplayName(data.name),
+                                },
+                            };
+                        } catch (error) {
+                            if (!(error instanceof UserProfileValidationError)) {
+                                throw error;
+                            }
+                            throw new APIError("BAD_REQUEST", {
+                                code: "INVALID_DISPLAY_NAME",
+                                message: error.message,
+                            });
+                        }
+                    },
+                    after: async (user, ctx) => {
+                        if (!options.profileProjection) return;
+                        const fields = profileFieldsFromBody(ctx?.body);
+                        if (!fields) return;
+                        await options.profileProjection.synchronize(user.id, {
+                            ...(fields.name ? { name: user.name } : {}),
+                            ...(fields.image ? { image: user.image ?? null } : {}),
+                        });
+                    },
+                },
             },
         },
         plugins: [
@@ -270,3 +308,13 @@ export function createAuth(
 }
 
 export type Auth = ReturnType<typeof createAuth>;
+
+function profileFieldsFromBody(
+  body: unknown,
+): { name: boolean; image: boolean } | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const record = body as Record<string, unknown>;
+  const name = Object.prototype.hasOwnProperty.call(record, "name");
+  const image = Object.prototype.hasOwnProperty.call(record, "image");
+  return name || image ? { name, image } : null;
+}

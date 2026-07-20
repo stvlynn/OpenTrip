@@ -1,5 +1,11 @@
-export { ApiError, apiFetch, rawRequest } from "./client";
-export { signInWithEmail, signInWithWechat, signOut } from "./auth";
+export { ApiError, apiFetch, apiUrl, rawRequest } from "./client";
+export {
+  signInWithEmail,
+  signInWithWechat,
+  signOut,
+  updateUserName,
+  uploadUserAvatar,
+} from "./auth";
 export {
   createTrip,
   fetchTrip,

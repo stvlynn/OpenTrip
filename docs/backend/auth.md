@@ -230,6 +230,14 @@ Mini Programs use a separate protocol and credential pair:
 `jscode2session` endpoint, discards `session_key`, and creates the normal Better
 Auth session. The Mini Program AppSecret is never shipped to Taro.
 
+The Mini Program collects the user-confirmed nickname and avatar with WeChat's
+native `input type="nickname"` and `button open-type="chooseAvatar"` controls
+before requesting that session. After identity exchange, it calls Better
+Auth's native `POST /api/auth/update-user` for the nickname and
+`POST /api/users/avatar` for the temporary avatar file. The bearer token is
+persisted only after both profile writes succeed, so a failed upload cannot
+bypass profile completion on the next launch.
+
 Bind the Website Application and Mini Program to the same WeChat Open Platform
 account when cross-surface account continuity is required. The adapter prefers
 `unionid` as the Better Auth `wechat` account id (falling back to Mini Program
@@ -401,7 +409,11 @@ enrollment / management.
 
 Avatar changes use the authenticated `/api/users/avatar` endpoints. The
 application service stores or removes the object and updates Better Auth through
-the server `auth.api.updateUser` API, with compensating cleanup on failure.
+the server `auth.api.updateUser` API, with compensating profile rollback and
+object cleanup on failure. `databaseHooks.user.update.before` trims and validates
+display names (1–64 characters). The corresponding `after` hook synchronizes
+name/image changes to user-backed trip member projections and publishes
+`members` realtime invalidations.
 
 ### Native iOS sessions
 

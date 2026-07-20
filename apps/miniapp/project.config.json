@@ -2,7 +2,6 @@
   "miniprogramRoot": "dist/",
   "projectname": "OpenTrip",
   "description": "OpenTrip Taro WeChat Mini Program",
-  "appid": "touristappid",
   "setting": {
     "urlCheck": true,
     "es6": true,

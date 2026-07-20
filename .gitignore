@@ -4,8 +4,10 @@ dist/
 build/
 .wrangler/
 .turbo/
-.swc/
 coverage/
+
+# WeChat DevTools per-user config (never committed)
+apps/miniapp/project.private.config.json
 
 # env & secrets
 .env

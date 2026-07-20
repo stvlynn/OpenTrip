@@ -25,7 +25,7 @@ export class ApiError extends Error {
   }
 }
 
-function endpoint(path: string): string {
+export function apiUrl(path: string): string {
   if (!config.baseUrl) {
     throw new ApiError("api_base_url_missing", copy.common.apiBaseUrlMissing, 0);
   }
@@ -34,11 +34,17 @@ function endpoint(path: string): string {
 
 export async function rawRequest<T>(
   path: string,
-  options: { method?: HttpMethod; data?: unknown; auth?: boolean } = {},
+  options: {
+    method?: HttpMethod;
+    data?: unknown;
+    auth?: boolean;
+    token?: string;
+  } = {},
 ) {
-  const token = options.auth === false ? null : getAuthToken();
+  const token =
+    options.auth === false ? null : (options.token ?? getAuthToken());
   return Taro.request<T>({
-    url: endpoint(path),
+    url: apiUrl(path),
     method: options.method ?? "GET",
     data: options.data,
     header: {

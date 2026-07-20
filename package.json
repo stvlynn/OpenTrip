@@ -8,7 +8,7 @@
         "node": ">=20"
     },
     "scripts": {
-        "dev": "pnpm -r --parallel dev",
+        "dev": "pnpm --filter @opentrip/web --filter @opentrip/api --parallel dev",
         "build": "pnpm -r build",
         "typecheck": "pnpm -r typecheck",
         "lint": "pnpm -r lint",

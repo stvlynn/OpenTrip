@@ -15,11 +15,14 @@ export function clearAuthToken(): void {
   Taro.removeStorageSync(TOKEN_STORAGE_KEY);
 }
 
-export function captureAuthToken(headers: Record<string, string>): string | null {
+export function captureAuthToken(
+  headers: Record<string, string>,
+  persist = true,
+): string | null {
   const entry = Object.entries(headers).find(
     ([name]) => name.toLowerCase() === "set-auth-token",
   );
   const token = entry?.[1];
-  if (token) setAuthToken(token);
+  if (token && persist) setAuthToken(token);
   return token ?? null;
 }

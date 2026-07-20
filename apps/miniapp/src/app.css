@@ -1,13 +1,17 @@
 page {
-  --background: #f7f8fb;
+  /* Aligned with apps/web cossUI tokens (colors.css):
+     primary = navy ink (ink-800), brand accent = cornflower (corn-500). */
+  --background: #fafbfd;
   --card: #ffffff;
-  --foreground: #172033;
-  --muted: #68738a;
-  --brand: #6174e8;
-  --brand-pressed: #4f61ce;
-  --brand-soft: #edf0ff;
-  --border: #e5e8f0;
-  --danger: #c43f4e;
+  --foreground: #28304a;
+  --muted: #6d788f;
+  --primary: #28304a;
+  --primary-pressed: #1d2540;
+  --brand: #3f6fc9;
+  --brand-pressed: #305bb0;
+  --brand-soft: #eff3fd;
+  --border: #e6e8ef;
+  --danger: #d4483b;
   min-height: 100%;
   background: var(--background);
   color: var(--foreground);
@@ -45,12 +49,12 @@ button::after {
 }
 
 .primary-button {
-  background: var(--brand);
+  background: var(--primary);
   color: #ffffff;
 }
 
 .primary-button:active {
-  background: var(--brand-pressed);
+  background: var(--primary-pressed);
   transform: scale(0.98);
 }
 
