@@ -20,6 +20,13 @@ The cossUI token CSS is ported from the handoff into
 Font variable contract: `--font-sans`, `--font-heading`, `--font-mono`. Use
 semantic tokens, never raw palette values.
 
+The image-generated application icon uses the same restrained Navy Ink palette:
+`--ink-800` for its full-bleed field, with `--ink-50` and cornflower expressing
+the two visible faces of a continuous Möbius journey. The source artwork is
+`apps/web/public/app-icon-master.png`; run
+`pnpm --filter @opentrip/web icons:generate` after replacing it to regenerate
+the platform PNGs. Do not redraw the artwork as SVG paths.
+
 ## Primitives
 
 Implemented in `apps/web/src/shared/ui`, matching cossUI APIs:
