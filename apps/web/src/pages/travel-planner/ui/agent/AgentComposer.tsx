@@ -34,11 +34,17 @@ function revokePreviews(files: PendingFile[]) {
 export function AgentComposer({
   trip,
   onSend,
+  initialDraft = null,
+  initialDraftKey,
   quote = null,
   onClearQuote,
 }: {
   trip: Trip;
   onSend: (text: string, files?: File[]) => Promise<void>;
+  /** One-shot page-owned suggestion. It fills an empty composer but never sends. */
+  initialDraft?: string | null;
+  /** Stable identity that prevents a cleared suggestion from being restored. */
+  initialDraftKey?: string;
   quote?: QuoteTarget | null;
   onClearQuote?: () => void;
 }) {
@@ -49,6 +55,7 @@ export function AgentComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachmentsRef = useRef(attachments);
+  const appliedInitialDraftKeyRef = useRef<string | null>(null);
 
   const mention = useMentionInput({
     trip,
@@ -70,6 +77,13 @@ export function AgentComposer({
     if (!quote) return;
     textareaRef.current?.focus();
   }, [quote]);
+
+  useEffect(() => {
+    if (!initialDraft || !initialDraftKey || draft.length > 0) return;
+    if (appliedInitialDraftKeyRef.current === initialDraftKey) return;
+    appliedInitialDraftKeyRef.current = initialDraftKey;
+    setDraft(initialDraft);
+  }, [draft.length, initialDraft, initialDraftKey]);
 
   const canSend =
     (draft.trim().length > 0 ||

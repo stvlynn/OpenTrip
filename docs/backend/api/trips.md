@@ -29,7 +29,9 @@ Unless noted, success body is `{ "data": … }` and the tables describe the **pa
 
 Omitted optional fields mean “TBD” in the create wizard. When any intake field
 is present, the trip is created with `agentSeedPending: true` and an `intake`
-object. If `destination` is set and `UNSPLASH_ACCESS_KEY` is configured, the
+object. The planner opens the agent and pre-fills a suggested `@agent` prompt;
+the member can edit it and must explicitly send it. If `destination` is set and
+`UNSPLASH_ACCESS_KEY` is configured, the
 server searches Unsplash for a landscape cover and stores `coverUrl`. When
 `destination` is set, the server also geocodes it via `GeoService` and stores
 `intake.destinationLat` / `destinationLng` so the planner map can open near
@@ -59,7 +61,7 @@ SELECT for up to ~60s (same pattern as agent message echo; see
 - **Body:** one of:
   - `{ title: string }` (trim, 1–120) — rename
   - `{ clearAgentSeedPending: true }` — clear the one-shot agent seed flag after
-    the planner has sent the first `@agent` message
+    the member sends the suggested prompt
 - **Response:** [`TripDto`](./dtos.md#tripdto-full-trip)
 
 ---

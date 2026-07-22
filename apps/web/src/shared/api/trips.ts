@@ -31,7 +31,7 @@ export function renameTrip(tripId: string, title: string): Promise<Trip> {
   });
 }
 
-/** Acknowledge that the planner has sent the one-shot @agent seed message. */
+/** Acknowledge that the member has sent the one-shot suggested agent prompt. */
 export function clearAgentSeedPending(tripId: string): Promise<Trip> {
   return apiFetch<Trip>(`/api/trips/${tripId}`, {
     method: "PATCH",

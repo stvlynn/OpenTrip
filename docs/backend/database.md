@@ -146,7 +146,8 @@ docker compose -f deploy/docker/compose.yaml --profile mysql up -d mysql
   can be derived on the client; seed trips use descriptive labels. `cover_url`
   is an optional Unsplash CDN URL; `intake` holds create-wizard answers
   (including optional `destinationLat`/`destinationLng` from GeoService);
-  `agent_seed_pending` gates the one-shot `@agent` seed on first planner open.
+  `agent_seed_pending` gates the one-shot suggested `@agent` draft shown on the
+  first planner open; the member must send it explicitly.
 - `trip_members` — `id`, `trip_id`, `name`, `short_name`, `initials`,
   `avatar_bg`, `avatar_fg`, `image`, `is_current_user`. `image` is an optional
   avatar URL.

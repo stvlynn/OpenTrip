@@ -750,7 +750,7 @@ export class Trip {
     this.markChanged();
   }
 
-  /** Clear the one-shot agent seed flag after the first @agent message is sent. */
+  /** Clear the one-shot agent seed flag after the suggested prompt is sent. */
   clearAgentSeedPending(): void {
     this.snapshot.agentSeedPending = false;
     this.markChanged();

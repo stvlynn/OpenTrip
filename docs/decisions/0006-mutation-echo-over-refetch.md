@@ -43,8 +43,8 @@ the mutation response
    start from a cached aggregate snapshot. Cache-enabled Hyperdrive is reserved
    for explicitly stale-tolerant read models.
 4. **Trip create UX:** After `POST /api/trips`, update caches and navigate to
-   the planner so the one-shot `@agent` seed can run without waiting on a fresh
-   list card.
+   the planner so the one-shot suggested `@agent` draft is available without
+   waiting on a fresh list card. The member explicitly sends the draft.
 
 ## Consequences
 

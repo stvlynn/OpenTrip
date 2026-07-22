@@ -14,7 +14,7 @@ export interface TripDto {
   coverUrl: string | null;
   /** Wizard answers captured at create time. */
   intake: TripSnapshot["intake"];
-  /** When true, the planner should seed the first @agent message once. */
+  /** When true, the planner should offer the first suggested @agent draft. */
   agentSeedPending: boolean;
   members: TripSnapshot["members"];
   /** The requesting user's effective permissions on this trip. */

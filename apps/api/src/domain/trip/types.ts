@@ -111,7 +111,7 @@ export interface TripSnapshot {
   coverUrl: string | null;
   /** Wizard answers captured at create time. Null when created without intake. */
   intake: TripIntake | null;
-  /** When true, the planner should seed the first @agent message once. */
+  /** When true, the planner should offer the first suggested @agent draft. */
   agentSeedPending: boolean;
   members: MemberSnapshot[];
   days: DaySnapshot[];
