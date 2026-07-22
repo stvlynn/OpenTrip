@@ -25,7 +25,7 @@ The image-generated application icon uses the same restrained Navy Ink palette:
 the two visible faces of a continuous Möbius journey. The source artwork is
 `apps/web/public/app-icon-master.png`; run
 `pnpm --filter @opentrip/web icons:generate` after replacing it to regenerate
-the platform PNGs. Do not redraw the artwork as SVG paths.
+the favicon, apple-touch, and PWA PNGs. Do not redraw the artwork as SVG paths.
 
 ## Primitives
 

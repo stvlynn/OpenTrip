@@ -152,20 +152,21 @@ with non-string titles are never mirrored.
 
 - `index.html` carries the `theme-color` metas (light `#fafbfd`, dark
   `#141a30` — the `--background` tokens), the `apple-mobile-web-app-*` metas,
-  and the `apple-touch-icon` link. iOS ignores SVG manifest icons, so PNG
-  icons are committed alongside the SVGs.
+  tab favicons (`favicon.ico`, `favicon-32x32.png`), and the
+  `apple-touch-icon` link. iOS installers need the PNG apple-touch asset;
+  browsers that still request `/favicon.ico` by default get a real icon
+  file instead of the SPA HTML fallback.
 - The same document owns the canonical production URL plus Open Graph and
   Twitter card metadata. Both surfaces use the committed 1200×600 image at
   `apps/web/public/og-image.png`, published as
   `https://opentrip.im/og-image.png`.
-- The manifest (inline in `vite.config.ts`) lists PNG icons first, then SVG;
+- The manifest (inline in `vite.config.ts`) lists the PNG PWA icons;
   `theme_color`/`background_color` match the app background so the install
   splash blends into the UI.
-- Regenerate the PNGs after editing the SVG sources with
+- Regenerate derived icons after replacing `app-icon-master.png` with
   `pnpm --filter @opentrip/web icons:generate`
   (`apps/web/scripts/generate-pwa-icons.mjs`, `sharp`) and commit the
-  output. The apple-touch-icon is rendered opaque from the full-bleed
-  maskable SVG.
+  output (favicon, apple-touch, and PWA PNGs).
 
 ## Navigations and update safety
 
