@@ -154,6 +154,10 @@ with non-string titles are never mirrored.
   `#141a30` — the `--background` tokens), the `apple-mobile-web-app-*` metas,
   and the `apple-touch-icon` link. iOS ignores SVG manifest icons, so PNG
   icons are committed alongside the SVGs.
+- The same document owns the canonical production URL plus Open Graph and
+  Twitter card metadata. Both surfaces use the committed 1200×600 image at
+  `apps/web/public/og-image.png`, published as
+  `https://opentrip.im/og-image.png`.
 - The manifest (inline in `vite.config.ts`) lists PNG icons first, then SVG;
   `theme_color`/`background_color` match the app background so the install
   splash blends into the UI.
