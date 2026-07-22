@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { THEME_CHANGE_EVENT } from "@/shared/config/theme";
 import { applyTheme, subscribeToThemeChanges } from "./apply-theme";
 import { resolveTheme, setStoredTheme } from "./theme-persistence";
 
@@ -35,14 +36,17 @@ describe("theme", () => {
       },
     };
     const toggle = vi.fn();
+    const themeChanged = vi.fn();
 
     vi.stubGlobal("window", windowTarget);
     vi.stubGlobal("localStorage", storage);
     vi.stubGlobal("document", { documentElement: { classList: { toggle } } });
+    windowTarget.addEventListener(THEME_CHANGE_EVENT, themeChanged);
 
     setStoredTheme("system");
     applyTheme();
     expect(toggle).toHaveBeenLastCalledWith("dark", false);
+    expect(themeChanged).toHaveBeenCalledOnce();
 
     const unsubscribe = subscribeToThemeChanges();
     systemDark = true;

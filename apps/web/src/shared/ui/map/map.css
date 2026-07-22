@@ -44,19 +44,55 @@
 .maplibregl-popup-tip {
   border-top-color: #fff;
 }
+.dark .maplibregl-popup-content {
+  color: var(--foreground);
+  background: var(--card);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+.dark .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: var(--card);
+}
+.dark .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: var(--card);
+}
+.dark .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--card);
+}
+.dark .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--card);
+}
 .maplibregl-ctrl-group {
   border-radius: 10px;
   box-shadow:
     0 1px 3px rgba(20, 26, 48, 0.12),
     0 0 0 1px rgba(20, 26, 48, 0.08) !important;
 }
+.maplibregl-map .maplibregl-ctrl-group button {
+  width: 40px;
+  height: 40px;
+}
+.dark .maplibregl-ctrl-group {
+  background: var(--card);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+.dark .maplibregl-ctrl-group button {
+  background-color: transparent;
+}
+.dark .maplibregl-ctrl-group button:hover {
+  background-color: var(--accent);
+}
+.dark .maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.3);
+}
 
-/* Overlays that occupy the map's top edge (e.g. a floating search bar) set
- * --map-ctrl-top-offset on an ancestor so the control stack starts below
- * them instead of underneath. Scoped under .maplibregl-map to outrank the
- * library's own `top: 0` regardless of stylesheet order. */
-.maplibregl-map .maplibregl-ctrl-top-right {
-  top: var(--map-ctrl-top-offset, 0px);
+/* Keep the bottom-right controls above the floating member and invite actions.
+ * Scoped under .maplibregl-map to outrank MapLibre's default `bottom: 0`. */
+.maplibregl-map .maplibregl-ctrl-bottom-right {
+  bottom: var(--map-ctrl-bottom-offset, 0px);
 }
 
 /* No spin while waiting / recovering — keep the control calm under load. */
@@ -86,6 +122,9 @@
     0 0 0 3px rgba(63, 111, 201, 0.22),
     0 1px 3px rgba(20, 26, 48, 0.35);
   transition: transform var(--dur-base) cubic-bezier(0.23, 1, 0.32, 1);
+}
+.dark .trip-map-user-location {
+  background: var(--muted);
 }
 
 @media (hover: hover) and (pointer: fine) {

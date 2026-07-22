@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { THEME_STORAGE_KEY } from "@/shared/config/theme";
+import {
+  THEME_CHANGE_EVENT,
+  THEME_STORAGE_KEY,
+} from "@/shared/config/theme";
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -31,10 +34,12 @@ export function useResolvedTheme(): "light" | "dark" {
   useEffect(() => {
     const sync = () => setTheme(resolveTheme(getStoredTheme()));
     window.addEventListener("storage", sync);
+    window.addEventListener(THEME_CHANGE_EVENT, sync);
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     media.addEventListener("change", sync);
     return () => {
       window.removeEventListener("storage", sync);
+      window.removeEventListener(THEME_CHANGE_EVENT, sync);
       media.removeEventListener("change", sync);
     };
   }, []);
