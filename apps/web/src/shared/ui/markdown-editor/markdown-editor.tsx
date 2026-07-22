@@ -1,14 +1,6 @@
 import { useEffect, useRef, type ClipboardEvent } from "react";
 import { Crepe } from "@milkdown/crepe";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
-import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
-import {
-  blockquoteSchema,
-  clearTextInCurrentBlockCommand,
-  paragraphSchema,
-  setBlockTypeCommand,
-  wrapInBlockTypeCommand,
-} from "@milkdown/kit/preset/commonmark";
 import { cn } from "@/shared/lib";
 import {
   NoteImageUploadError,
@@ -36,6 +28,20 @@ export interface MarkdownEditorProps {
 
 export interface MarkdownEditorApi {
   getMarkdown: () => string;
+}
+
+interface TextInsertionTransaction {
+  insertText: (text: string, from?: number, to?: number) => TextInsertionTransaction;
+  scrollIntoView: () => TextInsertionTransaction;
+}
+
+interface TextInsertionView {
+  state: {
+    selection: { from: number };
+    tr: TextInsertionTransaction;
+  };
+  dispatch: (transaction: TextInsertionTransaction) => void;
+  focus: () => void;
 }
 
 function MarkdownEditorInner({
@@ -118,20 +124,17 @@ function MarkdownEditorInner({
           textGroup: { h6: null },
           buildMenu: (builder) => {
             if (!mapMenuLabel || !mapBlockLabel) return;
+            const quoteAction = builder
+              .getGroup("text")
+              .group.items.find((item) => item.key === "quote")?.onRun;
             builder.addGroup("travel", mapMenuLabel).addItem("map", {
               label: mapMenuLabel,
               icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></svg>',
               onRun: (ctx) => {
-                const commands = ctx.get(commandsCtx);
-                commands.call(clearTextInCurrentBlockCommand.key);
-                commands.call(setBlockTypeCommand.key, {
-                  nodeType: paragraphSchema.type(ctx),
-                });
-                commands.call(wrapInBlockTypeCommand.key, {
-                  nodeType: blockquoteSchema.type(ctx),
-                });
-
-                const view = ctx.get(editorViewCtx);
+                quoteAction?.(ctx);
+                const view = ctx.get<TextInsertionView, "editorView">(
+                  "editorView",
+                );
                 const { from } = view.state.selection;
                 view.dispatch(
                   view.state.tr
