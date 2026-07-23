@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { TripIntake } from "@/entities/trip";
 
-/** Build the one-shot @agent seed message from wizard intake. Returns null when
+/** Build the one-shot suggested @agent draft from wizard intake. Returns null when
  * there is nothing useful to ask (all fields TBD / empty intake). */
 export function buildAgentSeedMessage(
   t: TFunction<"agent">,

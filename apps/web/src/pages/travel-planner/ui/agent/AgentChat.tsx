@@ -16,10 +16,6 @@ import {
   type AgentDisplayMessage,
 } from "./AgentMessage";
 
-function seedGuardKey(tripId: string): string {
-  return `wf.agentSeed.${tripId}`;
-}
-
 /** Message list + sticky input for the shared trip session. */
 export function AgentChat({
   tripId,
@@ -56,7 +52,6 @@ export function AgentChat({
   } = useAgentChat(tripId, enabled);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [quote, setQuote] = useState<QuoteTarget | null>(null);
-  const seedingRef = useRef(false);
 
   const persisted: AgentDisplayMessage[] = (history?.messages ?? []).map((m) => ({
     id: m.id,
@@ -108,44 +103,22 @@ export function AgentChat({
       .map((s) => [s.messageId!, s] as const),
   );
 
-  // One-shot wizard seed: open panel + empty history + pending flag.
-  useEffect(() => {
-    if (!enabled || historyPending || seedingRef.current) return;
+  // Wizard intake is a suggested first prompt, never an automatic agent turn.
+  // Keep the panel-opening behavior, then let the member edit or send it.
+  const initialDraft =
+    enabled &&
+    !historyPending &&
+    trip.agentSeedPending &&
+    messages.length === 0
+      ? buildAgentSeedMessage(t, trip.intake)
+      : null;
+
+  const sendFromComposer = async (text: string, files: File[] = []) => {
+    await send(text, files);
     if (!trip.agentSeedPending) return;
-    if (messages.length > 0) return;
-
-    const text = buildAgentSeedMessage(t, trip.intake);
-    if (!text) return;
-
-    if (typeof sessionStorage !== "undefined") {
-      if (sessionStorage.getItem(seedGuardKey(tripId))) return;
-      sessionStorage.setItem(seedGuardKey(tripId), "1");
-    }
-    seedingRef.current = true;
-
-    void (async () => {
-      try {
-        await send(text, []);
-        const updated = await clearAgentSeedPending(tripId);
-        queryClient.setQueryData(queryKeys.trip(tripId), updated);
-      } catch {
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.removeItem(seedGuardKey(tripId));
-        }
-        seedingRef.current = false;
-      }
-    })();
-  }, [
-    enabled,
-    historyPending,
-    messages.length,
-    queryClient,
-    send,
-    t,
-    trip.agentSeedPending,
-    trip.intake,
-    tripId,
-  ]);
+    const updated = await clearAgentSeedPending(tripId);
+    queryClient.setQueryData(queryKeys.trip(tripId), updated);
+  };
 
   // Follow both new messages and in-place part growth during streaming
   // (text deltas and DeepSeek reasoning deltas).
@@ -212,7 +185,9 @@ export function AgentChat({
 
       <AgentComposer
         trip={trip}
-        onSend={send}
+        onSend={sendFromComposer}
+        initialDraft={initialDraft}
+        initialDraftKey={tripId}
         quote={quote}
         onClearQuote={() => setQuote(null)}
       />

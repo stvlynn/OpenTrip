@@ -1,10 +1,10 @@
 /* cossUI — Color system
  * ----------------------------------------------------------------------------
  * Recolored from coss.com/ui (Cal.com's design system). The original ships a
- * warm Tailwind-neutral palette; here every neutral is retuned to the cool,
- * restrained blue-grey of the reference portrait — silver-white light, navy
- * ink dark — with a single cornflower-blue accent (the hair ribbon) reserved
- * for focus, links and brand moments. Restraint over ornament.
+ * warm Tailwind-neutral palette; here the light theme keeps the cool,
+ * restrained blue-grey of the reference portrait while the dark theme uses a
+ * neutral near-black surface ladder. Cornflower blue is reserved for focus,
+ * links and brand moments in both themes. Restraint over ornament.
  *
  * Two layers:
  *   1. Base ramps  — --ink-* (cool slate) and --corn-* (cornflower)
@@ -113,41 +113,45 @@
 }
 
 .dark {
-  --background: var(--ink-950);
-  --foreground: var(--ink-100);
+  /* Neutral night surfaces. The original handoff's navy dark tokens were
+     never shown in its final light-only compositions; in the real three-pane
+     shell they flattened every surface into one blue slab. Start from true
+     black and raise only interactive/elevated surfaces by luminance. */
+  --background: #000000;
+  --foreground: #f5f5f5;
 
-  --card: var(--ink-900);
-  --card-foreground: var(--ink-100);
-  --popover: var(--ink-900);
-  --popover-foreground: var(--ink-100);
+  --card: #101010;
+  --card-foreground: #f5f5f5;
+  --popover: #161616;
+  --popover-foreground: #f5f5f5;
 
-  --primary: var(--ink-100);
-  --primary-foreground: var(--ink-900);
+  --primary: #f5f5f5;
+  --primary-foreground: #0a0a0a;
 
   --brand: var(--corn-400);
-  --brand-foreground: var(--ink-950);
+  --brand-foreground: #050505;
   --brand-muted: color-mix(in srgb, var(--corn-400) 16%, transparent);
 
   --secondary: color-mix(in srgb, var(--white) 6%, transparent);
-  --secondary-foreground: var(--ink-100);
+  --secondary-foreground: #f5f5f5;
   --muted: color-mix(in srgb, var(--white) 5%, transparent);
-  --muted-foreground: var(--ink-400);
-  --accent: color-mix(in srgb, var(--white) 6%, transparent);
-  --accent-foreground: var(--ink-100);
+  --muted-foreground: #a3a3a3;
+  --accent: color-mix(in srgb, var(--white) 8%, transparent);
+  --accent-foreground: #f5f5f5;
 
   --info: var(--corn-400);
   --info-foreground: var(--corn-300);
 
-  --border: color-mix(in srgb, var(--white) 8%, transparent);
-  --border-strong: color-mix(in srgb, var(--white) 16%, transparent);
-  --input: color-mix(in srgb, var(--white) 12%, transparent);
+  --border: color-mix(in srgb, var(--white) 9%, transparent);
+  --border-strong: color-mix(in srgb, var(--white) 17%, transparent);
+  --input: color-mix(in srgb, var(--white) 14%, transparent);
   --ring: var(--corn-400);
 
-  --sidebar: var(--ink-900);
-  --sidebar-foreground: var(--ink-400);
-  --sidebar-accent: color-mix(in srgb, var(--white) 6%, transparent);
-  --sidebar-accent-foreground: var(--ink-100);
-  --sidebar-border: color-mix(in srgb, var(--white) 6%, transparent);
+  --sidebar: #070707;
+  --sidebar-foreground: #a3a3a3;
+  --sidebar-accent: color-mix(in srgb, var(--white) 7%, transparent);
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: color-mix(in srgb, var(--white) 8%, transparent);
 
   --avatar-1-bg: color-mix(in srgb, var(--corn-400) 24%, var(--card));
   --avatar-1-fg: var(--corn-200);
@@ -157,8 +161,8 @@
   --avatar-3-fg: var(--warning);
   --avatar-4-bg: color-mix(in srgb, var(--destructive) 20%, var(--card));
   --avatar-4-fg: var(--destructive);
-  --avatar-5-bg: var(--ink-700);
-  --avatar-5-fg: var(--ink-200);
+  --avatar-5-bg: #262626;
+  --avatar-5-fg: #d4d4d4;
 
   /* Shadow-as-border on dark: a single white ring — layered depth shadows are
      invisible on dark surfaces. */

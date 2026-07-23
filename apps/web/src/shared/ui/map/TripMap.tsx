@@ -11,13 +11,16 @@ import {
   Popup,
 } from "maplibre-gl";
 import { reversePlace } from "@/shared/api";
+import { useResolvedTheme } from "@/shared/lib/theme";
+import {
+  mapStyleUrlForTheme,
+  routeCasingColorForTheme,
+  type MapTheme,
+} from "./map-theme";
 import type { MapStop, SearchResult, UserLocationAvatar } from "./types";
 import { SearchPopup } from "./SearchPopup";
 import { UserLocationMarker } from "./UserLocationMarker";
 import "./map.css";
-
-const STYLE_URL =
-  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 /** ~45m — only reverse-geocode again after a meaningful move. */
 const REVERSE_DELTA = 0.0004;
@@ -54,6 +57,41 @@ const DEFAULT_CENTER: [number, number] = [0, 20];
 const DEFAULT_ZOOM = 1.6;
 const FALLBACK_ZOOM = 10;
 
+function installTripRouteLayers(map: MlMap, theme: MapTheme): void {
+  if (!map.getSource("trip-route")) {
+    map.addSource("trip-route", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getLayer("trip-route-casing")) {
+    map.addLayer({
+      id: "trip-route-casing",
+      type: "line",
+      source: "trip-route",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: {
+        "line-color": routeCasingColorForTheme(theme),
+        "line-width": 6,
+        "line-opacity": 0.9,
+      },
+    });
+  }
+  if (!map.getLayer("trip-route-line")) {
+    map.addLayer({
+      id: "trip-route-line",
+      type: "line",
+      source: "trip-route",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: {
+        "line-color": ["get", "color"],
+        "line-width": 2.5,
+        "line-opacity": 0.9,
+      },
+    });
+  }
+}
+
 /** Pushpin cursor (data URI) with the hotspot at the pin tip. */
 const PIN_CURSOR =
   "url(\"data:image/svg+xml;utf8," +
@@ -80,8 +118,11 @@ export function TripMap({
   locateSignal = 0,
 }: TripMapProps) {
   const { t, i18n } = useTranslation("planner");
+  const theme = useResolvedTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
+  const themeRef = useRef<MapTheme>(theme);
+  const appliedThemeRef = useRef<MapTheme | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const popupRef = useRef<Popup | null>(null);
   const readyRef = useRef(false);
@@ -121,6 +162,7 @@ export function TripMap({
   fallbackCenterRef.current = fallbackCenter;
   userAvatarRef.current = userAvatar;
   locateLabelRef.current = t("map.locate");
+  themeRef.current = theme;
 
   clearUserMarkerRef.current = () => {
     reverseAbortRef.current?.abort();
@@ -242,7 +284,7 @@ export function TripMap({
     try {
       map = new MlMap({
         container: containerRef.current,
-        style: STYLE_URL,
+        style: mapStyleUrlForTheme(themeRef.current),
         center: boot ? [boot.lng, boot.lat] : DEFAULT_CENTER,
         zoom: boot ? FALLBACK_ZOOM : DEFAULT_ZOOM,
         attributionControl: false,
@@ -251,11 +293,12 @@ export function TripMap({
           "GeolocateControl.LocationNotAvailable": locateLabelRef.current,
         },
       });
+      appliedThemeRef.current = themeRef.current;
     } catch {
       setFailed(true);
       return;
     }
-    map.addControl(new NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new NavigationControl({ showCompass: false }), "bottom-right");
 
     const geolocate = new GeolocateControl({
       positionOptions: {
@@ -268,20 +311,23 @@ export function TripMap({
       showAccuracyCircle: false,
       showUserLocation: false,
     });
-    map.addControl(geolocate, "top-right");
+    map.addControl(geolocate, "bottom-right");
     geolocateRef.current = geolocate;
 
     // Fold locate into the zoom control group so the stack is one level surface.
-    const topRight = map.getContainer().querySelector(".maplibregl-ctrl-top-right");
-    const groups = topRight?.querySelectorAll(":scope > .maplibregl-ctrl-group");
-    if (groups && groups.length >= 2) {
-      const zoomGroup = groups[0]!;
-      const locateGroup = groups[1]!;
-      const locateBtn = locateGroup.querySelector("button");
-      if (locateBtn) {
-        zoomGroup.appendChild(locateBtn);
-        locateGroup.remove();
-      }
+    const bottomRight = map
+      .getContainer()
+      .querySelector(".maplibregl-ctrl-bottom-right");
+    const zoomGroup = bottomRight
+      ?.querySelector(".maplibregl-ctrl-zoom-in")
+      ?.closest(".maplibregl-ctrl-group");
+    const locateBtn = bottomRight?.querySelector(
+      ".maplibregl-ctrl-geolocate",
+    );
+    const locateGroup = locateBtn?.closest(".maplibregl-ctrl-group");
+    if (zoomGroup && locateBtn && locateGroup && zoomGroup !== locateGroup) {
+      zoomGroup.appendChild(locateBtn);
+      locateGroup.remove();
     }
 
     geolocate.on("geolocate", (e: { coords: GeolocationCoordinates }) => {
@@ -326,29 +372,8 @@ export function TripMap({
     map.on("contextmenu", (e) => {
       contextRef.current?.(e.lngLat.lng, e.lngLat.lat);
     });
-    map.on("load", () => {
-      map.addSource("trip-route", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      map.addLayer({
-        id: "trip-route-casing",
-        type: "line",
-        source: "trip-route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#ffffff", "line-width": 6, "line-opacity": 0.9 },
-      });
-      map.addLayer({
-        id: "trip-route-line",
-        type: "line",
-        source: "trip-route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 2.5,
-          "line-opacity": 0.9,
-        },
-      });
+    const handleStyleReady = () => {
+      installTripRouteLayers(map, themeRef.current);
       readyRef.current = true;
       map.resize();
       // trigger the first sync
@@ -358,7 +383,9 @@ export function TripMap({
       if (pos) ensureUserMarkerRef.current(pos.lng, pos.lat);
       // Locate was requested before the control existed — start it now.
       if (locatePendingRef.current) locateUserRef.current();
-    });
+    };
+    map.on("load", handleStyleReady);
+    map.on("style.load", handleStyleReady);
     mapRef.current = map;
     return () => {
       clearUserMarkerRef.current();
@@ -368,8 +395,21 @@ export function TripMap({
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
+      appliedThemeRef.current = null;
     };
   }, []);
+
+  // Swap the basemap in place so camera, markers, popups, and geolocation stay
+  // mounted. MapLibre removes custom sources/layers during setStyle;
+  // handleStyleReady restores the trip route after the new style loads.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || appliedThemeRef.current === theme) return;
+    appliedThemeRef.current = theme;
+    readyRef.current = false;
+    setFailed(false);
+    map.setStyle(mapStyleUrlForTheme(theme));
+  }, [theme]);
 
   // Keep a stable ref to the latest sync so map load can call it.
   const syncRef = useRef<() => void>(() => {});
@@ -575,7 +615,10 @@ export function TripMap({
   }, [searchResult, i18n.language, t]);
 
   return (
-    <div ref={containerRef} className="relative size-full overflow-hidden bg-[#e9ecf4]">
+    <div
+      ref={containerRef}
+      className="relative size-full overflow-hidden bg-muted"
+    >
       {failed ? (
         <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-muted-foreground">
           {unavailableLabel}

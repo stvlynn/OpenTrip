@@ -1,4 +1,7 @@
-import { THEME_STORAGE_KEY } from "@/shared/config/theme";
+import {
+  THEME_CHANGE_EVENT,
+  THEME_STORAGE_KEY,
+} from "@/shared/config/theme";
 import { getStoredTheme, resolveTheme } from "./theme-persistence";
 
 /** Apply the persisted theme to the document root. Call once at app boot. */
@@ -6,6 +9,9 @@ export function applyTheme(): void {
   if (typeof document === "undefined") return;
   const resolved = resolveTheme(getStoredTheme());
   document.documentElement.classList.toggle("dark", resolved === "dark");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+  }
 }
 
 /** Keep system mode synchronized with OS changes and other tabs. */

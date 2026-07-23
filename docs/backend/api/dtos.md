@@ -56,7 +56,7 @@ Returned by most trip mutations and `GET /api/trips/:id`.
 | `startDate` | string | ISO `YYYY-MM-DD` or `""` |
 | `coverUrl` | string \| null | Optional cover image URL |
 | `intake` | `TripIntake` \| null | Create-wizard answers (TBD fields omitted) |
-| `agentSeedPending` | boolean | Planner should send one-shot `@agent` seed |
+| `agentSeedPending` | boolean | Planner should offer a one-shot suggested `@agent` draft |
 | `members` | `MemberDto[]` | Membership |
 | `permissions` | `TripPermissions` | **Caller’s** effective rights |
 | `days` | `DayDto[]` | Itinerary days |

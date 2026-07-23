@@ -162,7 +162,7 @@ export class TripService {
     return toTripDto(trip, userId);
   }
 
-  /** Clear the one-shot agent seed flag after the planner sends the first message. */
+  /** Clear the one-shot agent seed flag after the member sends the suggested prompt. */
   async clearAgentSeedPending(
     tripId: string,
     userId: string,

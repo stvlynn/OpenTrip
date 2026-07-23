@@ -11,6 +11,11 @@ The cossUI token CSS is ported from the handoff into
 - `colors.css` — `--ink-*` (cool blue-grey) and `--corn-*` (cornflower) ramps
   plus semantic aliases (`--background`, `--foreground`, `--card`, `--primary`,
   `--brand`, `--muted`, `--border`, status colors) and a `.dark` scope.
+  The light theme preserves the handoff's cool blue-grey composition. Dark mode
+  uses true black for the canvas, neutral raised surfaces for cards/sidebar,
+  and keeps cornflower only as an accent. The handoff shipped dark token values
+  but its final compositions were light-only; copying the navy tokens into the
+  later three-pane planner flattened the shell and competed with the black map.
 - `spacing.css` — radius scale (base 10px, card `2xl`), spacing steps,
   elevation shadows, top-highlight, shadow-as-border, focus-ring, and motion
   tokens (`--press-scale: 0.96`, `--ease-out`, `--enter-stagger`).

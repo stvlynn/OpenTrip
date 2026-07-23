@@ -39,8 +39,9 @@ geocoding source.
 Below the `md` breakpoint the search control spans the top edge of the map
 (full width with side margins) instead of the fixed-width top-left box, and
 the all-days color legend is hidden — the itinerary bottom-sheet pill occupies
-that corner and carries the same per-day information. The zoom/locate control
-stack is pushed below the search bar via the `--map-ctrl-top-offset` CSS
+that corner and carries the same per-day information. The zoom and locate
+controls stay in the bottom-right corner, above the floating
+member/invite actions via the `--map-ctrl-bottom-offset` CSS
 variable (defined in `map.css`, set by the page that owns the overlay) so the
 two never overlap. The selected stop opens
 as a bottom detail sheet rather than in the sidebar. See
@@ -77,12 +78,16 @@ tracks the user with `watchPosition` while active.
 
 ## Behavior
 
-- **Basemap**: CARTO positron GL style (free, light).
+- **Basemap**: CARTO Positron in light mode and CARTO Dark Matter in dark mode.
+  `TripMap` observes the resolved application theme, swaps the MapLibre style
+  in place, and restores the page-owned route source/layers after `style.load`.
+  Camera, markers, popups, and geolocation remain mounted across the swap.
+  Route casing and MapLibre popups/controls use theme-specific contrast.
 - **Markers**: circular numbered pins colored by day; `transit` stops render as
   rounded squares. Hover scales up; the active stop scales further with a
   cornflower ring.
-- **Routes**: one line per day (white casing + colored line) connecting that
-  day's stops in order.
+- **Routes**: one line per day (theme-contrast casing + colored line) connecting
+  that day's stops in order.
 - **Focus**: selecting a stop flies to it and opens a name popup.
 - **Fit**: when no stop is active, the map fits bounds to the visible stops.
 - **Empty trip + destination**: create stores geocoded `trip.destinationLat/Lng`
