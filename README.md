@@ -31,7 +31,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/screenshots/pc-map.jpg" alt="OpenTrip desktop map view — Japan Autumn trip" width="920" />
+  <video src="docs/assets/OpenTripPromo.mp4" width="920" controls muted playsinline>
+    OpenTrip promo video
+  </video>
 </p>
 
 ---

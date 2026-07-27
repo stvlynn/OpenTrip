@@ -31,7 +31,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/screenshots/pc-map.jpg" alt="OpenTrip 桌面端地图视图 — 日本秋日之旅" width="920" />
+  <video src="docs/assets/OpenTripPromo.mp4" width="920" controls muted playsinline>
+    OpenTrip 宣传视频
+  </video>
 </p>
 
 ---
