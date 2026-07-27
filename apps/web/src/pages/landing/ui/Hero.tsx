@@ -33,10 +33,6 @@ export function Hero({ onGetStarted }: { onGetStarted: () => void }) {
               {t("hero.secondary")}
             </Button>
           </div>
-
-          <p className="wf-enter mt-6 text-xs text-muted-foreground">
-            {t("hero.trust")}
-          </p>
         </div>
 
         <div className="wf-enter mx-auto mt-14 max-w-5xl">

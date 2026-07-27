@@ -8,7 +8,6 @@
     "subtitle": "OpenTrip turns the chaos into one shared plan: the route, the days, the money — and an AI co-planner that knows every stop.",
     "primary": "Start planning",
     "secondary": "See how it works",
-    "trust": "Free to start · Includes a 5-day Japan demo trip",
     "imageAlt": "OpenTrip desktop map of the five-day Japan demo trip"
   },
   "facts": {
@@ -53,7 +52,6 @@
   },
   "cta": {
     "title": "Your crew is ready when you are.",
-    "subtitle": "Sign up and the demo trip is waiting — five days across Japan, already planned.",
     "button": "Start planning"
   },
   "footer": {

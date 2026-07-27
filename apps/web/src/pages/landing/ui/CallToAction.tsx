@@ -10,9 +10,6 @@ export function CallToAction({ onGetStarted }: { onGetStarted: () => void }) {
         <h2 className="mx-auto max-w-xl text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
           {t("cta.title")}
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-pretty text-primary-foreground/70">
-          {t("cta.subtitle")}
-        </p>
         <div className="mt-8 flex justify-center">
           <Button variant="brand" size="lg" onClick={onGetStarted}>
             {t("cta.button")}
