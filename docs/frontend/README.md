@@ -26,6 +26,15 @@ sessions skip the landing entirely. The gate lives in `app/App.tsx`. Landing
 copy is centralized in the `landing` i18n namespace (EN + 中文) and its
 screenshots reuse the README captures under `pages/landing/assets`.
 
+Every landing section is centred in a `max-w-6xl` column except the closing
+call to action, which is the page's one full-bleed surface: an edge-to-edge
+band (navy in light, the raised card surface in dark) that butts straight into
+the footer, so the page ends on a single weighted block. The dashed route line
+with its stop pins bleeds off both edges along the foot of the band — it is
+what makes the full width read as deliberate rather than as a stretched card —
+and it stays clear of the copy. `LandingFooter` therefore carries no top margin
+of its own.
+
 ## Error pages
 
 `pages/error` is one variant-driven surface for every error state — `404`,
