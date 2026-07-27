@@ -30,24 +30,21 @@
   <img alt="i18n" src="https://img.shields.io/badge/i18n-EN%20%7C%20中文-green" />
 </p>
 
+| Intro |
+| :---: |
+| <video src="https://github.com/user-attachments/assets/c0cdeabc-f26a-477f-a55f-f80e48780d7b" width="920" controls muted playsinline></video> |
 
-https://github.com/user-attachments/assets/c0cdeabc-f26a-477f-a55f-f80e48780d7b
+| Trips & invite | Map | Schedule |
+| :---: | :---: | :---: |
+| <video src="https://github.com/user-attachments/assets/e55d18dd-4123-4a64-a49b-e3a169d8a7f3" width="300" controls muted playsinline></video> | <video src="https://github.com/user-attachments/assets/ee63c096-76a2-4b2e-9e6a-ca248c6e3e1f" width="300" controls muted playsinline></video> | <video src="https://github.com/user-attachments/assets/a494cb20-3dcb-4a13-857a-4538734b2ae0" width="300" controls muted playsinline></video> |
 
-https://github.com/user-attachments/assets/e55d18dd-4123-4a64-a49b-e3a169d8a7f3
+| Budget | Votes | Agent |
+| :---: | :---: | :---: |
+| <video src="https://github.com/user-attachments/assets/00b35438-a335-4e2b-a51e-ef37f7a05457" width="300" controls muted playsinline></video> | <video src="https://github.com/user-attachments/assets/a40a214b-d22a-436c-b18b-b9d0193c0e01" width="300" controls muted playsinline></video> | <video src="https://github.com/user-attachments/assets/f8c3e385-bcca-4dcf-bb34-fd308ad26110" width="300" controls muted playsinline></video> |
 
-https://github.com/user-attachments/assets/ee63c096-76a2-4b2e-9e6a-ca248c6e3e1f
-
-https://github.com/user-attachments/assets/a494cb20-3dcb-4a13-857a-4538734b2ae0
-
-https://github.com/user-attachments/assets/00b35438-a335-4e2b-a51e-ef37f7a05457
-
-https://github.com/user-attachments/assets/a40a214b-d22a-436c-b18b-b9d0193c0e01
-
-https://github.com/user-attachments/assets/f8c3e385-bcca-4dcf-bb34-fd308ad26110
-
-https://github.com/user-attachments/assets/3a55bd70-3d78-4cb3-bec1-09203f5638b3
-
-https://github.com/user-attachments/assets/75859314-463d-4da7-8ebd-54c52aa9be90
+| Travelogue | PWA & close |
+| :---: | :---: |
+| <video src="https://github.com/user-attachments/assets/3a55bd70-3d78-4cb3-bec1-09203f5638b3" width="300" controls muted playsinline></video> | <video src="https://github.com/user-attachments/assets/75859314-463d-4da7-8ebd-54c52aa9be90" width="300" controls muted playsinline></video> |
 
 ---
 
