@@ -29,11 +29,17 @@ screenshots reuse the README captures under `pages/landing/assets`.
 Every landing section is centred in a `max-w-6xl` column except the closing
 call to action, which is the page's one full-bleed surface: an edge-to-edge
 band (navy in light, the raised card surface in dark) that butts straight into
-the footer, so the page ends on a single weighted block. The dashed route line
-with its stop pins bleeds off both edges along the foot of the band — it is
-what makes the full width read as deliberate rather than as a stretched card —
-and it stays clear of the copy. `LandingFooter` therefore carries no top margin
-of its own.
+the footer, so the page ends on a single weighted block. `LandingFooter`
+therefore carries no top margin of its own. The ask sits left and the mobile
+schedule capture rises out of the band's bottom edge, cropped by it. Behind
+both, a travel photo is washed in at ~10% opacity (`CTA_PHOTO_ID` in
+`pages/landing/lib/content`) purely as texture — it is decorative, so it is
+`aria-hidden` with no alt text, and it removes itself if the CDN request fails
+rather than leaving a broken-image glyph.
+
+Unsplash CDN urls are built with `unsplashSrc` / `unsplashSrcSet`
+(`shared/lib/unsplash`), shared by the landing CTA and the error surfaces. Photo
+ids are stable and referenced literally at the call site.
 
 ## Error pages
 

@@ -25,6 +25,7 @@ export {
   AGENT_AVATAR_SEED,
 } from "./avatar";
 export { pressable, interactive, field } from "./motion";
+export { unsplashSrc, unsplashSrcSet, type UnsplashPhotoId } from "./unsplash";
 export {
   MOBILE_MEDIA_QUERY,
   matchesMediaQuery,

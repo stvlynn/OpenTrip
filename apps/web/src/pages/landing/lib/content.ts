@@ -11,6 +11,11 @@ import stopDetailShot from "../assets/pc-stop-detail.jpg";
 export const SHOT_WIDTH = 1440;
 export const SHOT_HEIGHT = 900;
 
+/** Unsplash photo washed into the closing CTA band — departure gate at dusk,
+ * the moment the page is asking the visitor to commit to. Already in the app's
+ * photo set (see `pages/error/model/variants`), so it is a known-good id. */
+export const CTA_PHOTO_ID = "photo-1504150558240-0b4fd8946624";
+
 export interface Feature {
   /** i18n key stem under `features.*`. */
   id: "map" | "schedule" | "budget" | "agent" | "collaborate";
