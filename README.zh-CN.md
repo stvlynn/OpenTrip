@@ -31,10 +31,22 @@
 </p>
 
 <p align="center">
-  <video src="https://res.cloudinary.com/di99byu6w/video/upload/v1785142026/OpenTripPromo_phjreo.mp4" width="920" controls muted playsinline>
-    OpenTrip 宣传视频
+  <video src="docs/assets/promo/01-intro.mp4" width="920" controls muted playsinline>
+    OpenTrip 宣传片 — 开场
   </video>
 </p>
+
+| 行程与邀请 | 地图 | 日程 |
+| :---: | :---: | :---: |
+| <video src="docs/assets/promo/02-trips.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/03-map.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/04-schedule.mp4" width="300" controls muted playsinline></video> |
+
+| 账本 | 投票 | Agent |
+| :---: | :---: | :---: |
+| <video src="docs/assets/promo/05-budget.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/06-votes.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/07-agent.mp4" width="300" controls muted playsinline></video> |
+
+| 游记 | PWA 与结尾 |
+| :---: | :---: |
+| <video src="docs/assets/promo/08-travelogue.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/09-close.mp4" width="300" controls muted playsinline></video> |
 
 ---
 

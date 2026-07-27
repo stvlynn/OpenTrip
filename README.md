@@ -31,10 +31,22 @@
 </p>
 
 <p align="center">
-  <video src="https://res.cloudinary.com/di99byu6w/video/upload/v1785142026/OpenTripPromo_phjreo.mp4" width="920" controls muted playsinline>
-    OpenTrip promo video
+  <video src="docs/assets/promo/01-intro.mp4" width="920" controls muted playsinline>
+    OpenTrip promo — intro
   </video>
 </p>
+
+| Trips & invite | Map | Schedule |
+| :---: | :---: | :---: |
+| <video src="docs/assets/promo/02-trips.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/03-map.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/04-schedule.mp4" width="300" controls muted playsinline></video> |
+
+| Budget | Votes | Agent |
+| :---: | :---: | :---: |
+| <video src="docs/assets/promo/05-budget.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/06-votes.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/07-agent.mp4" width="300" controls muted playsinline></video> |
+
+| Travelogue | PWA & close |
+| :---: | :---: |
+| <video src="docs/assets/promo/08-travelogue.mp4" width="300" controls muted playsinline></video> | <video src="docs/assets/promo/09-close.mp4" width="300" controls muted playsinline></video> |
 
 ---
 

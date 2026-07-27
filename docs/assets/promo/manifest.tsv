@@ -1,0 +1,10 @@
+id	title	start_frame	end_frame	file	bytes
+01-intro	Intro	0	240	01-intro.mp4	647089
+02-trips	Trips & invite	240	630	02-trips.mp4	1084402
+03-map	Map	630	930	03-map.mp4	2203549
+04-schedule	Schedule	930	1170	04-schedule.mp4	871389
+05-budget	Budget	1170	1566	05-budget.mp4	477980
+06-votes	Votes	1566	1776	06-votes.mp4	266266
+07-agent	Agent	1776	2046	07-agent.mp4	220812
+08-travelogue	Travelogue	2046	2316	08-travelogue.mp4	221822
+09-close	PWA & close	2316	2651	09-close.mp4	766056
