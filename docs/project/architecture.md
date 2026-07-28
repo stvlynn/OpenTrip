@@ -73,6 +73,9 @@ flowchart TD
 - All persistence is PostgreSQL. Better Auth and the domain repositories share
   one connection pool.
 - Seed data mirrors the prototype (members, days, 22 stops, 8 expenses).
+- After committed trip mutations, the Workers runtime publishes change events
+  through a Durable Object so connected planner sessions refresh. See
+  [../backend/realtime.md](../backend/realtime.md).
 
 ## Runtime differences (Cloudflare vs Docker)
 
@@ -81,6 +84,7 @@ flowchart TD
 | Frontend | Pages (`apps/web/dist`) | static container |
 | API | Workers (`fetch` entry) | Node (`@hono/node-server`) |
 | DB connection | Hyperdrive binding `connectionString` | `DATABASE_URL` |
+| Realtime | Trip Durable Object WebSocket | HTTP-only; use Workers for full realtime |
 | Secrets | `wrangler secret` / vars | env file |
 | Avatar storage | S3-compatible API configured by env (R2) | persistent filesystem volume or S3-compatible API |
 

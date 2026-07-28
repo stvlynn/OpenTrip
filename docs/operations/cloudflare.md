@@ -233,6 +233,9 @@ The Worker has two independent Durable Object namespaces:
 | `TRIP_REALTIME` | `TripRealtimeObject` | Per-trip realtime collaboration |
 | `AUTH_RATE_LIMIT` | `AuthRateLimitObject` | Globally atomic Better Auth limits per hashed IP/path key |
 
+Product behavior and the WebSocket message protocol are documented in
+[../backend/realtime.md](../backend/realtime.md).
+
 `v2-auth-rate-limit` creates the authentication limiter class after the
 existing realtime migration. No KV, PostgreSQL rate-limit table, or Workers
 Rate Limiting binding participates in authentication enforcement. Cloudflare's

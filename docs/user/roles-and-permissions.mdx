@@ -1,0 +1,40 @@
+---
+title: Roles and permissions
+description: What owners, editors, and viewers can do on a shared trip.
+---
+
+OpenTrip authorizes trip actions from membership role and invite flags.
+
+## Roles
+
+| Role | Can view trip | Can edit plan and budget | Can invite others |
+| --- | --- | --- | --- |
+| **Owner** | Yes | Yes | Yes (by default) |
+| **Editor** | Yes | Yes | Only when `canInvite` is granted |
+| **Viewer** | Yes | No | Only when `canInvite` is granted |
+
+Editing includes itinerary days and stops, reservations, expenses, votes, and
+comments. Viewers receive `403` on those mutations.
+
+## Invite settings
+
+When someone with invite permission creates a link, they choose:
+
+| Setting | Meaning |
+| --- | --- |
+| **Access scope** | `anyone` with the link, or `restricted_emails` for listed addresses |
+| **Join role** | New members become `editor` or `viewer` |
+| **Can invite** | Whether joiners may create further invites |
+| **Expiry** | When the link stops accepting new joins |
+
+Regenerating an invite replaces the previous token. Old links stop working.
+
+## AI companion
+
+Every member can read the shared companion timeline when the agent is enabled.
+Applying write tools and mutating suggestions still requires edit permission.
+
+## Related
+
+- [Collaborate](./collaborate.mdx)
+- [Account and security](./account-and-security.mdx)

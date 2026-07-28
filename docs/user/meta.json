@@ -2,11 +2,22 @@
   "title": "User guide",
   "pages": [
     "index",
+    "---Tutorials---",
+    "first-trip",
+    "---How-to guides---",
     "getting-started",
     "plan-a-trip",
+    "manage-reservations",
+    "map-and-places",
     "collaborate",
     "expenses",
+    "today-and-weather",
+    "travelogues",
     "ai-companion",
-    "account-and-security"
+    "wechat-and-mobile",
+    "account-and-security",
+    "settings-and-preferences",
+    "---Reference---",
+    "roles-and-permissions"
   ]
 }

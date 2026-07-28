@@ -6,6 +6,7 @@
     "api",
     "database",
     "auth",
+    "realtime",
     "agent",
     "trip-ops",
     "weather",

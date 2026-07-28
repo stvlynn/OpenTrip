@@ -1,6 +1,6 @@
 ---
 title: Account and security
-description: Manage sign-in methods, password recovery, profile settings, and 2FA.
+description: Manage sign-in methods, password recovery, profile access, and 2FA.
 ---
 
 ## Sign-in options
@@ -12,15 +12,31 @@ Available providers can vary by deployment.
 
 From the sign-in screen, choose **Forgot password?** and complete the email
 verification flow. Signed-in users can change or establish a password from
-profile settings.
+profile / security settings.
 
 ## Add two-factor authentication
 
-Enable 2FA from security settings, save backup codes somewhere outside
-OpenTrip, and verify that your authenticator works before leaving the setup
-screen.
+1. Open security settings.
+2. Enable 2FA (TOTP).
+3. Scan the QR code with your authenticator app.
+4. Save backup codes somewhere outside OpenTrip.
+5. Verify a code before leaving the setup screen.
+
+### If you lose access
+
+1. Try a backup code if you still have the list.
+2. If you cannot complete 2FA, use the account recovery path your deployment
+   supports (typically email-assisted recovery). Contact the operator if you
+   are locked out of the only enrolled device.
 
 ## Protect invitations and sessions
 
-Treat trip invites like private links. Sign out on shared devices and revoke
-access when a device or invite may have been exposed.
+- Treat trip invites like private links; regenerate if exposed.
+- Sign out on shared devices.
+- Revoke access when a device may have been compromised.
+
+## Related
+
+- [Getting started](./getting-started.mdx)
+- [Settings and preferences](./settings-and-preferences.mdx)
+- [Roles and permissions](./roles-and-permissions.mdx)

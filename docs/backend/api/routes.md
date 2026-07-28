@@ -16,6 +16,9 @@ API origin. **Auth**: `public` | `session` | `session + member` | `session + edi
 | GET | `/api/mobile-auth/oauth/start` | public | 302 to Google with OAuth state cookies |
 | GET | `/api/mobile-auth/oauth/complete` | OAuth cookie | Redirect to the app with a one-time code |
 | POST | `/api/mobile-auth/oauth/exchange` | one-time code | Exchange code for a native Bearer session |
+| POST | `/api/mobile-auth/webview/mint` | shell bearer | Mint a single-use WebView bridge code |
+| POST | `/api/mobile-auth/webview/exchange` | one-time code | Exchange code for Better Auth HttpOnly cookies |
+| GET | `/api/trips/:tripId/realtime` | session + member | WebSocket upgrade for trip changes + presence |
 | GET | `/api/health` | public | Liveness `{ status: "ok" }` |
 | GET | `/api/uploads/*` | public | Immutable managed file bytes |
 | GET | `/api/weather` | session | Forecast/observed weather |

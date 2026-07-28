@@ -9,11 +9,12 @@ Travel Planner SaaS — plan trips together, split everything.
 ## Published documentation
 
 The Fumadocs site in `apps/docs` publishes this directory from two
-perspectives:
+perspectives, structured with [Diátaxis](https://diataxis.fr/):
 
-- [user/index.mdx](user/index.mdx) — outcome-oriented guidance for travelers.
-- The project, frontend, backend, operations, quality, decisions, and reference
-  sections below — implementation guidance for contributors.
+| Perspective | Path | Diátaxis focus |
+| --- | --- | --- |
+| [User guide](user/index.mdx) | `/user` | Tutorials, how-to guides, and traveler reference |
+| Developer docs | `/developer` | Explanation, reference, contributor tutorial, runbooks |
 
 Run `make dev-docs` to preview both perspectives at
 `http://localhost:5171`. The perspective switcher keeps user workflows separate
@@ -26,6 +27,8 @@ review rules.
 ### Project
 
 - [project/README.md](project/README.md) — product overview and scope.
+- [project/contributor-tutorial.md](project/contributor-tutorial.md) —
+  first-time contributor lesson.
 - [project/architecture.md](project/architecture.md) — system architecture.
 - [project/handoff-implementation.md](project/handoff-implementation.md) —
   prototype-to-product mapping.
@@ -39,6 +42,7 @@ review rules.
 - [frontend/i18n.md](frontend/i18n.md)
 - [frontend/data-caching.md](frontend/data-caching.md) — React Query write-echo
   (Hyperdrive read-after-write)
+- [frontend/mobile-pwa.md](frontend/mobile-pwa.md) — responsive shells and PWA
 - [frontend/miniapp.md](frontend/miniapp.md) — native WeChat WebView shell,
   one-time-code auth bridge, and embedded PWA behavior.
 
@@ -57,6 +61,7 @@ Start here for multi-client development:
 - [backend/api/README.md](backend/api/README.md) — client-facing HTTP contract and DTOs
 - [backend/database.md](backend/database.md)
 - [backend/auth.md](backend/auth.md)
+- [backend/realtime.md](backend/realtime.md) — trip WebSocket changes and presence
 - [backend/agent.md](backend/agent.md)
 - [backend/trip-ops.md](backend/trip-ops.md) — trip mutation registry (HTTP + agent)
 - [backend/weather.md](backend/weather.md) — weather proxy, cache, agent tool
@@ -71,6 +76,7 @@ Start here for multi-client development:
 - [operations/README.md](operations/README.md)
 - [operations/cloudflare.md](operations/cloudflare.md)
 - [operations/docker.md](operations/docker.md)
+- [operations/observability.md](operations/observability.md)
 - [quality/README.md](quality/README.md)
 - [decisions/README.md](decisions/README.md)
 
@@ -80,7 +86,8 @@ Start here for multi-client development:
 
 ### Implementation specifications
 
-- [superpowers/README.md](superpowers/README.md)
+- [superpowers/README.md](superpowers/README.md) — design drafts (not published
+  on the Fumadocs developer tree; keep for agents and historical design work)
 
 ## Repository layout
 

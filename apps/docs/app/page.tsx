@@ -19,8 +19,9 @@ export default function HomePage() {
         <p className="home-eyebrow">One trip, two ways to learn</p>
         <h1>Start with what you want to do.</h1>
         <p>
-          Find practical guidance for planning a trip, or go behind the scenes
-          to understand and build OpenTrip.
+          Find practical guidance for planning a trip — including Today,
+          reservations, map and street view, WeChat, and the AI companion — or
+          go behind the scenes to understand and build OpenTrip.
         </p>
       </section>
 
@@ -32,7 +33,7 @@ export default function HomePage() {
           <span className="perspective-card-copy">
             <small>For travelers</small>
             <strong>User guide</strong>
-            <span>Plan an itinerary, invite companions, track costs, and use the AI trip companion.</span>
+            <span>Plan itineraries, manage reservations, track costs, use Today and travelogues, and work with the AI companion.</span>
           </span>
           <ArrowRight size={20} aria-hidden="true" />
         </Link>

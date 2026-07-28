@@ -1,24 +1,57 @@
 ---
 title: Getting started
-description: Create an account, sign in, and open your first shared trip.
+description: Create an account, sign in, browse your trips, and open the planner.
 ---
 
 ## Create or access your account
 
 Open [OpenTrip](https://opentrip.im), choose **Start planning**, and continue
-with email, Google, or WeChat. Email sign-up may require verification before
-the first password sign-in.
+with email, Google, or WeChat. Available providers depend on how the deployment
+is configured.
 
 ![The real OpenTrip sign-in page with email, Google, and WeChat options](/assets/screenshots/sign-in.png)
 
-## Create your first trip
+| Method | What to expect |
+| --- | --- |
+| Email + password | Sign-up may require an email OTP before the first password sign-in |
+| Google | OAuth when the Google provider is enabled |
+| WeChat | Website QR login and/or the WeChat Mini Program shell when configured |
+
+Password recovery and two-factor authentication are covered in
+[Account and security](./account-and-security.mdx).
+
+## Browse the trips home
+
+After sign-in you land on the trips library. Each card shows status (for
+example planning, active, or settled), dates, cover art, and member avatars.
 
 ![The OpenTrip trip library on desktop with active, planned, and settled trips](/assets/screenshots/pc-trips.jpg)
 
-1. From the home screen, choose **Create trip**.
-2. Describe where you are going and choose the travel dates.
-3. Review the suggested cover and trip details.
-4. Create the trip, then start adding days, stops, and reservations.
+From the home hub you can also open:
+
+- **Today** — a current place, weather, and quick actions between journeys
+- **Travelogues** — personal moment capture (device-local preview today)
+
+On narrow screens those destinations appear in the bottom navigation. See
+[Today and weather](./today-and-weather.mdx), [Travelogues](./travelogues.mdx),
+and [WeChat and mobile](./wechat-and-mobile.mdx).
+
+## Create a trip
+
+1. Choose **Create trip**.
+2. Describe the destination and choose travel dates.
+3. Optionally note party size or a planned budget. These fields do **not**
+   pre-create members or expenses.
+4. Review the suggested cover (Unsplash when a destination is set), then create.
+
+OpenTrip navigates into the planner. On first open you may see a one-shot
+AI-suggested draft; review it before treating anything as confirmed.
+
+## Open an existing trip
+
+Select a trip card to open the planner. Desktop uses a sidebar plus Map /
+Schedule / Reservations / Budget tabs. Mobile uses a bottom tab bar and sheets
+for itinerary, stop detail, and the AI companion.
 
 ## Before inviting companions
 
@@ -29,5 +62,5 @@ Add enough context for the group to recognize the plan:
 - the first few confirmed reservations;
 - notes for decisions that are still open.
 
-Next, [build the itinerary](./plan-a-trip.mdx) or
+Next: [build the itinerary](./plan-a-trip.mdx) or
 [invite your travel group](./collaborate.mdx).

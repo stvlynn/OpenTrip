@@ -1,4 +1,9 @@
 {
   "title": "Project",
-  "pages": ["README", "architecture", "handoff-implementation"]
+  "pages": [
+    "README",
+    "contributor-tutorial",
+    "architecture",
+    "handoff-implementation"
+  ]
 }

@@ -1,15 +1,36 @@
 ---
 title: Use the AI trip companion
-description: Ask for grounded help while keeping the group in control.
+description: Ask for grounded help, review tool results, and approve writes before they land.
 ---
 
 ## Ask in the trip context
 
-The companion works best when your question names the day, place, constraint,
-or decision involved. For example: “Find a lunch stop near our museum booking
-on day two.”
+Open the companion from the planner (side drawer on desktop, sheet on mobile).
+Questions work best when they name the day, place, constraint, or decision.
+
+Examples:
+
+- “Find a lunch stop near our museum booking on day two.”
+- “What does the hostel entrance look like?”
+- “Draft a three-day Tokyo outline within our budget.”
 
 ![The OpenTrip AI companion responding inside the trip workspace](/assets/screenshots/pc-agent.jpg)
+
+![Mobile AI companion sheet in the OpenTrip PWA](/assets/screenshots/pwa-agent.jpg)
+
+## What the companion can research
+
+Read-only tools can help with:
+
+- weather for your dates;
+- place search, nearby points of interest, and place details;
+- routes and travel-time matrices;
+- Airbnb lodging search and listing details;
+- street-level imagery cards when you ask what a place looks like;
+- trip-owned media the agent is allowed to read.
+
+Geo and lodging results are research. Turning a discovery into a stop still
+requires a write that you approve.
 
 ## Review proposed changes
 
@@ -17,8 +38,29 @@ AI output can include suggestions or structured trip changes. Review dates,
 locations, prices, and opening hours before applying anything to the shared
 plan.
 
+Write tools that mutate the trip (insert stop, reorder days, update expense,
+and similar) require **your approval**. Ambient replies to ordinary member
+chat stay read-only.
+
+On first open after creating a trip, you may see a one-shot suggested draft.
+Edit it before treating it as the group plan.
+
+## Mentions and stop threads
+
+- In the companion timeline, talk with `@agent` when you want a streaming reply
+  with write tools available after approval.
+- In a stop comment, `@agent` asks for help in that stop’s thread; `@Member`
+  notifies a teammate.
+
 ## Keep sensitive information private
 
 Do not paste passports, payment card details, private access codes, or other
 secrets into the conversation. Store only the minimum booking information your
 group needs.
+
+## Related
+
+- [Plan a trip](./plan-a-trip.mdx)
+- [Map and places](./map-and-places.mdx)
+- [Manage reservations](./manage-reservations.mdx)
+- [Collaborate](./collaborate.mdx)

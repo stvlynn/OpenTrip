@@ -42,6 +42,7 @@ export const developerDocs = defineDocs({
       "backend/meta.json",
       "backend/api/meta.json",
       "operations/meta.json",
+      "operations/incidents/meta.json",
       "quality/meta.json",
       "decisions/meta.json",
       "reference/meta.json"

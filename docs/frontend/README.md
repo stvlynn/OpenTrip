@@ -77,6 +77,20 @@ In the WeChat shell the hub surfaces share one native page: switching between
 SPA history, and only returning to the hub from a deeper native page (e.g. a
 trip) resets the native stack. See [miniapp.md](miniapp.md).
 
+## Today and travelogues (hub)
+
+Both surfaces live under `pages/trips` with the trips grid:
+
+- **Today** — place selection persisted per user in `localStorage`, weather via
+  the shared `/api/weather` client, and shortcuts into upcoming or recent trips.
+- **Travelogues** — versioned **device-local** draft documents
+  (`local-journal` preview). Do not document them as synced or shared until a
+  backend adapter exists. Composer/reader details and mobile sheets are in
+  [mobile-pwa.md](mobile-pwa.md).
+
+Traveler-facing guidance: [../user/today-and-weather.mdx](../user/today-and-weather.mdx)
+and [../user/travelogues.mdx](../user/travelogues.mdx).
+
 ## Path aliases
 
 `@/*` maps to `apps/web/src/*` (see `apps/web/tsconfig.json` and

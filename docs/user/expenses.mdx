@@ -1,6 +1,6 @@
 ---
 title: Track expenses and settle up
-description: Record shared spending, split costs, and understand who owes whom.
+description: Record shared spending, choose splits, convert display currency, and settle.
 ---
 
 ## Record spending when it happens
@@ -8,16 +8,40 @@ description: Record shared spending, split costs, and understand who owes whom.
 Add the amount, currency, payer, participants, category, and a short
 description. Recording expenses during the trip reduces missing context later.
 
+Editors can add and update expenses. Viewers can read the budget but cannot
+change it.
+
 ## Check the split
 
 ![The OpenTrip budget view with shared expenses and settlement balances](/assets/screenshots/pc-budget.jpg)
 
-Before saving, confirm that every person who benefited is included and that the
-payer is correct. Use a custom split when equal shares do not match the real
-agreement.
+Before saving, confirm:
 
-## Settle after review
+- every person who benefited is included;
+- the payer is correct;
+- equal shares match the agreement, or switch to a custom split.
 
-Review the expense list together before using the settlement summary. Currency
-conversion helps compare balances, but the group should still agree on the
-rate and final payment method.
+## Review balances and settle
+
+OpenTrip computes per-member balances and a minimal set of transfers that
+settles the trip. Review the expense list together before anyone pays.
+
+### Display currency conversion
+
+You can view settle-up amounts in another currency using the FX rate table.
+Conversion helps comparison; it does not rewrite stored expense amounts. The
+group should still agree on the rate and the final payment method outside
+OpenTrip.
+
+## On mobile
+
+Budget is one of the four planner tabs. The same add-expense and settlement
+summary flows are available in the mobile shell.
+
+![Mobile budget view in the OpenTrip PWA](/assets/screenshots/pwa-budget.jpg)
+
+## Related
+
+- [Collaborate](./collaborate.mdx)
+- [Settings and preferences](./settings-and-preferences.mdx) — default currency
+- [Roles and permissions](./roles-and-permissions.mdx)

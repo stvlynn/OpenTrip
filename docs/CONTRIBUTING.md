@@ -1,13 +1,14 @@
 ---
 title: "Contributing to the documentation"
-description: "Audience, ownership, structure, screenshots, and review rules for OpenTrip documentation."
+description: "Audience, ownership, Diátaxis structure, screenshots, and review rules for OpenTrip documentation."
 ---
 
 # Contributing to the documentation
 
 OpenTrip documentation is maintained with the product in the same monorepo.
 Documentation changes follow the same pull request, review, and deployment
-workflow as code changes.
+workflow as code changes. Authoring follows
+[Diátaxis](https://diataxis.fr/).
 
 ## Start with the audience
 
@@ -15,18 +16,37 @@ Every page belongs to one primary perspective:
 
 | Perspective | Reader | Content |
 | --- | --- | --- |
-| User guide | A traveler trying to complete a task | Outcomes, ordered workflows, screenshots, and safety notes |
-| Developer docs | A contributor changing or operating OpenTrip | Architecture, contracts, decisions, configuration, and runbooks |
+| User guide | A traveler trying to complete a task | Tutorials, how-to guides, and traveler reference |
+| Developer docs | A contributor changing or operating OpenTrip | Explanation, API/domain reference, ADRs, and runbooks |
 
 Do not mix implementation details into a user workflow. Link to the developer
 page when internal context is genuinely useful.
+
+## Choose the Diátaxis type
+
+| Type | User asks… | Write… |
+| --- | --- | --- |
+| **Tutorial** | “Teach me to succeed once” | A lesson with a fixed path and a clear ending |
+| **How-to** | “How do I solve X?” | Goal-oriented steps the reader can jump into |
+| **Reference** | “What are the exact rules/fields?” | Tables, contracts, inventories |
+| **Explanation** | “Why does it work this way?” | Discussion of rationale and trade-offs |
+
+Examples:
+
+- Tutorial: [user/first-trip.mdx](user/first-trip.mdx),
+  [project/contributor-tutorial.md](project/contributor-tutorial.md)
+- How-to: most pages under [user/](user/)
+- Reference: [backend/api/](backend/api/),
+  [user/roles-and-permissions.mdx](user/roles-and-permissions.mdx)
+- Explanation: [backend/realtime.md](backend/realtime.md), ADRs under
+  [decisions/](decisions/)
 
 ## Put content in the right place
 
 ```text
 docs/
-  user/          traveler workflows
-  project/       product scope and system architecture
+  user/          traveler tutorials, how-tos, and reference
+  project/       product scope, contributor tutorial, architecture
   frontend/      client architecture and UI conventions
   backend/       domain, application, infrastructure, and HTTP contracts
   operations/    local development, deployment, observability, incidents
@@ -34,6 +54,7 @@ docs/
   decisions/     durable architecture decisions
   reference/     source material and handoff records
   assets/        shared images, videos, and diagrams
+  superpowers/   design drafts (not on the published developer page tree)
 ```
 
 Keep one authoritative page for each topic. Prefer a link over copying a
@@ -47,6 +68,8 @@ paragraph into another section.
 4. Use the exact labels visible in the product.
 5. Put warnings immediately before the risky action.
 6. End with the next likely task.
+7. Do not invent features. Label previews and limits explicitly (for example
+   device-local travelogues).
 
 ## Maintain developer documentation with code
 

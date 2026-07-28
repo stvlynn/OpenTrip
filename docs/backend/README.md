@@ -70,5 +70,6 @@ wrapper only.
 - [geo.md](geo.md) — internal geo service (OSM/Google), cache, and agent read tools.
 - [lodging.md](lodging.md) — Airbnb lodging search (openbnb-style), agent read tools.
 - [street-view.md](street-view.md) — provider-neutral imagery search, previews, viewer, and agent tools.
+- [realtime.md](realtime.md) — trip change fan-out, presence, and WebSocket protocol.
 - [database.md](database.md) — schema, migrations, seed.
 - [auth.md](auth.md) — Better Auth integration.

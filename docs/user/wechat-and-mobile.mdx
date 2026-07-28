@@ -1,0 +1,61 @@
+---
+title: WeChat and mobile
+description: Use OpenTrip in WeChat, in a mobile browser, or as an installed PWA.
+---
+
+## WeChat Mini Program
+
+When the WeChat shell is configured, OpenTrip opens as a Mini Program that hosts
+the same responsive web app inside a native page stack.
+
+What the native shell provides:
+
+- WeChat sign-in;
+- native navigation bar, back button, and swipe-back;
+- share cards and deep links into a trip or invite;
+- a secure one-time handoff into the embedded web session.
+
+What stays in the web app:
+
+- trips home, Today, and Travelogues;
+- the full trip planner (map, schedule, reservations, budget);
+- the AI companion.
+
+Open a shared trip card or invite link inside WeChat when a companion sends one.
+Use the native back gesture to leave a trip and return to the home hub.
+
+## Mobile browser
+
+On a phone browser, OpenTrip uses a compact shell:
+
+- home hub bottom navigation for Trips, Today, and Travelogues;
+- planner bottom tabs for Map, Schedule, Reservations, and Budget;
+- sheets for itinerary, stop detail, and the companion.
+
+![Mobile trips home in the OpenTrip PWA](/assets/screenshots/pwa-trips.jpg)
+
+![Mobile schedule board in the OpenTrip PWA](/assets/screenshots/pwa-schedule.jpg)
+
+## Install as a PWA
+
+Where the browser supports installation:
+
+1. Open OpenTrip in the mobile browser.
+2. Use the browser’s **Add to Home Screen** / install action.
+3. Launch from the home screen icon for a fuller-screen experience.
+
+Installed mode still talks to the same account and API. Offline behavior covers
+cached shell assets; treat trip edits as requiring connectivity unless the UI
+explicitly says a change is queued.
+
+## Permissions and notifications
+
+Profile settings may include permission prompts used by the mobile experience.
+Grant only what you need (for example notifications). Declining location is
+fine — Today asks you to name a city or region instead.
+
+## Related
+
+- [Getting started](./getting-started.mdx)
+- [Today and weather](./today-and-weather.mdx)
+- [Account and security](./account-and-security.mdx)
