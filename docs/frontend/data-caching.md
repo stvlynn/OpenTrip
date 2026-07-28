@@ -1,3 +1,7 @@
+---
+title: "React Query cache and write-echo"
+---
+
 # React Query cache and write-echo
 
 OpenTrip’s SPA uses TanStack Query (`@tanstack/react-query`) for server state.

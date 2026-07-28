@@ -1,3 +1,7 @@
+---
+title: "Observability and agent tracing"
+---
+
 # Observability and agent tracing
 
 OpenTrip uses two complementary observability surfaces:

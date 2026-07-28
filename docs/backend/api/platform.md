@@ -1,3 +1,7 @@
+---
+title: "Platform endpoints"
+---
+
 # Platform endpoints
 
 Unless noted, success body is `{ "data": … }` and the tables describe the **payload inside `data`**.

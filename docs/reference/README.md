@@ -1,3 +1,7 @@
+---
+title: "Reference sources"
+---
+
 # Reference sources
 
 Auditable record of the material this implementation is based on, so future

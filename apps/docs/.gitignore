@@ -1,0 +1,6 @@
+.next/
+.source/
+out/
+public/assets/
+next-env.d.ts
+tsconfig.tsbuildinfo

@@ -1,3 +1,7 @@
+---
+title: "Authentication (Better Auth)"
+---
+
 # Authentication (Better Auth)
 
 Reference: [../reference/backend-sources.md](../reference/backend-sources.md).

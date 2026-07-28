@@ -1,3 +1,7 @@
+---
+title: "Lodging (Airbnb)"
+---
+
 # Lodging (Airbnb)
 
 Internal vacation-rental search used by the trip agent. Logic is adapted from

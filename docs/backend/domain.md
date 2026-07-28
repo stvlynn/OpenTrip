@@ -1,3 +1,7 @@
+---
+title: "Domain model"
+---
+
 # Domain model
 
 Reference: [../reference/handoff.md](../reference/handoff.md) for the source

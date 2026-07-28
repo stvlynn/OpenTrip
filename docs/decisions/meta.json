@@ -1,0 +1,16 @@
+{
+  "title": "Architecture decisions",
+  "pages": [
+    "README",
+    "0001-architecture-and-stack",
+    "0002-cloudflare-and-docker-deploy",
+    "0003-i18n",
+    "0004-env-configured-object-storage",
+    "0005-trip-agent",
+    "0006-mutation-echo-over-refetch",
+    "0007-separate-taro-miniapp-client",
+    "0008-native-r2-worker-binding",
+    "0009-mini-program-pwa-webview-shell",
+    "0010-miniapp-native-page-stack"
+  ]
+}

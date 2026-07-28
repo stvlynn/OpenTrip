@@ -1,3 +1,7 @@
+---
+title: "Backend (DDD + Hexagonal)"
+---
+
 # Backend (DDD + Hexagonal)
 
 The backend (`apps/api`) is a Hono + TypeScript app following Domain-Driven

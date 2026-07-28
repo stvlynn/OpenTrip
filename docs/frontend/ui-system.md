@@ -1,3 +1,7 @@
+---
+title: "UI system (cossUI)"
+---
+
 # UI system (cossUI)
 
 Reference: [../reference/frontend-sources.md](../reference/frontend-sources.md)

@@ -1,3 +1,7 @@
+---
+title: "Frontend (Feature-Sliced Design)"
+---
+
 # Frontend (Feature-Sliced Design)
 
 The browser frontend (`apps/web`) is a React + TypeScript + Vite PWA organized

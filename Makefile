@@ -8,7 +8,7 @@ POSTGRES_DB ?= opentrip
 MINIAPP_DIR ?= apps/miniapp
 WECHAT_DEVTOOLS_CLI ?= /Applications/wechatwebdevtools.app/Contents/MacOS/cli
 
-.PHONY: help install env setup postgres-up postgres-down dev dev-nodb dev-web dev-api
+.PHONY: help install env setup postgres-up postgres-down dev dev-nodb dev-web dev-api dev-docs
 .PHONY: miniapp-env miniapp-sync-config miniapp-clear-cache miniapp miniapp-open dev-miniapp-api
 .PHONY: db-init db-reset db-migrate db-seed db-generate db-pull db-push db-studio db-snapshot
 .PHONY: deploy-up deploy-down deploy-logs
@@ -36,6 +36,7 @@ help:
 	@echo "  make dev-nodb        Start web + api only (skip Postgres startup)"
 	@echo "  make dev-web         Start Vite only (http://localhost:5170)"
 	@echo "  make dev-api         Start API only (http://localhost:8780)"
+	@echo "  make dev-docs        Start Fumadocs only (http://localhost:5171)"
 	@echo ""
 	@echo "WeChat Mini Program (PWA WebView shell):"
 	@echo "  make miniapp              Prepare config and open DevTools"
@@ -122,6 +123,9 @@ dev-web: env
 
 dev-api: env postgres-up db-migrate
 	pnpm --filter @opentrip/api dev
+
+dev-docs:
+	pnpm --filter @opentrip/docs dev
 
 miniapp-sync-config:
 	@node "$(MINIAPP_DIR)/scripts/sync-config.mjs"
@@ -237,12 +241,15 @@ docs:
 
 clean:
 	rm -rf apps/web/dist
+	rm -rf apps/docs/.next apps/docs/out apps/docs/public/assets
 	@echo "Cleaned build artifacts."
 
 deploy:
 	@echo "Cloudflare (git push to main auto-deploys):"
 	@echo "  Web  https://opentrip.im"
 	@echo "  API  https://api.opentrip.im"
+	@echo "  Docs https://docs.opentrip.im"
 	@echo "  Docs deploy/cloudflare/README.md"
 	@echo "  Manual: CLOUDFLARE_API_TOKEN=… node deploy/cloudflare/scripts/deploy-web.mjs"
+	@echo "          CLOUDFLARE_API_TOKEN=… node deploy/cloudflare/scripts/deploy-docs.mjs"
 	@echo "Docker:     see deploy/docker/README.md"

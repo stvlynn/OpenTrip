@@ -1,3 +1,7 @@
+---
+title: "Reference: agentic-coding template"
+---
+
 # Reference: agentic-coding template
 
 ## Source

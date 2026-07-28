@@ -1,0 +1,14 @@
+{
+  "title": "Developer docs",
+  "pages": [
+    "README",
+    "CONTRIBUTING",
+    "project",
+    "frontend",
+    "backend",
+    "operations",
+    "quality",
+    "decisions",
+    "reference"
+  ]
+}

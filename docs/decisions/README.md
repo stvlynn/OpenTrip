@@ -1,3 +1,7 @@
+---
+title: "Architecture Decision Records"
+---
+
 # Architecture Decision Records
 
 ADRs capture significant, hard-to-reverse decisions and their context. Add a new

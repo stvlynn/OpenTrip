@@ -1,3 +1,7 @@
+---
+title: "Frontend layers"
+---
+
 # Frontend layers
 
 Responsibilities and boundaries per FSD layer in `apps/web/src`.

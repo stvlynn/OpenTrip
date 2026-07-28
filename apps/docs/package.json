@@ -1,0 +1,37 @@
+{
+  "name": "@opentrip/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets:sync": "node scripts/sync-assets.mjs",
+    "dev": "pnpm assets:sync && next dev --hostname 127.0.0.1 --port 5171",
+    "build": "pnpm assets:sync && next build --webpack",
+    "start": "serve out",
+    "typecheck": "fumadocs-mdx && next typegen && tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@orama/orama": "^3.1.18",
+    "fumadocs-core": "^16.6.14",
+    "fumadocs-mdx": "^14.2.7",
+    "fumadocs-ui": "^16.6.14",
+    "lucide-react": "^0.547.0",
+    "next": "^16.1.6",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.1",
+    "serve": "^14.2.4",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.7.3"
+  }
+}

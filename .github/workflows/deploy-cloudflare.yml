@@ -39,6 +39,10 @@ on:
         description: "Deploy Pages frontend"
         type: boolean
         default: true
+      deploy_docs:
+        description: "Deploy Pages documentation"
+        type: boolean
+        default: true
       sync_secrets:
         description: "Sync GitHub secrets → Worker secrets after API deploy"
         type: boolean
@@ -89,6 +93,32 @@ jobs:
           CAPTCHA_PROVIDER: ${{ vars.CAPTCHA_PROVIDER }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: node deploy/cloudflare/scripts/deploy-web.mjs
+
+  deploy-docs:
+    name: Pages (opentrip-docs)
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_docs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Deploy documentation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_BRANCH: main
+        run: node deploy/cloudflare/scripts/deploy-docs.mjs
 
   deploy-api:
     name: Workers (opentrip-api)

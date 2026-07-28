@@ -1,0 +1,18 @@
+{
+  "title": "Backend",
+  "pages": [
+    "README",
+    "domain",
+    "api",
+    "database",
+    "auth",
+    "agent",
+    "trip-ops",
+    "weather",
+    "cover",
+    "fx",
+    "geo",
+    "lodging",
+    "street-view"
+  ]
+}

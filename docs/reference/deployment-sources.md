@@ -1,3 +1,7 @@
+---
+title: "Reference: deployment sources"
+---
+
 # Reference: deployment sources
 
 ## Cloudflare Workers + Pages + Hyperdrive

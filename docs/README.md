@@ -1,6 +1,25 @@
+---
+title: "OpenTrip documentation"
+---
+
 # OpenTrip documentation
 
 Travel Planner SaaS — plan trips together, split everything.
+
+## Published documentation
+
+The Fumadocs site in `apps/docs` publishes this directory from two
+perspectives:
+
+- [user/index.mdx](user/index.mdx) — outcome-oriented guidance for travelers.
+- The project, frontend, backend, operations, quality, decisions, and reference
+  sections below — implementation guidance for contributors.
+
+Run `make dev-docs` to preview both perspectives at
+`http://localhost:5171`. The perspective switcher keeps user workflows separate
+from internal architecture without duplicating the underlying documentation.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for audience, structure, screenshot, and
+review rules.
 
 ## Map
 
@@ -68,6 +87,7 @@ Start here for multi-client development:
 ```
 apps/
   web/   React + Vite frontend (FSD)
+  docs/  Fumadocs static documentation site
   miniapp/ dependency-free native WeChat PWA shell
   api/   Hono backend (DDD + Hexagonal)
 packages/

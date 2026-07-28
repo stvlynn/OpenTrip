@@ -1,3 +1,7 @@
+---
+title: "0002 — Cloudflare and Docker deployment"
+---
+
 # 0002 — Cloudflare and Docker deployment
 
 ## Status

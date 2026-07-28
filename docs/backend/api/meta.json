@@ -1,0 +1,20 @@
+{
+  "title": "HTTP API",
+  "pages": [
+    "README",
+    "conventions",
+    "auth-session",
+    "trips",
+    "itinerary",
+    "reservations",
+    "expenses",
+    "invites",
+    "agent-endpoints",
+    "user",
+    "platform",
+    "dtos",
+    "errors",
+    "routes",
+    "multi-client"
+  ]
+}

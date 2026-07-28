@@ -1,3 +1,7 @@
+---
+title: "0004 — Environment-configured object storage"
+---
+
 # 0004 — Environment-configured object storage
 
 ## Status

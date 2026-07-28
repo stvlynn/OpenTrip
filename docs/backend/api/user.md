@@ -1,3 +1,7 @@
+---
+title: "User profile, preferences, and avatar"
+---
+
 # User profile, preferences, and avatar
 
 Unless noted, success body is `{ "data": … }` and the tables describe the **payload inside `data`**.

@@ -1,3 +1,7 @@
+---
+title: "Mobile adaptation and PWA install"
+---
+
 # Mobile adaptation and PWA install
 
 How the SPA adapts to narrow viewports and installs as a PWA. The service

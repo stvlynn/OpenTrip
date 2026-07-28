@@ -1,3 +1,7 @@
+---
+title: "DTO catalog"
+---
+
 # DTO catalog
 
 ## `StopCategory`

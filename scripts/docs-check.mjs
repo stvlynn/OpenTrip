@@ -52,7 +52,7 @@ async function walk(dir) {
   for (const entry of entries) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) files.push(...(await walk(full)));
-    else if (entry.name.endsWith(".md")) files.push(full);
+    else if (/\.(md|mdx)$/.test(entry.name)) files.push(full);
   }
   return files;
 }
@@ -68,9 +68,11 @@ if (existsSync(docsDir)) {
       const target = match[1].split("#")[0].trim();
       if (!target) continue;
       if (/^(https?:|mailto:)/.test(target)) continue;
-      const resolved = target.startsWith("/")
-        ? join(root, target.slice(1))
-        : resolve(dirname(file), target);
+      const resolved = target.startsWith("/assets/")
+        ? join(docsDir, target.slice(1))
+        : target.startsWith("/")
+          ? join(root, target.slice(1))
+          : resolve(dirname(file), target);
       if (!existsSync(resolved)) {
         errors.push(`${relative(root, file)}: broken link -> ${target}`);
       }
@@ -85,7 +87,7 @@ async function indexListsSiblings(indexRel) {
   const content = await readFile(indexPath, "utf8");
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    if (!entry.isFile() || !/\.(md|mdx)$/.test(entry.name)) continue;
     if (entry.name === "README.md") continue;
     if (!content.includes(entry.name)) {
       errors.push(`${indexRel}: does not reference sibling ${entry.name}`);

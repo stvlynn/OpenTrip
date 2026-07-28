@@ -1,3 +1,7 @@
+---
+title: "Trip cover images (Unsplash)"
+---
+
 # Trip cover images (Unsplash)
 
 When a trip is created with a `destination`, `TripService` asks

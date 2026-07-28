@@ -1,3 +1,7 @@
+---
+title: "0008 — Native R2 binding for Workers"
+---
+
 # 0008 — Native R2 binding for Workers
 
 ## Status

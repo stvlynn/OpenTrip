@@ -1,3 +1,7 @@
+---
+title: "Reference: frontend sources"
+---
+
 # Reference: frontend sources
 
 ## Feature-Sliced Design (FSD v2.1)

@@ -1,3 +1,7 @@
+---
+title: "Product overview"
+---
+
 # Product overview
 
 OpenTrip is a collaborative travel planning SaaS. A small group plans a trip

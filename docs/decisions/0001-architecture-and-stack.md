@@ -1,3 +1,7 @@
+---
+title: "0001 — Architecture and stack"
+---
+
 # 0001 — Architecture and stack
 
 ## Status

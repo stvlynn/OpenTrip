@@ -1,3 +1,7 @@
+---
+title: "API (client contract)"
+---
+
 # API (client contract)
 
 The client-facing HTTP contract is split into multiple files under

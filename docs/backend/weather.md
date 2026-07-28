@@ -1,3 +1,7 @@
+---
+title: "Weather"
+---
+
 # Weather
 
 Internal weather capability used by the planner UI and the trip agent. Consumers

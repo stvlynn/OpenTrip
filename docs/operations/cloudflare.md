@@ -1,3 +1,7 @@
+---
+title: "Cloudflare deployment"
+---
+
 # Cloudflare deployment
 
 Pages (frontend) + Workers (API) + Hyperdrive (external PostgreSQL). Config
@@ -9,6 +13,7 @@ lives in [deploy/cloudflare](../../deploy/cloudflare/README.md). Reference:
 | Surface | URL |
 | --- | --- |
 | Web | https://opentrip.im |
+| Docs | https://docs.opentrip.im |
 | API | https://api.opentrip.im |
 
 The SPA bakes `API_BASE_URL` (as Vite `BASE_URL`) at build time. The Worker
@@ -22,10 +27,12 @@ Pushing to `main` triggers
 
 1. Build and deploy the SPA to Pages (`opentrip-web` → `opentrip.im`), baking
    `CAPTCHA_PROVIDER` + `TURNSTILE_SITE_KEY` when set.
-2. Deploy the API Worker (`opentrip-api` → `api.opentrip.im`), overlaying
+2. Build and deploy the static Fumadocs site to its own Pages project
+   (`opentrip-docs` → `docs.opentrip.im`).
+3. Deploy the API Worker (`opentrip-api` → `api.opentrip.im`), overlaying
    GitHub Actions **variables** onto `wrangler.api.jsonc` vars. The committed
    config deploys both realtime and authentication rate-limit Durable Objects.
-3. Sync GitHub **secrets** into Worker secrets (`sync-secrets.mjs`).
+4. Sync GitHub **secrets** into Worker secrets (`sync-secrets.mjs`).
 
 **Source of truth for production config is GitHub Actions** (Settings →
 Secrets and variables → Actions). Committed `wrangler.api.jsonc` vars are

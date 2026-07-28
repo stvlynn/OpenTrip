@@ -1,3 +1,7 @@
+---
+title: "Docker deployment"
+---
+
 # Docker deployment
 
 Compose stack: `postgres` + `api` (Node Hono) + `web` (static build). Files in

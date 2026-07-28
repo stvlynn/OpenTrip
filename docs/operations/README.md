@@ -1,3 +1,7 @@
+---
+title: "Operations"
+---
+
 # Operations
 
 ## Local development
@@ -21,6 +25,7 @@ Other useful targets:
 | `make dev-nodb` | Start web + api only (skip Postgres startup) |
 | `make dev-web` | Vite only |
 | `make dev-api` | Postgres + migrations + API only |
+| `make dev-docs` | Fumadocs only on http://localhost:5171 |
 | `make miniapp` | Generate native-shell config and open WeChat DevTools |
 | `make miniapp-open` | Sync config, clear DevTools project cache, and reopen `apps/miniapp` |
 | `make miniapp-sync-config` | Generate gitignored AppID/API/PWA config from `apps/miniapp/.env` |
@@ -97,7 +102,8 @@ business domain and `MINIAPP_API_BASE_URL` as a request domain.
 ## Deployment
 
 - Cloudflare (Pages + Workers + Hyperdrive): [cloudflare.md](cloudflare.md).
-  Production: **https://opentrip.im** (web) · **https://api.opentrip.im** (API).
+  Production: **https://opentrip.im** (web) ·
+  **https://docs.opentrip.im** (docs) · **https://api.opentrip.im** (API).
   Pushing to `main` auto-deploys via GitHub Actions; see the Cloudflare doc for
   required repo secrets and the Hyperdrive bootstrap step. Read-after-write
   pitfalls (create trip missing from list, etc.):

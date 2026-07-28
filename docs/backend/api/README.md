@@ -1,3 +1,7 @@
+---
+title: "API (client contract)"
+---
+
 # API (client contract)
 
 HTTP contract for **web, mobile, and other clients**.

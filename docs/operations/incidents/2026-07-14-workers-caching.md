@@ -1,3 +1,7 @@
+---
+title: "Incident: authenticated API responses cached before Worker execution"
+---
+
 # Incident: authenticated API responses cached before Worker execution
 
 ## Summary

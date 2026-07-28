@@ -1,0 +1,13 @@
+{
+  "title": "Frontend",
+  "pages": [
+    "README",
+    "layers",
+    "ui-system",
+    "map",
+    "i18n",
+    "data-caching",
+    "mobile-pwa",
+    "miniapp"
+  ]
+}

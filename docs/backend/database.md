@@ -1,3 +1,7 @@
+---
+title: "Database"
+---
+
 # Database
 
 PostgreSQL (default) or MySQL/MariaDB, selected via env. Runtime repositories

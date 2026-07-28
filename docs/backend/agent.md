@@ -1,3 +1,7 @@
+---
+title: "Trip agent"
+---
+
 # Trip agent
 
 The non-intrusive AI companion described in

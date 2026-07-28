@@ -1,3 +1,7 @@
+---
+title: "FX rates"
+---
+
 # FX rates
 
 Internal FX capability used by the budget settle-up UI. Consumers never talk to

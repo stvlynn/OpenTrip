@@ -1,3 +1,7 @@
+---
+title: "0007 — Separate Taro client for the WeChat Mini Program"
+---
+
 # 0007 — Separate Taro client for the WeChat Mini Program
 
 ## Context

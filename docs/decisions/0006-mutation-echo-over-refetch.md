@@ -1,3 +1,7 @@
+---
+title: "0006 — Mutation echo over immediate refetch"
+---
+
 # 0006 — Mutation echo over immediate refetch
 
 ## Status

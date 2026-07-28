@@ -5,7 +5,8 @@ Historical and live Worker log queries use the shared runbook in
 The operator-only token template is `observability.example.env` and must never
 be synced to Worker secrets.
 
-Frontend on **Pages**, API on **Workers**, PostgreSQL fronted by **Hyperdrive**.
+Frontend and docs on separate **Pages** projects, API on **Workers**, PostgreSQL
+fronted by **Hyperdrive**.
 Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cloudflare.md).
 
 ## Production URLs
@@ -13,6 +14,7 @@ Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cl
 | Surface | Hostname |
 | --- | --- |
 | Web (Pages) | https://opentrip.im · https://www.opentrip.im · https://opentrip-web.pages.dev |
+| Docs (Pages) | https://docs.opentrip.im · https://opentrip-docs.pages.dev |
 | API (Worker) | https://api.opentrip.im · https://opentrip-api.stvlynn.workers.dev |
 
 ## Files
@@ -23,6 +25,7 @@ Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cl
 | [secrets.example.json](secrets.example.json) | Secret key names only (no values) |
 | [vars.example.json](vars.example.json) | Non-secret Actions variable key names |
 | [scripts/deploy-web.mjs](scripts/deploy-web.mjs) | Build SPA + `wrangler pages deploy` |
+| [scripts/deploy-docs.mjs](scripts/deploy-docs.mjs) | Build Fumadocs static export + deploy its Pages project |
 | [scripts/deploy-api.mjs](scripts/deploy-api.mjs) | Deploy API Worker; overlay Actions vars |
 | [scripts/sync-secrets.mjs](scripts/sync-secrets.mjs) | Bulk-upload Worker secrets |
 | [scripts/set-hyperdrive.mjs](scripts/set-hyperdrive.mjs) | Patch Hyperdrive id into wrangler config |
@@ -33,10 +36,11 @@ Full walkthrough: [../../docs/operations/cloudflare.md](../../docs/operations/cl
 
 Pushing to `main` runs [`.github/workflows/deploy-cloudflare.yml`](../../.github/workflows/deploy-cloudflare.yml):
 
-1. **Pages** deploys with `API_BASE_URL`, `CAPTCHA_PROVIDER`, `TURNSTILE_SITE_KEY`.
-2. **API Worker** deploys with Hyperdrive id + Actions **variables** overlaid
+1. **Web Pages** deploys with `API_BASE_URL`, `CAPTCHA_PROVIDER`, `TURNSTILE_SITE_KEY`.
+2. **Docs Pages** independently deploys the `apps/docs/out` static export.
+3. **API Worker** deploys with Hyperdrive id + Actions **variables** overlaid
    onto wrangler vars.
-3. GitHub **secrets** are bulk-synced to the Worker.
+4. GitHub **secrets** are bulk-synced to the Worker.
 
 Production config lives in **GitHub Actions secrets/variables**, not in git.
 
@@ -153,6 +157,7 @@ export EMAIL_PROVIDER=resend
 export EMAIL_FROM='OpenTrip <noreply@opentrip.im>'
 
 node deploy/cloudflare/scripts/deploy-web.mjs
+node deploy/cloudflare/scripts/deploy-docs.mjs
 node deploy/cloudflare/scripts/deploy-api.mjs
 node deploy/cloudflare/scripts/sync-secrets.mjs
 ```

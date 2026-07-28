@@ -1,3 +1,7 @@
+---
+title: "Quality"
+---
+
 # Quality
 
 ## Hyperdrive consistency gate

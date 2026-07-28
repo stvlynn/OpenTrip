@@ -1,3 +1,7 @@
+---
+title: "Map (mapcn / MapLibre)"
+---
+
 # Map (mapcn / MapLibre)
 
 Reference: [../reference/frontend-sources.md](../reference/frontend-sources.md).

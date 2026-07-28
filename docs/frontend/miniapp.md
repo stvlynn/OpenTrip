@@ -1,3 +1,7 @@
+---
+title: "WeChat Mini Program PWA shell"
+---
+
 # WeChat Mini Program PWA shell
 
 `apps/miniapp` is a dependency-free native WeChat Mini Program shell. It owns

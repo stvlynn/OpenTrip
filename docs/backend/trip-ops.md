@@ -1,3 +1,7 @@
+---
+title: "Trip operations registry"
+---
+
 # Trip operations registry
 
 Single source of truth for **trip-scoped editor mutations** shared by:
