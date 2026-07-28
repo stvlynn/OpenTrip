@@ -19,8 +19,11 @@ perspectives, structured with [Diátaxis](https://diataxis.fr/):
 Run `make dev-docs` to preview both perspectives at
 `http://localhost:5171`. The perspective switcher keeps user workflows separate
 from internal architecture without duplicating the underlying documentation.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for audience, structure, screenshot, and
-review rules.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for audience, structure, screenshot,
+docs demo, and review rules. Interaction clips live under
+[assets/demos/](assets/demos/) and embed via the fumadocs `DemoVideo`
+component. Marketing README chapters under [assets/promo/](assets/promo/)
+are separate and must not be reused as docs demos.
 
 ## Map
 

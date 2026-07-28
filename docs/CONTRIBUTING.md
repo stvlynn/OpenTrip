@@ -1,6 +1,6 @@
 ---
 title: "Contributing to the documentation"
-description: "Audience, ownership, Diátaxis structure, screenshots, and review rules for OpenTrip documentation."
+description: "Audience, ownership, Diátaxis structure, screenshots, docs demos, and review rules for OpenTrip documentation."
 ---
 
 # Contributing to the documentation
@@ -86,6 +86,32 @@ Time-sensitive production failures belong in `docs/operations/incidents/`.
 - Use descriptive alt text that explains what the reader should notice.
 - Update a screenshot when the documented control, label, or workflow changes.
 - Prefer one focused screenshot per decision point over decorative image grids.
+
+## Prefer docs demos for mouse-driven flows
+
+Interaction clips under `docs/assets/demos/` are freshly rendered Remotion
+demos (scripted cursor over real UI). Embed them with the fumadocs
+`DemoVideo` MDX component:
+
+```mdx
+<DemoVideo
+  src="/assets/demos/map.mp4"
+  caption="Filter days and follow numbered stops on the shared trip map"
+  poster="/assets/screenshots/pc-map.jpg"
+/>
+```
+
+Rules:
+
+- Prefer **MP4 H.264** demos (Safari-friendly static export). Do not use GIF.
+- Keep one focused still when the video does not show a specific control or
+  mobile layout the page needs to call out.
+- Capture English UI for English docs; avoid mixed-locale evidence.
+- Regenerate demos from the sibling Remotion project
+  [`OpenTrip-video`](https://github.com/stvlynn/OpenTrip-video) with
+  `npm run export:docs-demos` — see
+  [assets/demos/README.md](assets/demos/README.md).
+- Do **not** reuse `docs/assets/promo/` marketing chapters as docs demos.
 
 The docs app copies `docs/assets/` into its generated `public/assets/`
 directory before development and builds. Generated copies are not committed.
