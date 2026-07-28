@@ -43,6 +43,9 @@ Pushing to `main` runs [`.github/workflows/deploy-cloudflare.yml`](../../.github
 4. GitHub **secrets** are bulk-synced to the Worker.
 
 Production config lives in **GitHub Actions secrets/variables**, not in git.
+Set `DOCS_CUSTOM_DOMAIN` and `DOCS_ZONE` as Actions variables to let the docs
+deployment idempotently attach the Pages custom domain and create its proxied
+CNAME. The deployment refuses to replace an existing CNAME with another target.
 
 ### Required GitHub secrets
 

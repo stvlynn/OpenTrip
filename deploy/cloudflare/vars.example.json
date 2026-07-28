@@ -1,6 +1,8 @@
 {
   "_comment": "Key names for GitHub Actions → Settings → Variables (non-secret). Real production values live only in the Actions UI / `gh variable set` — never commit them into wrangler.api.jsonc. Placeholders below are documentation only.",
   "API_BASE_URL": "https://api.opentrip.im",
+  "DOCS_CUSTOM_DOMAIN": "docs.example.com",
+  "DOCS_ZONE": "example.com",
   "TRUSTED_ORIGINS": "https://opentrip.im,https://www.opentrip.im,https://opentrip-web.pages.dev,opentrip://",
   "DATABASE_PROVIDER": "postgres",
   "DATABASE_SSL": "off",

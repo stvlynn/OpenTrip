@@ -117,6 +117,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DOCS_CUSTOM_DOMAIN: ${{ vars.DOCS_CUSTOM_DOMAIN }}
+          DOCS_ZONE: ${{ vars.DOCS_ZONE }}
           PAGES_BRANCH: main
         run: node deploy/cloudflare/scripts/deploy-docs.mjs
 

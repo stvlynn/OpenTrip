@@ -66,6 +66,7 @@ for the full list. Production must set at least:
 | Variable | Example |
 | --- | --- |
 | `API_BASE_URL` | `https://api.opentrip.im` |
+| `DOCS_CUSTOM_DOMAIN` / `DOCS_ZONE` | Docs hostname and its Cloudflare zone |
 | `TRUSTED_ORIGINS` | `https://opentrip.im,…,opentrip://` |
 | `EMAIL_PROVIDER` | `resend` |
 | `EMAIL_FROM` | `OpenTrip <noreply@opentrip.im>` |
