@@ -22,12 +22,16 @@ They are produced by the sibling project
 | `travelogue.mp4` | `Docs-Travelogue` | `travelogues` |
 | `pwa.mp4` | `Docs-PWA` | `wechat-and-mobile` |
 | `reservations.mp4` | `Docs-Reservations` | `manage-reservations`, `first-trip` |
+| `today.mp4` | `Docs-Today` | `today-and-weather` |
+| `settings.mp4` | `Docs-Settings` | `settings-and-preferences` |
+| `account.mp4` | `Docs-Account` | `account-and-security` |
+| `signin.mp4` | `Docs-SignIn` | `getting-started`, `first-trip` |
+| `reservations-pwa.mp4` | `Docs-ReservationsPwa` | `manage-reservations` |
+| `agent-pwa.mp4` | `Docs-AgentPwa` | `ai-companion` |
 
 `manifest.tsv` records byte sizes from the last export.
 
 ## Regenerate
-
-From a checkout of OpenTrip-video next to this monorepo:
 
 ```bash
 cd ../OpenTrip-video/promo
@@ -35,16 +39,10 @@ npm i
 npm run export:docs-demos
 ```
 
-Single demo:
+Single demo: `bash scripts/export-docs-demos.sh Docs-ReservationsPwa`
 
-```bash
-bash scripts/export-docs-demos.sh Docs-Map
-# or
-bash scripts/export-docs-demos.sh map
-```
-
-See `promo/DOCS-DEMOS.md` in OpenTrip-video for scale/CRF overrides and the
-composition map.
+See OpenTrip-video `promo/DOCS-DEMOS.md` for still-export commands
+(`sign-in.png`, `pwa-reservations.jpg`, `pwa-agent.jpg`).
 
 Then in OpenTrip:
 
@@ -54,17 +52,14 @@ pnpm docs:check
 pnpm --filter @opentrip/docs typecheck
 ```
 
-Embed with `<DemoVideo src="/assets/demos/….mp4" … />` in MDX.
+## Screenshot notes
 
-## Remaining media work
+| Asset | Status |
+| --- | --- |
+| `sign-in.png` | English Remotion still from `Docs-SignIn` (recreation, not live capture) |
+| `pwa-reservations.jpg` | Remotion still from `Docs-ReservationsPwa` — full prices visible |
+| `pwa-agent.jpg` | Remotion still from `Docs-AgentPwa` |
+| `pwa-map/budget/schedule/trips.jpg` | Re-exported from OpenTrip-video hi-res captures |
+| Live device captures | Still preferred for README marketing grids when UI drifts |
 
-Stills that still need English/recapture (videos do not replace these yet):
-
-- [ ] `screenshots/sign-in.png` — English UI; remove blank field between password and Login
-- [ ] `screenshots/product-home.png` — orphan or recrop; index uses `trips.mp4`
-- [ ] `screenshots/pwa-reservations.jpg` — amounts look truncated; must recapture
-- [ ] `screenshots/pwa-map.jpg` — soft / low quality; re-export at higher quality
-- [ ] `screenshots/pwa-budget.jpg` — truncated labels; consider scroll crop showing settle-up
-- [ ] Stills or clips for Today, Settings, Account (no Remotion demo yet)
-- [ ] Delete or document unused meta shots: `docs-user-guide.png`,
-      `docs-perspective-switcher.png`, `docs-mobile-guide.png`
+`roles-and-permissions.mdx` is reference-only (no demo).
