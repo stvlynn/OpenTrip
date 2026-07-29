@@ -1,0 +1,37 @@
+.ot-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 64rpx 0;
+}
+
+.ot-invite__eyebrow {
+  font-size: var(--text-caption);
+  letter-spacing: 2rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-invite__title {
+  font-size: var(--text-display);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -1rpx;
+  color: var(--foreground);
+}
+
+.ot-invite__meta {
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+}
+
+.ot-invite__blocked {
+  font-size: var(--text-body);
+  color: var(--danger);
+}
+
+.ot-invite__action {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 56rpx;
+}

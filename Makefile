@@ -9,7 +9,7 @@ MINIAPP_DIR ?= apps/miniapp
 WECHAT_DEVTOOLS_CLI ?= /Applications/wechatwebdevtools.app/Contents/MacOS/cli
 
 .PHONY: help install env setup postgres-up postgres-down dev dev-nodb dev-web dev-api dev-docs
-.PHONY: miniapp-env miniapp-sync-config miniapp-clear-cache miniapp miniapp-open dev-miniapp-api
+.PHONY: miniapp-env miniapp-sync-config miniapp-build miniapp-watch miniapp-clear-cache miniapp miniapp-open dev-miniapp-api
 .PHONY: db-init db-reset db-migrate db-seed db-generate db-pull db-push db-studio db-snapshot
 .PHONY: deploy-up deploy-down deploy-logs
 .PHONY: build test lint typecheck check docs clean deploy
@@ -38,12 +38,14 @@ help:
 	@echo "  make dev-api         Start API only (http://localhost:8780)"
 	@echo "  make dev-docs        Start Fumadocs only (http://localhost:5171)"
 	@echo ""
-	@echo "WeChat Mini Program (PWA WebView shell):"
-	@echo "  make miniapp              Prepare config and open DevTools"
+	@echo "WeChat Mini Program (native Taro client):"
+	@echo "  make miniapp              Build the client and open DevTools"
+	@echo "  make miniapp-build        Compile apps/miniapp into apps/miniapp/dist"
+	@echo "  make miniapp-watch        Rebuild on change while DevTools stays open"
 	@echo "  make miniapp-open         Open apps/miniapp in WeChat Developer Tools"
-	@echo "  make miniapp-sync-config  Generate AppID and public-origin config"
+	@echo "  make miniapp-sync-config  Generate the gitignored DevTools AppID config"
 	@echo "  make miniapp-clear-cache  Clear DevTools file/compile cache and rebuild watcher"
-	@echo "  make dev-miniapp-api      Start Postgres + API + PWA for shell development"
+	@echo "  make dev-miniapp-api      Start Postgres + API for native client development"
 	@echo ""
 	@echo "Database (Prisma):"
 	@echo "  make db-generate     Generate Prisma Client from schema.prisma"
@@ -139,8 +141,14 @@ miniapp-env:
 	fi
 	@$(MAKE) miniapp-sync-config
 
-miniapp-clear-cache: miniapp-env
-	@node -e 'const fs=require("fs");const p="$(MINIAPP_DIR)/project.private.config.json";const r="$(MINIAPP_DIR)/miniprogram/config.js";let id="";try{id=JSON.parse(fs.readFileSync(p,"utf8")).appid||""}catch{}if(!String(id).trim()||!fs.existsSync(r)){console.error("Mini Program config missing. Set MINIAPP_* in apps/miniapp/.env, then run: make miniapp-sync-config");process.exit(1)}console.log("Mini Program config synced ("+String(id).trim().slice(0,4)+"…).")'
+miniapp-build: miniapp-env
+	pnpm --filter @opentrip/miniapp build
+
+miniapp-watch: miniapp-env
+	pnpm --filter @opentrip/miniapp dev
+
+miniapp-clear-cache: miniapp-build
+	@node -e 'const fs=require("fs");const p="$(MINIAPP_DIR)/project.private.config.json";let id="";try{id=JSON.parse(fs.readFileSync(p,"utf8")).appid||""}catch{}if(!String(id).trim()){console.error("Mini Program AppID missing. Set MINIAPP_APP_ID in apps/miniapp/.env, then run: make miniapp-sync-config");process.exit(1)}console.log("Mini Program config synced ("+String(id).trim().slice(0,4)+"…).")'
 	@if [ ! -x "$(WECHAT_DEVTOOLS_CLI)" ]; then \
 		echo "WeChat Developer Tools CLI not found: $(WECHAT_DEVTOOLS_CLI)"; \
 		echo "Set WECHAT_DEVTOOLS_CLI to the installed CLI path."; \
@@ -159,20 +167,20 @@ miniapp-clear-cache: miniapp-env
 
 miniapp-open: miniapp-clear-cache
 	@echo "Project directory: $(CURDIR)/$(MINIAPP_DIR)"
-	@echo "(project.config.json loads the native shell from miniprogram/.)"
+	@echo "(project.config.json loads the Taro build output from dist/.)"
 	@echo "Restarting project after cache cleanup…"
 	@"$(WECHAT_DEVTOOLS_CLI)" close --project "$(CURDIR)/$(MINIAPP_DIR)" || true
 	@"$(WECHAT_DEVTOOLS_CLI)" open --project "$(CURDIR)/$(MINIAPP_DIR)"
-	@echo "Production requires the PWA business domain and API request domain in WeChat."
+	@echo "Production requires the API origin on the WeChat request-domain allowlist."
 
 miniapp: miniapp-open
 
-# API + PWA development. The WebView origins must be reachable over HTTPS.
+# API for native client development. The API origin must be reachable from the
+# device or simulator and listed as a WeChat request domain in production.
 dev-miniapp-api: env postgres-up db-migrate miniapp-env
 	@echo "API → http://localhost:8780"
-	@echo "PWA → http://localhost:5170"
-	@echo "Set MINIAPP_API_BASE_URL and MINIAPP_WEB_BASE_URL to reachable HTTPS origins."
-	pnpm dev
+	@echo "Set MINIAPP_API_BASE_URL when the client must reach another origin."
+	pnpm --filter @opentrip/api dev
 
 db-generate:
 	pnpm --filter @opentrip/api db:generate

@@ -1,0 +1,243 @@
+import type { StopCategory } from "@/entities/stop";
+import type { Trip, TripSummary } from "@/entities/trip";
+
+import { apiFetch } from "./client";
+
+export function fetchTrips(): Promise<TripSummary[]> {
+  return apiFetch<TripSummary[]>("/api/trips");
+}
+
+export function fetchTrip(tripId: string): Promise<Trip> {
+  return apiFetch<Trip>(`/api/trips/${encodeURIComponent(tripId)}`);
+}
+
+export interface CreateTripInput {
+  title: string;
+  currency?: string;
+  startDate?: string;
+  endDate?: string;
+  dayCount?: number;
+  destination?: string;
+  budgetAmount?: number;
+  partySize?: number;
+}
+
+export function createTrip(input: CreateTripInput): Promise<Trip> {
+  return apiFetch<Trip>("/api/trips", { method: "POST", body: input });
+}
+
+export function renameTrip(tripId: string, title: string): Promise<Trip> {
+  return apiFetch<Trip>(`/api/trips/${encodeURIComponent(tripId)}`, {
+    method: "PATCH",
+    body: { title },
+  });
+}
+
+/** Acknowledge that the member has sent the one-shot suggested agent prompt. */
+export function clearAgentSeedPending(tripId: string): Promise<Trip> {
+  return apiFetch<Trip>(`/api/trips/${encodeURIComponent(tripId)}`, {
+    method: "PATCH",
+    body: { clearAgentSeedPending: true },
+  });
+}
+
+export function addTripDay(tripId: string): Promise<Trip> {
+  return apiFetch<Trip>(`/api/trips/${encodeURIComponent(tripId)}/days`, {
+    method: "POST",
+  });
+}
+
+export function deleteTripDay(tripId: string, dayNumber: number): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/days/${dayNumber}`,
+    { method: "DELETE" },
+  );
+}
+
+export interface UpdateTripDayInput {
+  date?: string;
+  dateLabel?: string;
+  city?: string;
+  color?: string;
+}
+
+export function updateTripDay(
+  tripId: string,
+  dayNumber: number,
+  input: UpdateTripDayInput,
+): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/days/${dayNumber}`,
+    { method: "PATCH", body: input },
+  );
+}
+
+export interface InsertStopInput {
+  day: number;
+  index: number;
+  name: string;
+  time: string;
+  duration?: string;
+  lat?: number;
+  lng?: number;
+  area?: string;
+  category?: StopCategory;
+  cost?: number;
+  costCurrency?: string;
+  note?: string;
+}
+
+export function insertStop(tripId: string, input: InsertStopInput): Promise<Trip> {
+  return apiFetch<Trip>(`/api/trips/${encodeURIComponent(tripId)}/stops`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export interface UpdateStopInput {
+  name?: string;
+  time?: string;
+  duration?: string;
+  area?: string;
+  category?: StopCategory;
+  cost?: number;
+  costCurrency?: string;
+  note?: string;
+}
+
+export function updateStop(
+  tripId: string,
+  stopId: string,
+  input: UpdateStopInput,
+): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}`,
+    { method: "PATCH", body: input },
+  );
+}
+
+export interface MoveStopInput {
+  day: number;
+  /** Zero-based position within the target day's stops after removing the stop. */
+  index: number;
+}
+
+export function moveStop(
+  tripId: string,
+  stopId: string,
+  input: MoveStopInput,
+): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}/position`,
+    { method: "PUT", body: input },
+  );
+}
+
+export function toggleVote(tripId: string, stopId: string): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}/vote`,
+    { method: "POST" },
+  );
+}
+
+export function addComment(
+  tripId: string,
+  stopId: string,
+  text: string,
+): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}/comments`,
+    { method: "POST", body: { text } },
+  );
+}
+
+export interface AddExpenseInput {
+  description: string;
+  amount: number;
+  currency?: string;
+  category?: StopCategory;
+  payer: string;
+  participants: string[];
+}
+
+export function addExpense(tripId: string, input: AddExpenseInput): Promise<Trip> {
+  return apiFetch<Trip>(`/api/trips/${encodeURIComponent(tripId)}/expenses`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function updateExpense(
+  tripId: string,
+  expenseId: string,
+  input: AddExpenseInput,
+): Promise<Trip> {
+  return apiFetch<Trip>(
+    `/api/trips/${encodeURIComponent(tripId)}/expenses/${encodeURIComponent(expenseId)}`,
+    { method: "PATCH", body: input },
+  );
+}
+
+export type InviteAccessScope = "anyone" | "restricted_emails";
+export type InviteMemberRole = "editor" | "viewer";
+
+export interface CreateInviteInput {
+  accessScope: InviteAccessScope;
+  allowedEmails: string[];
+  role: InviteMemberRole;
+  canInvite: boolean;
+  /** ISO 8601 expiry, or null for a link that never expires. */
+  expiresAt: string | null;
+}
+
+export interface CreatedInvite {
+  url: string;
+  token: string;
+  expiresAt: string | null;
+}
+
+export type InvitePreviewStatus =
+  | "usable"
+  | "expired"
+  | "revoked"
+  | "email_restricted";
+
+export interface InvitePreview {
+  tripId: string;
+  tripTitle: string;
+  inviterName: string;
+  memberCount: number;
+  role: InviteMemberRole;
+  accessScope: InviteAccessScope;
+  status: InvitePreviewStatus;
+  alreadyMember: boolean;
+  expiresAt: string | null;
+}
+
+export interface AcceptedInvite {
+  trip: Trip;
+  joined: boolean;
+}
+
+export function createTripInvite(
+  tripId: string,
+  input: CreateInviteInput,
+): Promise<CreatedInvite> {
+  return apiFetch<CreatedInvite>(
+    `/api/trips/${encodeURIComponent(tripId)}/invites`,
+    { method: "POST", body: input },
+  );
+}
+
+export function previewTripInvite(token: string): Promise<InvitePreview> {
+  return apiFetch<InvitePreview>(
+    `/api/trip-invites/${encodeURIComponent(token)}`,
+  );
+}
+
+export function acceptTripInvite(token: string): Promise<AcceptedInvite> {
+  return apiFetch<AcceptedInvite>(
+    `/api/trip-invites/${encodeURIComponent(token)}/accept`,
+    { method: "POST" },
+  );
+}

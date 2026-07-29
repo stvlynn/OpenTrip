@@ -1,0 +1,71 @@
+.ot-planner-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--background);
+  /* Hairline under the bar, echoing the PWA header's border-b. */
+  box-shadow: 0 1rpx 0 var(--border);
+}
+
+.ot-planner-nav__row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding-left: 16rpx;
+  padding-right: 8rpx;
+}
+
+.ot-planner-nav__back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ot-planner-nav__back--pressed {
+  opacity: 0.7;
+  transform: scale(0.96);
+}
+
+.ot-planner-nav__back-glyph {
+  margin-top: -6rpx;
+  font-size: 52rpx;
+  line-height: 1;
+  color: var(--foreground);
+}
+
+.ot-planner-nav__title {
+  flex: 1;
+  overflow: hidden;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Quiet pill, echoing the PWA AgentToggle's muted header button. */
+.ot-planner-nav__agent {
+  height: 64rpx;
+  padding: 0 24rpx;
+  display: flex;
+  align-items: center;
+  border-radius: 999rpx;
+  background: var(--ink-100);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ot-planner-nav__agent--pressed {
+  opacity: 0.7;
+  transform: scale(0.96);
+}
+
+.ot-planner-nav__agent-text {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+}

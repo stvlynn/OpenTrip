@@ -1,185 +1,199 @@
 ---
-title: "WeChat Mini Program PWA shell"
+title: "WeChat Mini Program native client"
 ---
 
-# WeChat Mini Program PWA shell
+# WeChat Mini Program native client
 
-`apps/miniapp` is a dependency-free native WeChat Mini Program shell. It owns
-WeChat login, secure browser-session handoff, the native page stack (navigation
-bar, back button, swipe-back), share cards, and WebView failure recovery. All
-product UI is the responsive PWA from `apps/web`.
+`apps/miniapp` is a native WeChat Mini Program built with Taro 4 + React +
+TypeScript. It renders the whole product with Mini Program components and talks
+to the same Hono API as the PWA over a Better Auth bearer token.
 
-## Hybrid native architecture
+There is no `<web-view>` and no PWA embedding: WeChat does not grant the
+embedded-web-page capability (业务域名) to personal accounts, so the shell
+architecture was replaced by this client. See
+[ADR 0011](../decisions/0011-native-taro-mini-program.md).
 
-The shell is not a single-page WebView wrapper. Each page-level PWA route is
-hosted by its own native page so WeChat provides real native navigation:
+## Pages
 
-| Native page | PWA route | Role |
-| --- | --- | --- |
-| `pages/home/home` | `/`, `/today`, `/journal`, `/journal/:entryId` | Stack bottom; the authenticated home hub (Trips, Today, Travelogues) and the travelogue reader |
-| `pages/trip/trip` | `/trips/:id` | Trip planner; share-card target |
-| `pages/invite/invite` | `/invite/:token` | Invite acceptance |
+| Page | Role |
+| --- | --- |
+| `pages/trips/index` | Trip list, status filters and create sheet (tab) |
+| `pages/today/index` | Quick capture, highlighted trip, focus card, today's stops with weather, recent travelogues (tab) |
+| `pages/journal/index` | Travelogue list, stored locally (tab) |
+| `pages/journal-entry/index` | Travelogue reader and editor |
+| `pages/trip/index` | Planner: custom nav bar (back / title / agent toggle), map / schedule / reservations / budget panels, floating members cluster, agent sheet |
+| `pages/invite/index` | Invite preview and acceptance |
+| `pages/settings/index` | Profile (WeChat avatar/nickname fill), currency, about |
 
-Every native page uses the default (native) navigation bar and embeds a
-`<web-view>` that loads `https://<web-origin>/miniapp#code=…&path=…`. The
-target PWA path and the single-use auth code travel in the URL fragment, which
-the PWA strips before making any request.
+The three hub pages are a native `tabBar`. The planner's four panels are
+in-page segmented tabs because they belong to one trip, not to the app shell.
+The planner page runs `navigationStyle: "custom"`: `ui/PlannerNavBar` mirrors
+the PWA's mobile planner header (back + title left, agent toggle right of the
+menu capsule, hidden when the agent is disabled), and the members/invite
+cluster floats bottom-right over the content like the PWA's `FloatingMembers`.
 
-Page-level transitions are driven from the PWA through the official JSSDK
-(`wx.miniProgram.*`, loaded on demand by `shared/lib/wechat-bridge.ts` in
-embedded mode — no `wx.config` signature is required for this API family):
-
-- opening a trip or invite calls `wx.miniProgram.navigateTo` with the PWA path
-  (and an optional `title` used to pre-label the native bar) in the query;
-- the home hub surfaces (`/`, `/today`, `/journal`) and the travelogue reader
-  (`/journal/:entryId`) all live in the home page's WebView: switching between
-  them navigates via SPA history in place, so the bottom hub navigation does not
-  push native pages;
-- "back to trips" (returning to any hub surface from a deeper native page such
-  as a trip) calls `wx.miniProgram.reLaunch` to the home page, which is
-  stack-safe from any entry point (including share cards) and avoids the
-  ten-page stack limit;
-- the native back button and iOS swipe-back pop the stack without any web
-  code.
-
-In-page panels (map / schedule / reservations / budget) remain PWA state inside
-one WebView; there is no app-level native `tabBar` because those panels belong
-to a single trip, not to the app shell.
-
-The native navigation bar title mirrors the WebView's `document.title`, which
-the PWA sets per page (`useDocumentTitle`); the shell also applies the `title`
-query via `wx.setNavigationBarTitle` before the WebView finishes loading.
-
-## Runtime flow
-
-1. A native page loads and calls into `miniprogram/lib/session.js`.
-2. On first use the shell calls `wx.login()` and exchanges the code at
-   `POST /api/auth/wechat-mini-program/sign-in` for a Better Auth bearer. The
-   bearer lives only in `App.globalData` (memory) — never persisted, never in
-   a URL.
-3. Each native page mints its own hashed, single-use, three-minute bridge code
-   at `POST /api/mobile-auth/webview/mint`. If the bearer expired, the shell
-   retries once with a fresh `wx.login`.
-4. The page opens `https://<web-origin>/miniapp#code=…&path=…`.
-5. The PWA removes the fragment and resolves Better Auth through the single
-   reactive `useSession` owner mounted by `AppContent`. Only when that initial
-   result is signed out does it exchange the code at
-   `POST /api/mobile-auth/webview/exchange` for the HttpOnly Better Auth
-   cookie, then refetches that same session owner. This keeps multi-page stacks
-   working regardless of whether the WebView shares cookies across native
-   pages, without a second independent `getSession` request.
-6. The PWA replaces its location with the target path (an internal redirect —
-   never a native stack push) and renders in embedded mode.
-
-Critical application state remains on the API. `wx.miniProgram.postMessage` is
-used only for share payloads because WeChat delivers it exclusively at selected
-lifecycle moments (back navigation, component destroy, share, copy link); it is
-never a real-time transport.
-
-## Share cards and deep links
-
-- The PWA queues the current share context (`{ type: "share", title, path,
-  imageUrl }`) with `postMiniappShareContext` whenever an embedded trip page is
-  active.
-- The shell collects payloads in `bindmessage` and answers
-  `onShareAppMessage` with a card pointing at the right native page, carrying
-  the PWA `path` (and `title`) in its query.
-- Opening a share card lands on that native page directly; `onLoad` sanitizes
-  the `path` query (internal, single-slash-rooted paths only) and boots the
-  WebView at the requested route.
-
-## Native shell source
+## Source layout (FSD)
 
 ```text
-app.js                  App.globalData.bearer (memory only)
-app.json                pages/home, pages/trip, pages/invite; native nav bar
-app.wxss                shared loading/error styles
-lib/copy.js             single source of shell copy
-lib/session.js          wx.login + sign-in + per-page mint
-lib/webview-page.js     shared Page factory (connect, share, deep link)
-lib/webview-shell.wxml  shared <web-view> + loading/error markup
-pages/{home,trip,invite}/
+src/app.config.ts        pages, window, tabBar, location permissions
+src/app.tsx              React Query + SessionProvider roots
+src/app.scss             design tokens (hex colors, system fonts)
+src/pages/…              page-first product code (model/ + ui/ per page)
+src/entities/…           trip, stop, expense, member, reservation, journal
+src/shared/api/…         transport, client, per-feature contracts, realtime
+src/shared/session/…     wx.login sign-in, token store, session context
+src/shared/ui/…          Button, Sheet, Field, Screen, Tag, Avatar, tabs
+src/shared/copy/…        single source of user-facing copy
+src/shared/lib/…         navigation, feedback, formatting, markdown, polyfills
 ```
 
-There is no Taro, React, duplicated trip model, or native product page. Native
-UI is limited to the navigation bar plus loading, error, and retry states.
+Imports flow downward only (`pages → entities → shared`), and each slice
+exposes its public API through `index.ts`.
+
+## Auth
+
+1. `shared/session/session.ts` calls `Taro.login()` and posts the code to
+   `POST /api/auth/wechat-mini-program/sign-in`.
+2. The returned Better Auth token is persisted in Mini Program storage
+   (`shared/session/token-store.ts`) so a cold start restores the session
+   without a new sign-in round trip.
+3. `shared/api/client.ts` sends `Authorization: Bearer …` on every request, and
+   on `401` clears the stored token and re-runs `wx.login` — a silent WeChat
+   re-auth — once before retrying.
+4. There is no sign-out UI: a cleared token is silently renewed by the next
+   automatic `wx.login`, so a sign-out button would be a no-op.
+
+The bearer never travels in a URL. The AppSecret stays on the API as
+`WECHAT_MINI_PROGRAM_APP_SECRET`. The legacy `mobile-auth/webview/*` bridge is
+gone from both the client and the API.
+
+## Data and realtime
+
+- React Query owns caching; keys live in `shared/api/query-keys.ts`.
+- Mutations follow the write-echo rule from
+  [multi-client.md](../backend/api/multi-client.md): the response payload is
+  written back into the cache instead of triggering a refetch, which keeps
+  read-after-write correct behind Hyperdrive.
+- Trip updates use `Taro.connectSocket` through `shared/api/realtime.ts`, which
+  reconnects with backoff and reuses the PWA's message shapes. WeChat sends no
+  `Origin` header on the upgrade, so the worker's trusted-origin check only
+  fires when an Origin is present (browsers always send one); Origin-less
+  upgrades are authenticated by the `Authorization: Bearer` header instead.
+  Realtime is worker-only (`handleRealtimeUpgrade` intercepts before the Hono
+  app), so the Node dev server has no realtime route — use the worker runtime.
+- Agent chat sends a message and then polls `GET …/agent/events` with a cursor;
+  Mini Program networking has no streaming response body. Replies are Markdown
+  for the PWA, so `shared/lib/markdown.ts` flattens them for `Text` rendering.
+- The Mini Program runtime has no `AbortController`, which React Query needs to
+  cancel a query. `shared/lib/abort-controller.ts` installs a minimal shim from
+  `app.tsx` before the client mounts; without it every query stays pending.
+
+## Map
+
+The planner map uses WeChat's native `<map>`:
+
+- stops render as day-colored circles connected by a polyline;
+- the viewport is computed from the stops' bounding box (`mapFrame`), because
+  `include-points` only applies reliably through the imperative map context; the
+  same span also sizes the circles so they stay legible at that zoom;
+- the map never requests the device position, so opening a trip raises no
+  location prompt — only stop creation asks, through `Taro.chooseLocation()`;
+- `Taro.openLocation()` opens WeChat navigation for a stop.
+
+Documented parity gaps against the PWA: MapLibre vector styling, custom marker
+art (Mini Program markers need binary image assets), and the Mapillary street
+view viewer. Street view is omitted rather than faked.
+
+## Journal
+
+Travelogues stay device-local (`entities/journal/store.ts` over
+`Taro.getStorageSync` / `Taro.setStorageSync`), matching the PWA's local-only
+journal. Entries do not sync across devices.
+
+## Copy
+
+All user-facing strings live in `src/shared/copy/index.ts` in Simplified
+Chinese; the Mini Program ships a single locale, so it ports the PWA's copy
+identifiers rather than its i18n runtime. Wording tracks the PWA's `zh`
+resources, and the tab pages put the brand in the navigation bar because each
+one already carries its own heading. One exception: `src/app.config.ts` is
+bundled separately by Taro and cannot import copy, so its `tabBar` labels are
+hardcoded next to a comment pointing back at `shared/copy` — keep the two in
+sync by hand.
+
+## Parity notes
+
+The client aims at the PWA's phone layout, screen by screen. Where the platform
+forces a different shape, the difference is deliberate:
+
+- the trip create wizard is one sheet instead of stepped questions, but asks the
+  same optional answers and derives the trip name from the destination;
+- trip cards draw the PWA's seeded route dots without its dashed path, which
+  would need a canvas per card;
+- the journal has no publish state or filters because entries never leave the
+  device;
+- the Today weather comes from the current day's first located stop rather than
+  a separately chosen place.
 
 ## Configuration
 
 Copy `apps/miniapp/.env.example` to the gitignored `.env`:
 
 ```dotenv
-MINIAPP_APP_ID=wx…
 MINIAPP_API_BASE_URL=https://api.example.com
-MINIAPP_WEB_BASE_URL=https://app.example.com
+MINIAPP_APP_ID=wx…
 ```
 
-Run `make miniapp-sync-config`. It generates:
+`MINIAPP_API_BASE_URL` is compiled into the bundle as a build-time constant
+(`config/env.ts` → `OPENTRIP_API_BASE_URL`); unset builds target
+`http://localhost:8780`. `scripts/sync-config.mjs` writes the AppID into the
+gitignored `project.private.config.json`.
 
-- `project.private.config.json` with the AppID;
-- `miniprogram/config.js` with the public API and PWA origins.
+Production WeChat configuration requires the API origin in **request 合法域名**
+with valid HTTPS, and a normal Mini Program AppID (not a Mini Game AppID). No
+业务域名 is needed anymore. Two more allowlists matter once avatars are in use:
+**uploadFile 合法域名** (avatar upload `POST /api/users/avatar`) and
+**downloadFile 合法域名** (rendering uploaded avatar images) — both point at the
+same API origin.
 
-Both files are gitignored. The AppSecret stays on the API as
-`WECHAT_MINI_PROGRAM_APP_SECRET`.
+### WeChat avatar/nickname fill
 
-Production WeChat configuration requires:
-
-- the PWA origin in **业务域名** for `<web-view>`;
-- the API origin in **request 合法域名**;
-- valid HTTPS certificates;
-- a normal Mini Program AppID, not a Mini Game AppID.
+Sign-in is silent (`wx.login` → openid/unionid only), so new users start as
+"WeChat User". The settings profile sheet implements the official
+[avatar/nickname fill capability](https://developers.weixin.qq.com/community/develop/doc/00022c683e8a80b29bed2142b56c01):
+`open-type="chooseAvatar"` returns a temp file that `shared/api/users.ts`
+uploads to `POST /api/users/avatar` (the service updates `user.image`
+server-side), and the nickname field uses `type="nickname"` so the WeChat
+keyboard offers the account nickname. `wx.getUserProfile` is intentionally not
+used — it has returned a grey avatar + "微信用户" since 2022-11-08.
 
 ## Commands
 
 ```bash
-make miniapp-sync-config
-make miniapp-open
-make miniapp-clear-cache
-make miniapp
-make dev-miniapp-api
+make miniapp-build        # taro build --type weapp → apps/miniapp/dist
+make miniapp-watch        # rebuild on change while DevTools stays open
+make miniapp              # build, clear DevTools cache, open the project
+make miniapp-sync-config  # AppID → project.private.config.json
+make dev-miniapp-api      # Postgres + API for client development
 ```
 
-There is no mini-program build or watcher. WeChat DevTools reads the native
-source directly from `apps/miniapp/miniprogram`.
-
-## Embedded PWA behavior
-
-`/miniapp` is a bootstrap route handled before the regular auth gate. Embedded
-mode:
-
-- keeps the auth gate blocked until the initial session result or bridge
-  refetch is definitive, so an empty session atom can never flash the sign-in
-  surface; after that first result, background refetches leave an in-progress
-  OTP or two-factor form mounted;
-- shows only a neutral, accessible loading spinner during bridge work rather
-  than presenting repeat page loads as a new login;
-- suppresses browser-only install/update prompts, mobile onboarding, and
-  system-notification setup;
-- preloads the JSSDK bridge and routes page-level `navigate()` calls through
-  the native stack (with an SPA history fallback while the JSSDK loads);
-- hides the self-drawn back button and title on the mobile planner header and
-  the brand label on the trips header — the native navigation bar owns them;
-- keeps the in-trip tab bar, sheets, dialogs, uploads, map, agent, and API
-  caching behavior unchanged — sheet/dialog overlays follow the Visual
-  Viewport keyboard policy documented in [mobile-pwa.md](mobile-pwa.md).
-
-The Service Worker never caches auth, mutation, or upload requests. Bridge
-responses are `Cache-Control: private, no-store`.
+WeChat DevTools loads `apps/miniapp/dist` (`miniprogramRoot` in
+`project.config.json`), so a build must run before opening the project.
 
 ## Verification
 
 Test in WeChat DevTools and real iOS/Android WeChat clients:
 
-- first and repeat login;
-- forward native-page navigation never renders the sign-in surface between the
-  bridge spinner and the authenticated target route;
-- expired and reused bridge codes;
-- cookie persistence across native pages (home → trip → back) and logout;
-- native back button and swipe-back from the trip page;
-- share a trip, open the share card cold (shell must boot straight into the
-  trip), and forward it;
-- avatar and trip-media uploads;
-- create-trip wizard and other sheet inputs remain visible above the virtual
-  keyboard on iOS and Android WeChat;
-- planner, map, and agent behavior;
-- offline and upstream failure recovery.
+- first sign-in, cold-start session restore, and sign-out;
+- expired token renewal on a protected request;
+- trip create, day/stop CRUD, reorder, votes, comments;
+- reservations create and cancel; budget expenses, balances, settle-up FX;
+- agent chat including tool write-echo into the planner;
+- realtime trip updates with two clients;
+- map framing for a single day and for a multi-city trip, location picking, and
+  WeChat navigation hand-off;
+- stop overflow actions: reorder, move to another day, edit;
+- share a trip and an invite, then open the card cold;
+- invite acceptance for an already-joined and a new member;
+- journal create/edit/delete after an app restart;
+- offline and upstream failure states on every screen.

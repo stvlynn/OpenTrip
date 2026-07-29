@@ -37,6 +37,14 @@
         "vitest": "^2.1.8"
     },
     "pnpm": {
-        "onlyBuiltDependencies": ["@prisma/engines", "prisma", "esbuild"]
+        "onlyBuiltDependencies": [
+            "@prisma/engines",
+            "prisma",
+            "esbuild",
+            "@tarojs/binding",
+            "@swc/core",
+            "core-js",
+            "core-js-pure"
+        ]
     }
 }

@@ -1,0 +1,11 @@
+/* Floating member cluster, mirroring the PWA's FloatingMembers: bottom-right
+   over the content, above panels but below sheets (z 60) and the nav bar (50). */
+.ot-members {
+  position: fixed;
+  right: 24rpx;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}

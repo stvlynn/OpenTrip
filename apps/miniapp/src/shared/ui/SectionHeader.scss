@@ -1,0 +1,24 @@
+.ot-section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 24rpx 0 16rpx;
+}
+
+.ot-section-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.ot-section-header__title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-section-header__meta {
+  font-size: 24rpx;
+  color: var(--muted-foreground);
+}

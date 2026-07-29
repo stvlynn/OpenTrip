@@ -1,0 +1,81 @@
+.ot-trip-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition: transform 140ms ease-out, opacity 140ms ease-out;
+}
+
+.ot-trip-card--pressed {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.ot-trip-card__cover {
+  position: relative;
+  height: 296rpx;
+  background: var(--ink-150);
+}
+
+/* Inset outline so a light cover photo still reads as a card against the page. */
+.ot-trip-card__cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2rpx rgba(0, 0, 0, 0.1);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.ot-trip-card__dot {
+  position: absolute;
+  width: 20rpx;
+  height: 20rpx;
+  margin: -8rpx 0 0 -8rpx;
+  border: 4rpx solid #ffffff;
+  border-radius: 999rpx;
+}
+
+.ot-trip-card__image {
+  width: 100%;
+  height: 100%;
+}
+
+.ot-trip-card__status {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+}
+
+.ot-trip-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 32rpx;
+}
+
+.ot-trip-card__title {
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-trip-card__meta {
+  font-size: 26rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-trip-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+
+.ot-trip-card__action {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--brand);
+}

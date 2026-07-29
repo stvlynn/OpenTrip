@@ -26,11 +26,10 @@ server config, captcha, Google/WeChat OAuth, and `defaultCurrency`.
    - Prefer the official Better Auth client for the platform when available so
      sign-in, sign-up, session refresh, and sign-out stay compatible.
 
-The native WeChat shell uses the Better Auth `bearer()` plugin only during
-bootstrap. It exchanges `wx.login()` for a session, mints a one-time WebView
-code, and discards the bearer. The embedded PWA exchanges the code for the same
-HttpOnly cookie used by ordinary browsers, so business requests and domain
-authorization have no client-specific path. See
+The native WeChat Mini Program client is bearer end-to-end. It exchanges
+`wx.login()` for a session token, stores it in Mini Program storage, and sends
+`Authorization: Bearer …` on every business request. There is no cookie handoff
+and no WebView bridge. See
 [../../frontend/miniapp.md](../../frontend/miniapp.md).
 
 ### Client-relevant Better Auth surfaces
@@ -61,16 +60,9 @@ The callback code is hashed at rest, valid for three minutes, and consumed on
 first use. Native business requests send the returned session token as a Bearer
 credential.
 
-### Mini Program WebView bridge
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| POST | `/api/mobile-auth/webview/mint` | Authenticate the shell bearer and return `{ data: { code } }` |
-| POST | `/api/mobile-auth/webview/exchange` | Consume `{ code }` and forward the Better Auth HttpOnly session cookie |
-
-The bridge reuses the one-time-token guarantees above. Both endpoints are
-`private, no-store`; the bearer is never accepted in a URL and the code is
-removed from the PWA fragment before exchange.
+The former `mobile-auth/webview/mint` and `mobile-auth/webview/exchange` bridge
+endpoints were removed with the WebView shell
+([0011](../../decisions/0011-native-taro-mini-program.md)).
 
 Cloudflare Turnstile (when `CAPTCHA_PROVIDER=cloudflare-turnstile`) intercepts
 protected auth POSTs via header `x-captcha-response`. Other CAPTCHA providers

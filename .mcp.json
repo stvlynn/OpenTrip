@@ -2,6 +2,19 @@
   "mcpServers": {
     "sentry": {
       "url": "https://mcp.sentry.dev/mcp"
+    },
+    "wechat-miniprogram": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "miniprogram-automator-mcp",
+        "launch",
+        "--project-path",
+        "apps/miniapp",
+        "--port",
+        "9420",
+        "--trust-project"
+      ]
     }
   }
 }

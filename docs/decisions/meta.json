@@ -11,6 +11,7 @@
     "0007-separate-taro-miniapp-client",
     "0008-native-r2-worker-binding",
     "0009-mini-program-pwa-webview-shell",
-    "0010-miniapp-native-page-stack"
+    "0010-miniapp-native-page-stack",
+    "0011-native-taro-mini-program"
   ]
 }

@@ -1,0 +1,46 @@
+.ot-reservations {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.ot-reservations__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.ot-reservations__row {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 24rpx 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.ot-reservations__row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.ot-reservations__row-title {
+  flex: 1;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-reservations__row-meta {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-reservations__row-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4rpx;
+}

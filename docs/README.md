@@ -46,8 +46,8 @@ are separate and must not be reused as docs demos.
 - [frontend/data-caching.md](frontend/data-caching.md) — React Query write-echo
   (Hyperdrive read-after-write)
 - [frontend/mobile-pwa.md](frontend/mobile-pwa.md) — responsive shells and PWA
-- [frontend/miniapp.md](frontend/miniapp.md) — native WeChat WebView shell,
-  one-time-code auth bridge, and embedded PWA behavior.
+- [frontend/miniapp.md](frontend/miniapp.md) — native WeChat Mini Program client
+  (Taro + React), bearer auth, and its parity substitutions.
 
 ### Client API (web, mobile, other apps)
 
@@ -98,7 +98,7 @@ Start here for multi-client development:
 apps/
   web/   React + Vite frontend (FSD)
   docs/  Fumadocs static documentation site
-  miniapp/ dependency-free native WeChat PWA shell
+  miniapp/ native WeChat Mini Program client (Taro + React, FSD)
   api/   Hono backend (DDD + Hexagonal)
 packages/
   agent-ui-catalog/  shared json-render catalog and spec safety boundary

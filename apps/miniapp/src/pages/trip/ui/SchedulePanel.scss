@@ -1,0 +1,198 @@
+.ot-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.ot-schedule__day {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 8rpx 24rpx 24rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.ot-schedule__day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0 16rpx;
+  border-bottom: 2rpx solid var(--border);
+}
+
+.ot-schedule__day-heading {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.ot-schedule__day-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 999rpx;
+}
+
+.ot-schedule__day-title {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-schedule__day-date {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-schedule__empty {
+  display: block;
+  padding: 32rpx 0;
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+}
+
+.ot-schedule__stop {
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--ink-100);
+}
+
+.ot-schedule__stop-index {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+  width: 76rpx;
+}
+
+.ot-schedule__stop-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 999rpx;
+  background: var(--ink-150);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--ink-700);
+}
+
+.ot-schedule__stop-time {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.ot-schedule__stop-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.ot-schedule__stop-name {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-schedule__stop-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.ot-schedule__stop-area {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-schedule__stop-note {
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--ink-600);
+}
+
+.ot-schedule__stop-actions {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-wrap: wrap;
+  margin-top: 4rpx;
+}
+
+.ot-schedule__day-footer {
+  padding-top: 24rpx;
+}
+
+.ot-schedule__add-day {
+  padding: 8rpx 0 24rpx;
+}
+
+.ot-schedule__comment {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: 16rpx 0;
+  border-bottom: 2rpx solid var(--ink-100);
+}
+
+.ot-schedule__comment-empty {
+  display: block;
+  padding: 16rpx 0 24rpx;
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+}
+
+.ot-schedule__comment-meta {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-schedule__comment-text {
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--ink-700);
+}
+
+.ot-schedule__move-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  min-height: 88rpx;
+  border-bottom: 2rpx solid var(--ink-100);
+}
+
+.ot-schedule__move-day:last-child {
+  border-bottom: none;
+}
+
+.ot-schedule__move-day-title {
+  font-size: var(--text-body);
+  color: var(--foreground);
+}
+
+.ot-schedule__move-day.is-current .ot-schedule__move-day-title {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.ot-schedule__move-day-date {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-stop-sheet__locate {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 8rpx 0 16rpx;
+}
+
+.ot-stop-sheet__coords {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}

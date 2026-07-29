@@ -232,13 +232,13 @@ Mini Programs use a separate protocol and credential pair:
 `POST /api/auth/wechat-mini-program/sign-in` accepts the short-lived code from
 `wx.login()`. The infrastructure adapter exchanges it with WeChat's
 `jscode2session` endpoint, discards `session_key`, and creates the normal Better
-Auth session. The Mini Program AppSecret is never shipped to the shell.
+Auth session. The Mini Program AppSecret is never shipped to the client.
 
-The shell uses that session only to mint a hashed, single-use, three-minute
-WebView code at `POST /api/mobile-auth/webview/mint`. The PWA consumes it at
-`POST /api/mobile-auth/webview/exchange`, receives the HttpOnly browser cookie,
-and handles profile edits and avatar upload through the normal web surface. The
-bearer is neither persisted nor placed in a URL.
+The native Mini Program client keeps that session token in Mini Program storage
+and sends it as a bearer on every request, including profile edits and avatar
+upload. The token is never placed in a URL, and the WebView bridge endpoints it
+used to need are gone
+([0011](../decisions/0011-native-taro-mini-program.md)).
 
 Bind the Website Application and Mini Program to the same WeChat Open Platform
 account when cross-surface account continuity is required. The adapter prefers
@@ -399,10 +399,8 @@ The frontend uses `better-auth/react` (`apps/web/src/shared/auth`) pointing at
 `inferAdditionalFields` so `session.user.defaultCurrency` and
 `session.user.twoFactorEnabled` are typed. It exposes `signIn`, `signUp`,
 `signOut`, `useSession`, `authClient.emailOtp.*`, and `authClient.twoFactor.*`.
-`AppContent` owns the single reactive session subscription used by the auth
-gate, invite route, and Mini Program bootstrap. The WebView bridge refetches
-that subscription after exchanging its one-time code; it does not perform an
-independent `getSession` check that could leave the gate's session atom empty.
+`AppContent` owns the single reactive session subscription used by the auth gate
+and the invite route.
 
 `AuthForm` is a multi-step email flow: credentials → email OTP (`OTPField`) or
 2FA challenge (TOTP / backup code), plus forgot-password (email → OTP + new

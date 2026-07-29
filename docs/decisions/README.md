@@ -28,12 +28,14 @@ Each ADR uses: **Context**, **Decision**, **Consequences**, **Status**
   echo mutation DTOs into React Query instead of immediate list refetch under
   Hyperdrive.
 - [0007-separate-taro-miniapp-client.md](0007-separate-taro-miniapp-client.md) —
-  superseded historical decision to keep a separate Taro client.
+  historical decision to keep a separate Taro client; revived by 0011.
 - [0008-native-r2-worker-binding.md](0008-native-r2-worker-binding.md) — use a
   native same-account R2 binding in Workers instead of S3 credential secrets.
 - [0009-mini-program-pwa-webview-shell.md](0009-mini-program-pwa-webview-shell.md)
-  — replace the duplicated Taro client with a native login shell hosting the
-  responsive PWA through a secure one-time-code bridge.
-- [0010-miniapp-native-page-stack.md](0010-miniapp-native-page-stack.md) — one
-  native page per page-level PWA route so WeChat provides native navigation,
-  back gestures, titles, share cards, and deep links.
+  — superseded WebView shell hosting the responsive PWA through a one-time-code
+  bridge.
+- [0010-miniapp-native-page-stack.md](0010-miniapp-native-page-stack.md) —
+  superseded native page stack around that WebView shell.
+- [0011-native-taro-mini-program.md](0011-native-taro-mini-program.md) — rebuild
+  the Mini Program as a native Taro client with bearer auth, because personal
+  WeChat accounts cannot use `<web-view>`.

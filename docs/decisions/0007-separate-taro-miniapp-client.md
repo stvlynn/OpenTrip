@@ -36,4 +36,5 @@ only after actual framework-independent reuse emerges.
 
 ## Status
 
-Superseded by [0009](0009-mini-program-pwa-webview-shell.md).
+Superseded by [0009](0009-mini-program-pwa-webview-shell.md), then revived in
+substance by [0011](0011-native-taro-mini-program.md).

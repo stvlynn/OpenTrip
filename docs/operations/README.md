@@ -26,11 +26,13 @@ Other useful targets:
 | `make dev-web` | Vite only |
 | `make dev-api` | Postgres + migrations + API only |
 | `make dev-docs` | Fumadocs only on http://localhost:5171 |
-| `make miniapp` | Generate native-shell config and open WeChat DevTools |
-| `make miniapp-open` | Sync config, clear DevTools project cache, and reopen `apps/miniapp` |
-| `make miniapp-sync-config` | Generate gitignored AppID/API/PWA config from `apps/miniapp/.env` |
+| `make miniapp` | Build the Mini Program client and open WeChat DevTools |
+| `make miniapp-build` | Compile `apps/miniapp` into `apps/miniapp/dist` |
+| `make miniapp-watch` | Rebuild on change while DevTools stays open |
+| `make miniapp-open` | Build, clear DevTools project cache, and reopen `apps/miniapp` |
+| `make miniapp-sync-config` | Generate the gitignored AppID config from `apps/miniapp/.env` |
 | `make miniapp-clear-cache` | Clear DevTools file/compile cache and rebuild its file watcher |
-| `make dev-miniapp-api` | Postgres + API + PWA dev servers for shell development |
+| `make dev-miniapp-api` | Postgres + API for Mini Program client development |
 | `make postgres-up` / `make postgres-down` | Start/stop local Postgres container |
 | `make db-init` | `db:migrate` + `db:seed` |
 | `make db-reset` | drop all tables, then `db:migrate` + `db:seed` |
@@ -78,16 +80,15 @@ not part of automated verification.
 | `WECHAT_WEB_APP_ID` / `WECHAT_WEB_APP_SECRET` | api | optional WeChat Open Platform website QR login |
 | `WECHAT_MINI_PROGRAM_APP_ID` / `WECHAT_MINI_PROGRAM_APP_SECRET` | api only | Mini Program login (`jscode2session`); never ship secret to the client |
 | `MINIAPP_APP_ID` | `make miniapp*` | AppID generated into gitignored `project.private.config.json` |
-| `MINIAPP_API_BASE_URL` | native shell | API request origin generated into gitignored `miniprogram/config.js` |
-| `MINIAPP_WEB_BASE_URL` | native shell | PWA business-domain origin generated into gitignored `miniprogram/config.js` |
+| `MINIAPP_API_BASE_URL` | `apps/miniapp` build | API request origin compiled into the Mini Program bundle |
 | `CLOUDFLARE_OBSERVABILITY_TOKEN` | local operator | historical Workers Logs query token; never synced to the Worker |
 
 On Cloudflare, `DATABASE_URL` is replaced by the Hyperdrive binding; set Worker
 var `DATABASE_PROVIDER` to `postgres` or `mysql` to match the origin database.
 Better Auth and S3 credential values are set with `wrangler secret`.
 
-Production Mini Programs must configure `MINIAPP_WEB_BASE_URL` as a WeChat
-business domain and `MINIAPP_API_BASE_URL` as a request domain.
+Production Mini Programs must configure `MINIAPP_API_BASE_URL` as a WeChat
+request domain. No business domain is required: the client is native.
 
 ## Common commands
 

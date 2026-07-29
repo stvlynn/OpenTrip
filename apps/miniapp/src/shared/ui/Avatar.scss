@@ -1,0 +1,46 @@
+.ot-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999rpx;
+  border: 4rpx solid var(--surface);
+}
+
+.ot-avatar--sm {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.ot-avatar--md {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.ot-avatar--overflow {
+  background: var(--ink-200);
+  color: var(--ink-700);
+}
+
+.ot-avatar__image {
+  width: 100%;
+  height: 100%;
+}
+
+.ot-avatar__initials {
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
+.ot-avatar--md .ot-avatar__initials {
+  font-size: 28rpx;
+}
+
+.ot-avatar-stack {
+  display: flex;
+  align-items: center;
+}
+
+.ot-avatar-stack__slot:not(:first-child) {
+  margin-left: -16rpx;
+}

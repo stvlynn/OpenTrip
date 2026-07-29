@@ -5,11 +5,6 @@
     "updateDescription": "Refresh when you are ready to use the latest version.",
     "updateAction": "Update"
   },
-  "miniappBridge": {
-    "connecting": "Connecting securely to OpenTrip…",
-    "errorTitle": "Unable to connect",
-    "errorDescription": "Return to the Mini Program and try opening OpenTrip again."
-  },
   "mobileOnboarding": {
     "later": "Not now",
     "install": {

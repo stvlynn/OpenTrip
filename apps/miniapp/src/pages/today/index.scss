@@ -1,0 +1,216 @@
+.ot-today__masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 8rpx 0 4rpx;
+}
+
+.ot-today__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+/* TODO: `.ot-today__card` and `.ot-today__trip` share the same card chrome;
+ * promote it to a shared `.ot-card` in app.scss once that file is editable
+ * from this area. */
+.ot-today__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ot-today__card.is-focus {
+  background: var(--brand-soft);
+}
+
+.ot-today__card--pressed {
+  transform: scale(0.99);
+  opacity: 0.9;
+}
+
+.ot-today__card-title {
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-today__card-hint {
+  font-size: var(--text-body);
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+
+.ot-today__card-action {
+  margin-top: 8rpx;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.ot-today__trip {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ot-today__trip-label {
+  font-size: var(--text-caption);
+  letter-spacing: 1rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-today__trip-title {
+  font-size: var(--text-title);
+  font-weight: 700;
+  letter-spacing: -0.3rpx;
+  color: var(--foreground);
+}
+
+.ot-today__trip-meta {
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+}
+
+.ot-today__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.ot-today__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: 24rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ot-today__entry-title {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-today__entry-date {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-today__date {
+  font-size: var(--text-caption);
+  letter-spacing: 1.4rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-today__title {
+  font-size: var(--text-display);
+  font-weight: 700;
+  letter-spacing: -1rpx;
+  color: var(--foreground);
+}
+
+.ot-today__subtitle {
+  margin-top: 8rpx;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.ot-today__weather {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
+/* Placeholder that reserves the loaded card's footprint (no layout shift). */
+.ot-today__weather--skeleton {
+  min-height: 120rpx;
+  background: var(--ink-100);
+}
+
+.ot-today__temp {
+  font-size: var(--text-display);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--foreground);
+}
+
+.ot-today__weather-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.ot-today__weather-main {
+  font-size: var(--text-body);
+  color: var(--foreground);
+}
+
+.ot-today__weather-notice {
+  display: block;
+  padding: 4rpx 0;
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-today__weather-meta {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-today__stops {
+  display: flex;
+  flex-direction: column;
+}
+
+.ot-today__stop {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--border);
+}
+
+.ot-today__stop-time {
+  width: 96rpx;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.ot-today__stop-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.ot-today__stop-name {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-today__stop-area {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}

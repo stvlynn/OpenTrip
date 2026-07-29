@@ -5,9 +5,9 @@ title: "Frontend (Feature-Sliced Design)"
 # Frontend (Feature-Sliced Design)
 
 The browser frontend (`apps/web`) is a React + TypeScript + Vite PWA organized
-with Feature-Sliced Design v2.1. The dependency-free WeChat shell
-(`apps/miniapp`) authenticates natively and hosts that same responsive PWA in a
-WebView. Reference:
+with Feature-Sliced Design v2.1. WeChat is served by a separate native Mini
+Program client (`apps/miniapp`, Taro + React, also FSD) that reuses the API but
+not this code. Reference:
 [../reference/frontend-sources.md](../reference/frontend-sources.md).
 
 ## Layers
@@ -25,8 +25,8 @@ Prototype-specific logic stays in the page (`pages/travel-planner`,
 
 Signed-out web visitors land on the marketing page (`pages/landing`) at the
 root; the auth form lives at `/signin`. Deep links (e.g. a shared trip) route
-straight to sign-in so the target path survives login, and embedded WeChat
-sessions skip the landing entirely. The gate lives in `app/App.tsx`. Landing
+straight to sign-in so the target path survives login. The gate lives in
+`app/App.tsx`. Landing
 copy is centralized in the `landing` i18n namespace (EN + 中文) and its
 screenshots reuse the README captures under `pages/landing/assets`.
 
@@ -70,12 +70,10 @@ routes:
 - `/journal/:entryId` — travelogue reader (`matchJournalEntryId`).
 - `/trips/:id` — the single-trip planner (`matchTripId`).
 - `/invite/:token` — invite accept surface (`matchInviteToken`).
-- `/signin`, `/miniapp` — auth form and the WeChat embedded entry.
+- `/signin` — auth form.
 
-In the WeChat shell the hub surfaces share one native page: switching between
-`HUB_PATHS` (or leaving a travelogue reader) stays in the current WebView via
-SPA history, and only returning to the hub from a deeper native page (e.g. a
-trip) resets the native stack. See [miniapp.md](miniapp.md).
+The web app has no embedded/WebView host mode; WeChat runs the native client in
+[miniapp.md](miniapp.md).
 
 ## Today and travelogues (hub)
 
@@ -122,7 +120,7 @@ import { Button } from "@/shared/ui/button/button";
 ## Related
 
 - [ui-system.md](ui-system.md) — cossUI tokens, primitives, polish.
-- [miniapp.md](miniapp.md) — native WebView shell, auth bridge, and setup.
+- [miniapp.md](miniapp.md) — native Taro Mini Program client, bearer auth, setup.
 - [map.md](map.md) — MapLibre wrapper.
 - [i18n.md](i18n.md) — internationalization.
 - [data-caching.md](data-caching.md) — React Query write-echo vs Hyperdrive

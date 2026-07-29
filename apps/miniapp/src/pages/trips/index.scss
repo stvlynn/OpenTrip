@@ -1,0 +1,39 @@
+.ot-trips__masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.ot-trips__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.ot-trips__title {
+  font-size: var(--text-display);
+  font-weight: 700;
+  letter-spacing: -1rpx;
+  color: var(--foreground);
+}
+
+.ot-trips__subtitle {
+  font-size: 26rpx;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.ot-trips__masthead-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding-top: 8rpx;
+}
+
+.ot-trips__list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}

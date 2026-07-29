@@ -20,8 +20,7 @@
 
 - Monorepo: `pnpm` workspaces, TypeScript strict everywhere.
 - Frontend: React + TypeScript + Vite, Feature-Sliced Design (FSD v2.1).
-- WeChat: dependency-free native shell hosting the responsive PWA in a WebView.
-- WeChat: dependency-free native shell hosting the responsive PWA in a WebView.
+- WeChat: native Taro (React) Mini Program client (apps/miniapp).
 - UI: cossUI primitives (Base UI + CVA style), cossUI design tokens.
 - Map: mapcn-style MapLibre GL wrapper.
 - Backend: Hono + TypeScript, Domain-Driven Design + Hexagonal architecture.

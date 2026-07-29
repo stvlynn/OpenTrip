@@ -1,0 +1,40 @@
+.ot-screen {
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.ot-screen--padded {
+  display: flex;
+  flex-direction: column;
+  row-gap: 32rpx;
+  padding: 32rpx 32rpx calc(64rpx + env(safe-area-inset-bottom));
+}
+
+/* Tab pages need ~100rpx more so the list clears the native tab bar. */
+.ot-screen--padded.ot-screen--tab {
+  padding-bottom: calc(164rpx + env(safe-area-inset-bottom));
+}
+
+.ot-screen--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 96rpx 48rpx;
+}
+
+.ot-screen__title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.ot-screen__hint {
+  font-size: 28rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-screen__action {
+  margin-top: 16rpx;
+}

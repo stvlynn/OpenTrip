@@ -1,0 +1,36 @@
+.ot-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.ot-tag__label {
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.ot-tag--neutral {
+  background: var(--ink-150);
+  color: var(--ink-600);
+}
+
+.ot-tag--brand {
+  background: var(--brand-soft);
+  color: var(--corn-600);
+}
+
+.ot-tag--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.ot-tag--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.ot-tag--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}

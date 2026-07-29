@@ -1,0 +1,41 @@
+{
+  "name": "@opentrip/miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenTrip native WeChat Mini Program client (Taro + React).",
+  "scripts": {
+    "sync-config": "node scripts/sync-config.mjs",
+    "dev": "pnpm sync-config && taro build --type weapp --watch",
+    "build": "pnpm sync-config && taro build --type weapp",
+    "typecheck": "pnpm sync-config && tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.7",
+    "@tarojs/components": "4.2.1",
+    "@tarojs/helper": "4.2.1",
+    "@tarojs/plugin-framework-react": "4.2.1",
+    "@tarojs/plugin-platform-weapp": "4.2.1",
+    "@tarojs/react": "4.2.1",
+    "@tarojs/runtime": "4.2.1",
+    "@tarojs/shared": "4.2.1",
+    "@tarojs/taro": "4.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@babel/runtime": "^7.29.7",
+    "@tarojs/cli": "4.2.1",
+    "@tarojs/taro-loader": "4.2.1",
+    "@tarojs/webpack5-runner": "4.2.1",
+    "@types/react": "^18.3.12",
+    "babel-preset-taro": "4.2.1",
+    "postcss": "^8.4.49",
+    "sass": "^1.83.0",
+    "typescript": "^5.7.3",
+    "webpack": "5.91.0"
+  }
+}

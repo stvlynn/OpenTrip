@@ -6,7 +6,8 @@ title: "0010 — Mini Program native page stack over a single WebView wrapper"
 
 ## Status
 
-Accepted. Extends [0009](0009-mini-program-pwa-webview-shell.md).
+Superseded by [0011](0011-native-taro-mini-program.md). Extended
+[0009](0009-mini-program-pwa-webview-shell.md).
 
 ## Context
 

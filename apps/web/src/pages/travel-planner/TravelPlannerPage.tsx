@@ -27,14 +27,8 @@ import { stopNumbers, upsertTripSummary, type Trip, type TripSummary } from "@/e
 import type { Stop } from "@/entities/stop";
 import { CalendarCheck2, CalendarRange, Map as MapIcon, Wallet } from "lucide-react";
 import { useRouter } from "@/app/router";
-import { useIsMiniappEmbedded } from "@/app/embedded-environment";
 import { useSession } from "@/shared/auth";
-import {
-  cn,
-  postMiniappShareContext,
-  useDocumentTitle,
-  useIsMobile,
-} from "@/shared/lib";
+import { cn, useDocumentTitle, useIsMobile } from "@/shared/lib";
 import { AppSidebar } from "@/widgets/app-sidebar";
 import { Spinner } from "@/shared/ui/spinner";
 import { Tabs } from "@/shared/ui/tabs";
@@ -96,24 +90,8 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
   });
   const actions = useTripActions(tripId);
   const realtime = useTripRealtime(tripId, Boolean(trip));
-  const embedded = useIsMiniappEmbedded();
 
-  // Inside the Mini Program WebView the native navigation bar mirrors the
-  // document title, so this also labels the native chrome.
   useDocumentTitle(trip?.title);
-
-  const tripTitle = trip?.title;
-  const tripCoverUrl = trip?.coverUrl;
-  useEffect(() => {
-    if (!embedded || !tripTitle) return;
-    // Queue the share card context; WeChat hands it to the native shell when
-    // the user opens the share sheet.
-    postMiniappShareContext({
-      title: tripTitle,
-      path: `/trips/${tripId}`,
-      imageUrl: tripCoverUrl ?? undefined,
-    });
-  }, [embedded, tripId, tripTitle, tripCoverUrl]);
 
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const previousSidebarWidthRef = useRef(DEFAULT_SIDEBAR_WIDTH);
@@ -724,7 +702,6 @@ export function TravelPlannerPage({ tripId }: { tripId: string }) {
           onBack={() => navigate("/")}
           onRename={(title) => rename.mutate(title)}
           onOpenAgent={agentEnabled ? () => setAgentPanel(false) : undefined}
-          nativeChrome={embedded}
         />
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           {panes}

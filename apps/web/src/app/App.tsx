@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppProviders } from "./providers";
 import { RouterProvider, useRouter, matchTripId, matchInviteToken, isKnownPath } from "./router";
-import { detectMiniappContainer, useIsMiniappEmbedded } from "./embedded-environment";
-import { MiniappBootstrap } from "./MiniappBootstrap";
 import { AppErrorBoundary } from "./AppErrorBoundary";
 import { resolveInitialSession } from "./auth-session-state";
 import { useSession } from "@/shared/auth";
@@ -30,7 +28,6 @@ function Gate({
   initialSessionResolved: boolean;
 }) {
   const { path } = useRouter();
-  const embedded = useIsMiniappEmbedded();
   const inviteToken = matchInviteToken(path);
 
   if (!initialSessionResolved) {
@@ -54,9 +51,8 @@ function Gate({
   if (!isAuthenticated) {
     // Web visitors land on the marketing page at the root; the auth form lives
     // at `/signin`. Deep links (e.g. a shared trip) still route straight to
-    // sign-in so the target path survives login, and embedded WeChat sessions
-    // skip the landing entirely.
-    if (!embedded && path === "/") return <LandingPage />;
+    // sign-in so the target path survives login.
+    if (path === "/") return <LandingPage />;
     return <AuthPage />;
   }
 
@@ -68,16 +64,9 @@ function Gate({
   );
 }
 
-function AppContent({ startsInBootstrap }: { startsInBootstrap: boolean }) {
-  const { replace } = useRouter();
-  const {
-    data: session,
-    isPending,
-    isRefetching,
-    refetch,
-  } = useSession();
+function AppContent() {
+  const { data: session, isPending, isRefetching } = useSession();
   const [initialSessionResolved, setInitialSessionResolved] = useState(false);
-  const [isBootstrapping, setIsBootstrapping] = useState(startsInBootstrap);
   const isAuthenticated = Boolean(session);
   const sessionBusy = isPending || isRefetching;
 
@@ -89,28 +78,6 @@ function AppContent({ startsInBootstrap }: { startsInBootstrap: boolean }) {
     );
   }, [isAuthenticated, sessionBusy]);
 
-  const completeBootstrap = useCallback(
-    (path: string) => {
-      // Internal redirect only: the current WebView must render the target
-      // route itself instead of pushing a new native page.
-      replace(path);
-      setIsBootstrapping(false);
-    },
-    [replace],
-  );
-
-  if (isBootstrapping) {
-    return (
-      <MiniappBootstrap
-        isAuthenticated={isAuthenticated}
-        sessionBusy={sessionBusy}
-        initialSessionResolved={initialSessionResolved}
-        refreshSession={refetch}
-        onComplete={completeBootstrap}
-      />
-    );
-  }
-
   return (
     <Gate
       isAuthenticated={isAuthenticated}
@@ -120,13 +87,11 @@ function AppContent({ startsInBootstrap }: { startsInBootstrap: boolean }) {
 }
 
 export function App() {
-  const embedded = detectMiniappContainer();
-
   return (
-    <AppProviders embedded={embedded}>
+    <AppProviders>
       <RouterProvider>
         <AppErrorBoundary>
-          <AppContent startsInBootstrap={window.location.pathname === "/miniapp"} />
+          <AppContent />
         </AppErrorBoundary>
       </RouterProvider>
     </AppProviders>

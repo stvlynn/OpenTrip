@@ -5,24 +5,25 @@ description: Use OpenTrip in WeChat, in a mobile browser, or as an installed PWA
 
 ## WeChat Mini Program
 
-When the WeChat shell is configured, OpenTrip opens as a Mini Program that hosts
-the same responsive web app inside a native page stack.
+OpenTrip has a native WeChat Mini Program that signs you in with your WeChat
+account and shares the same trips as the web app.
 
-What the native shell provides:
+What it covers:
 
-- WeChat sign-in;
-- native navigation bar, back button, and swipe-back;
-- share cards and deep links into a trip or invite;
-- a secure one-time handoff into the embedded web session.
+- Trips, Today, and Travelogues as the bottom tabs;
+- the trip planner: map, schedule, reservations, and budget;
+- the AI companion, member invites, and share cards.
 
-What stays in the web app:
+Differences from the web app:
 
-- trips home, Today, and Travelogues;
-- the full trip planner (map, schedule, reservations, budget);
-- the AI companion.
+- the map is WeChat's own map, so styling is simpler and street view is not
+  available — tap a stop to open WeChat navigation instead;
+- travelogues are stored on the device, as in the web app;
+- sign-in is WeChat only; email, Google, and two-factor sign-in live in the
+  browser.
 
 Open a shared trip card or invite link inside WeChat when a companion sends one.
-Use the native back gesture to leave a trip and return to the home hub.
+Use the native back gesture to leave a trip.
 
 ## Mobile browser
 

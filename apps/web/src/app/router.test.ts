@@ -37,9 +37,8 @@ describe("isKnownPath", () => {
     expect(isKnownPath("/journal/entry-1")).toBe(true);
   });
 
-  it("accepts auth, miniapp, trip, and invite routes", () => {
+  it("accepts auth, trip, and invite routes", () => {
     expect(isKnownPath("/signin")).toBe(true);
-    expect(isKnownPath("/miniapp")).toBe(true);
     expect(isKnownPath("/trips/abc")).toBe(true);
     expect(isKnownPath("/invite/tok")).toBe(true);
   });

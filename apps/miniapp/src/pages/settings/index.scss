@@ -1,0 +1,83 @@
+.ot-settings__identity {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.ot-settings__identity-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.ot-settings__name {
+  font-size: var(--text-title);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.ot-settings__meta {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-settings__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 32rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.ot-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ot-settings__row-label {
+  font-size: var(--text-body);
+  color: var(--foreground);
+}
+
+.ot-settings__row-value {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-settings__hint {
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+/* WeChat native button reset: the chooseAvatar button wraps the avatar preview,
+   so the default grey chrome must go. */
+.ot-settings__avatar-button {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.ot-settings__avatar-button::after {
+  border: none;
+}
+
+.ot-settings__avatar-hint {
+  flex: 1;
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}

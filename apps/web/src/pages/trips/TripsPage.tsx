@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@/app/router";
-import { useIsMiniappEmbedded } from "@/app/embedded-environment";
 import { useSession } from "@/shared/auth";
 import { fetchTrips } from "@/shared/api";
 import { queryKeys } from "@/shared/config";
-import { useDocumentTitle } from "@/shared/lib";
 import { AppSidebar } from "@/widgets/app-sidebar";
 import { UserMenu } from "@/widgets/user-menu";
 import { toastManager } from "@/shared/ui/toast";
@@ -37,7 +35,6 @@ export function TripsPage() {
   const { t: tc, i18n } = useTranslation("common");
   const { path, navigate } = useRouter();
   const { data: session } = useSession();
-  const embedded = useIsMiniappEmbedded();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LocalJournalEntry | null>(
@@ -48,9 +45,6 @@ export function TripsPage() {
     string | undefined
   >();
   const surface = surfaceForPath(path);
-
-  // Labels the native navigation bar inside the Mini Program WebView.
-  useDocumentTitle(embedded ? tc("appName") : undefined);
 
   const {
     data: trips = [],
@@ -132,14 +126,9 @@ export function TripsPage() {
 
       <main className="min-w-0 flex-1 overflow-y-auto rounded-l-2xl border border-r-0 border-border bg-background shadow-[-8px_0_24px_-16px_rgba(15,23,42,0.25)] max-md:rounded-none max-md:border-0 max-md:shadow-none">
         <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border/70 bg-background/88 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-xl md:hidden">
-          {/* The native navigation bar already shows the brand when embedded. */}
-          {embedded ? (
-            <span aria-hidden="true" />
-          ) : (
-            <span className="font-heading text-lg font-semibold">
-              {tc("appName")}
-            </span>
-          )}
+          <span className="font-heading text-lg font-semibold">
+            {tc("appName")}
+          </span>
           <UserMenu compact direction="down" />
         </div>
 

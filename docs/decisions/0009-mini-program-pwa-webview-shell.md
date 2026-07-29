@@ -6,7 +6,7 @@ title: "0009 — Mini Program PWA WebView shell"
 
 ## Status
 
-Accepted. Supersedes
+Superseded by [0011](0011-native-taro-mini-program.md). Superseded
 [0007](0007-separate-taro-miniapp-client.md).
 
 ## Context

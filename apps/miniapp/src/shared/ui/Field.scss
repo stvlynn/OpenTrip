@@ -1,0 +1,50 @@
+.ot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 16rpx 0;
+}
+
+.ot-field__label {
+  font-size: 25rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-field__input,
+.ot-field__textarea,
+.ot-field__picker {
+  width: 100%;
+  min-height: 88rpx;
+  padding: 16rpx 24rpx;
+  background: var(--ink-100);
+  border-radius: var(--radius-sm);
+  font-size: 30rpx;
+  color: var(--foreground);
+}
+
+/* WXSS has no reliable :focus, so TextField toggles this class itself. */
+.ot-field__input.is-focused {
+  box-shadow: 0 0 0 2rpx var(--brand);
+}
+
+.ot-field__textarea {
+  min-height: 140rpx;
+  line-height: 1.5;
+}
+
+.ot-field__picker {
+  display: flex;
+  align-items: center;
+}
+
+.ot-field__placeholder,
+.ot-field__placeholder-text {
+  color: var(--ink-400);
+}
+
+.ot-field__hint {
+  font-size: 24rpx;
+  color: var(--muted-foreground);
+}

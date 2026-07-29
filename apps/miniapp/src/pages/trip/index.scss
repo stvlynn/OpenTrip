@@ -1,0 +1,29 @@
+.ot-trip__notice {
+  padding-bottom: 16rpx;
+}
+
+.ot-trip__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  padding: 24rpx 0 8rpx;
+}
+
+.ot-trip__day-chip {
+  padding: 16rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--ink-100);
+}
+
+.ot-trip__day-chip.is-active {
+  background: var(--primary);
+}
+
+.ot-trip__day-chip-text {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+}
+
+.ot-trip__day-chip.is-active .ot-trip__day-chip-text {
+  color: var(--primary-foreground);
+}

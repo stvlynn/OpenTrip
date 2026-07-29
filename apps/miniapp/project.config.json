@@ -1,12 +1,19 @@
 {
-  "miniprogramRoot": "miniprogram/",
+  "miniprogramRoot": "dist/",
   "projectname": "OpenTrip",
-  "description": "OpenTrip PWA WebView shell",
+  "description": "OpenTrip native WeChat Mini Program client",
   "setting": {
     "urlCheck": true,
-    "es6": true,
-    "enhance": true,
-    "compileHotReLoad": true
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false,
+    "compileHotReLoad": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
   },
   "compileType": "miniprogram"
 }

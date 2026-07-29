@@ -1,0 +1,232 @@
+.ot-budget {
+  display: flex;
+  flex-direction: column;
+}
+
+.ot-budget__totals {
+  display: flex;
+  gap: 16rpx;
+}
+
+.ot-budget__total {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.ot-budget__total-label {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-budget__total-value {
+  font-size: var(--text-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.ot-budget__balances {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 0 32rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.ot-budget__balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--ink-100);
+}
+
+.ot-budget__balance:last-child {
+  border-bottom: none;
+}
+
+.ot-budget__balance-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.ot-budget__balance-name {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-budget__balance-meta {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.ot-budget__balance-net {
+  font-size: var(--text-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ot-budget__balance-net.is-positive {
+  color: var(--success);
+}
+
+.ot-budget__balance-net.is-negative {
+  color: var(--danger);
+}
+
+.ot-budget__settled {
+  display: block;
+  padding: 24rpx 32rpx;
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.ot-budget__settlements {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 0 32rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.ot-budget__settlement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--ink-100);
+}
+
+.ot-budget__settlement:last-child {
+  border-bottom: none;
+}
+
+.ot-budget__settlement-text {
+  font-size: var(--text-body);
+  color: var(--foreground);
+}
+
+.ot-budget__settlement-amount {
+  font-size: var(--text-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand);
+}
+
+.ot-budget__expenses {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 0 32rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.ot-budget__expense {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  min-height: 88rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--ink-100);
+}
+
+.ot-budget__expense:last-child {
+  border-bottom: none;
+}
+
+.ot-row--pressed {
+  opacity: 0.9;
+  transform: scale(0.99);
+  transition: transform 140ms ease-out, opacity 140ms ease-out;
+}
+
+.ot-budget__expense-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.ot-budget__expense-name {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-budget__expense-meta {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-budget__expense-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2rpx;
+}
+
+.ot-budget__expense-amount {
+  font-size: var(--text-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.ot-budget__expense-each {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.ot-budget__participants-label {
+  display: block;
+  padding: 16rpx 0 8rpx;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 1rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-budget__participants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.ot-budget__participant {
+  padding: 16rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--ink-100);
+}
+
+.ot-budget__participant.is-selected {
+  background: var(--primary);
+}
+
+.ot-budget__participant-name {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+}
+
+.ot-budget__participant.is-selected .ot-budget__participant-name {
+  color: var(--primary-foreground);
+}

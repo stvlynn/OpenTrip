@@ -1,0 +1,29 @@
+.ot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 96rpx 48rpx;
+  text-align: center;
+}
+
+.ot-empty__icon {
+  font-size: 64rpx;
+  line-height: 1;
+}
+
+.ot-empty__title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.ot-empty__hint {
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.ot-empty__action {
+  margin-top: 24rpx;
+}

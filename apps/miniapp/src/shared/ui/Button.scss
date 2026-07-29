@@ -1,0 +1,55 @@
+.ot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 0 32rpx;
+  height: 88rpx;
+  border-radius: var(--radius);
+  font-size: 30rpx;
+  font-weight: 600;
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+
+.ot-button--sm {
+  height: 80rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+}
+
+.ot-button--block {
+  display: flex;
+  width: 100%;
+}
+
+.ot-button--primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.ot-button--secondary {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 0 0 2rpx var(--border);
+}
+
+.ot-button--ghost {
+  background: transparent;
+  color: var(--brand);
+  padding: 0 16rpx;
+}
+
+.ot-button--danger {
+  background: transparent;
+  color: var(--danger);
+  box-shadow: 0 0 0 2rpx var(--danger);
+}
+
+.ot-button--pressed {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.ot-button.is-disabled {
+  opacity: 0.42;
+}

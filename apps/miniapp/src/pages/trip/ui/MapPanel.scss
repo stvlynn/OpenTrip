@@ -1,0 +1,78 @@
+.ot-map {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.ot-map__canvas {
+  width: 100%;
+  height: 560rpx;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.ot-map__list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 0 24rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.ot-map__row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  min-height: 88rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--ink-100);
+  transition: background 140ms ease;
+}
+
+.ot-map__row:last-child {
+  border-bottom: none;
+}
+
+.ot-row--pressed {
+  opacity: 0.9;
+  transform: scale(0.99);
+  transition: transform 140ms ease-out, opacity 140ms ease-out;
+}
+
+.ot-map__row.is-selected .ot-map__row-name {
+  color: var(--brand);
+}
+
+.ot-map__row-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 999rpx;
+}
+
+.ot-map__row-number-text {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ot-map__row-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.ot-map__row-name {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ot-map__row-area {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}

@@ -102,8 +102,6 @@ const mobileOAuthExchangeSchema = z.object({
   code: z.string().min(16).max(512),
 });
 
-const webviewExchangeSchema = mobileOAuthExchangeSchema;
-
 const createTripSchema = z.object({
   title: z.string().trim().min(1).max(120),
   currency: z.string().trim().min(1).max(8).optional(),
@@ -425,39 +423,6 @@ export function createApp(
     const { code } = mobileOAuthExchangeSchema.parse(await c.req.json());
     const session = await auth.api.verifyOneTimeToken({ body: { token: code } });
     return c.json({ token: session.session.token, session });
-  });
-
-  app.post("/api/mobile-auth/webview/mint", async (c) => {
-    const authorization = c.req.header("authorization");
-    if (!authorization?.startsWith("Bearer ") || !c.get("session")) {
-      return fail(c, "unauthorized", "Authentication required", 401);
-    }
-    const { token } = await auth.api.generateOneTimeToken({
-      headers: c.req.raw.headers,
-    });
-    return ok(c, { code: token });
-  });
-
-  app.post("/api/mobile-auth/webview/exchange", async (c) => {
-    const { code } = webviewExchangeSchema.parse(await c.req.json());
-    const verified = await auth.api.verifyOneTimeToken({
-      body: { token: code },
-      asResponse: true,
-    });
-    if (!verified.ok) {
-      return fail(
-        c,
-        "webview_code_invalid",
-        "WebView sign-in code is invalid or expired",
-        401,
-      );
-    }
-    const session = await verified.json();
-    const result = ok(c, { session });
-    for (const cookie of verified.headers.getSetCookie()) {
-      result.headers.append("Set-Cookie", cookie);
-    }
-    return result;
   });
 
   app.get("/api/health", (c) => ok(c, { status: "ok" }));

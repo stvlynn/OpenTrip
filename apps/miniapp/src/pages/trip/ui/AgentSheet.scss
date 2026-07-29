@@ -1,0 +1,90 @@
+.ot-agent__thread {
+  max-height: 52vh;
+}
+
+.ot-agent__message {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: 16rpx 0;
+  animation: ot-rise 200ms ease-out;
+}
+
+.ot-agent__message-author {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-agent__message-text {
+  font-size: var(--text-body);
+  line-height: 1.65;
+  color: var(--foreground);
+}
+
+.ot-agent__message.is-assistant .ot-agent__message-text {
+  padding: 16rpx 24rpx;
+  background: var(--brand-soft);
+  border-radius: var(--radius-sm);
+  color: var(--ink-800);
+}
+
+.ot-agent__empty {
+  display: block;
+  padding: 40rpx 0;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.ot-agent__notice {
+  display: block;
+  padding: 16rpx 0;
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.ot-agent__suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background: var(--ink-100);
+  border-radius: var(--radius);
+}
+
+.ot-agent__suggestion-title {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.ot-agent__suggestion-text {
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+.ot-agent__suggestion-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.ot-agent__composer {
+  flex: 1;
+}
+
+/* One-shot mount animation for incoming thread messages. */
+@keyframes ot-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

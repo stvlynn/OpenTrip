@@ -1,0 +1,80 @@
+.ot-journal__masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 8rpx 0 4rpx;
+}
+
+.ot-journal__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.ot-journal__title {
+  font-size: var(--text-display);
+  font-weight: 700;
+  letter-spacing: -1rpx;
+  color: var(--foreground);
+}
+
+.ot-journal__subtitle {
+  font-size: 26rpx;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.ot-journal__masthead-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding-top: 8rpx;
+}
+
+.ot-journal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  /* Rhythm comes from the Screen row gap. */
+  margin-top: 0;
+}
+
+.ot-journal__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 32rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition: opacity 140ms ease-out;
+}
+
+.ot-journal__entry--pressed {
+  opacity: 0.86;
+}
+
+.ot-journal__entry-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.ot-journal__entry-date {
+  font-size: 24rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-journal__entry-excerpt {
+  margin-top: 8rpx;
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: var(--ink-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}

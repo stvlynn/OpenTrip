@@ -3,9 +3,11 @@ import { handleRealtimeUpgrade } from "../src/worker";
 
 const secret = "test-realtime-secret-at-least-32-bytes-long";
 
-function request(origin = "https://opentrip.im", upgrade = "websocket") {
+function request(origin: string | null = "https://opentrip.im", upgrade = "websocket") {
+  const headers: Record<string, string> = { Upgrade: upgrade };
+  if (origin !== null) headers["Origin"] = origin;
   return new Request("https://api.opentrip.im/api/trips/trip-1/realtime", {
-    headers: { Origin: origin, Upgrade: upgrade },
+    headers,
   });
 }
 
@@ -57,6 +59,26 @@ describe("Cloudflare realtime upgrade route", () => {
     await expect(
       handleRealtimeUpgrade(request("https://evil.example"), env as never, container as never),
     ).resolves.toMatchObject({ status: 403 });
+  });
+
+  it("accepts Origin-less upgrades (WeChat) and still enforces the session", async () => {
+    const { env, container, fetch } = fixture();
+    const response = await handleRealtimeUpgrade(
+      request(null),
+      env as never,
+      container as never,
+    );
+    expect(await response?.text()).toBe("forwarded");
+    expect(fetch).toHaveBeenCalledOnce();
+
+    const signedOut = fixture({ session: false });
+    await expect(
+      handleRealtimeUpgrade(
+        request(null),
+        signedOut.env as never,
+        signedOut.container as never,
+      ),
+    ).resolves.toMatchObject({ status: 401 });
   });
 
   it("requires an authenticated trip member", async () => {

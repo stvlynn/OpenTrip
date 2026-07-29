@@ -9,11 +9,10 @@ title: "Architecture"
 ```mermaid
 flowchart TD
   browser[Browser] --> web[apps/web React SPA]
-  wechat[WeChat] --> miniapp[apps/miniapp native shell]
-  miniapp -->|WebView| web
+  wechat[WeChat] --> miniapp[apps/miniapp Taro client]
   web -->|"/api/*"| api[apps/api Hono]
   web -->|"/api/auth/*"| api
-  miniapp -->|"wx.login + bearer bridge"| api
+  miniapp -->|"wx.login + Bearer"| api
   api --> app[Application use cases]
   app --> domain[Domain aggregates]
   app --> ports[Repository ports]
@@ -36,12 +35,12 @@ flowchart TD
 
 - **apps/web** — React SPA (FSD). Renders Trips and the Planner, talks to the
   API over `fetch`, and delegates auth to the Better Auth client.
-- **apps/miniapp** — dependency-free native WeChat shell. It exchanges
-  `wx.login` for a short-lived in-memory bearer, mints a single-use WebView
-  code per native page, and hosts the responsive PWA behind a native page
-  stack (one native page per page-level PWA route) so navigation bar, back
-  gestures, share cards, and deep links are native. See
-  [../frontend/miniapp.md](../frontend/miniapp.md).
+- **apps/miniapp** — native WeChat Mini Program client (Taro 4 + React, FSD).
+  It exchanges `wx.login` for a Better Auth token and calls the same API with a
+  bearer header; the product UI is rebuilt with Mini Program components because
+  personal WeChat accounts cannot use `<web-view>`. See
+  [../frontend/miniapp.md](../frontend/miniapp.md) and
+  [../decisions/0011-native-taro-mini-program.md](../decisions/0011-native-taro-mini-program.md).
 - **apps/api** — Hono app (DDD + Hexagonal). `interfaces/http` routes call
   `application` use cases, which operate on `domain` aggregates through
   repository ports implemented in `infrastructure`.

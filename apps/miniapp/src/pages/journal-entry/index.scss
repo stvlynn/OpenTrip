@@ -1,0 +1,30 @@
+.ot-entry__title {
+  display: block;
+  font-size: var(--text-display);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.ot-entry__date {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--muted-foreground);
+}
+
+.ot-entry__body {
+  display: block;
+  margin-top: 32rpx;
+  font-size: 30rpx;
+  line-height: 1.75;
+  color: var(--ink-700);
+  white-space: pre-wrap;
+}
+
+.ot-entry__actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 56rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+}

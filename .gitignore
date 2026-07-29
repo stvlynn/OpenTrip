@@ -8,8 +8,6 @@ coverage/
 
 # WeChat DevTools per-user config (never committed)
 apps/miniapp/project.private.config.json
-apps/miniapp/miniprogram/project.private.config.json
-apps/miniapp/miniprogram/config.js
 
 # env & secrets
 .env

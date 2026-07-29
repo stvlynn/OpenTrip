@@ -129,8 +129,12 @@ export async function handleRealtimeUpgrade(
   if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
     return new Response("Expected WebSocket", { status: 426 });
   }
-  const origin = request.headers.get("Origin") ?? "";
-  if (!origin || !container.config.trustedOrigins.includes(origin)) {
+  // Browsers always send Origin on a WebSocket upgrade, so the cookie-CSRF
+  // origin check only fires when one is present. Non-browser clients (WeChat
+  // `wx.connectSocket` sends no Origin) authenticate with the Bearer token
+  // enforced by the session check below.
+  const origin = request.headers.get("Origin");
+  if (origin && !container.config.trustedOrigins.includes(origin)) {
     return new Response("Untrusted origin", { status: 403 });
   }
   const session = await container.auth.api.getSession({ headers: request.headers });
